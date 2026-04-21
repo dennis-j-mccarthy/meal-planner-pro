@@ -41,7 +41,7 @@ export function CookDateSteps({
   ];
 
   return (
-    <div className="panel p-4 sm:p-6 sticky top-64 z-40 bg-white/95 backdrop-blur-sm">
+    <div className="panel p-4 sm:p-6 sticky top-32 z-40 bg-white/95 backdrop-blur-sm">
       <div className="flex items-center justify-between">
         {steps.map((step, i) => (
           <div key={step.number} className="flex items-center flex-1">

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { logIn } from "@/app/actions";
 
 export function MarketingPage() {
@@ -6,14 +5,6 @@ export function MarketingPage() {
     <div className="space-y-20 py-8">
       {/* Hero */}
       <section className="text-center space-y-6 max-w-3xl mx-auto">
-        <Image
-          src="/meal-planner-pro-logo.png"
-          alt="Meal Planner Pro"
-          width={500}
-          height={250}
-          className="h-40 w-auto object-contain mx-auto"
-          priority
-        />
         <h1 className="text-4xl font-bold text-slate-900 sm:text-5xl tracking-tight">
           Everything a personal chef needs.
           <br />

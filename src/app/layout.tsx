@@ -45,22 +45,20 @@ export default async function RootLayout({
       <body className={`${inter.variable} antialiased`}>
         <div className="min-h-screen bg-white text-slate-900">
           <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-            <div className="mx-auto grid h-64 max-w-7xl grid-cols-3 items-center px-4 sm:px-6 lg:px-8">
-              <div className="flex items-center">
-                {loggedIn && <AppNav />}
-              </div>
-              <div className="flex items-center justify-center">
-                <Link href="/" className="block">
+            <div className="mx-auto flex h-32 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-6 shrink-0">
+                <Link href="/" className="block shrink-0">
                   <Image
                     src="/logo-v2.png"
                     alt="Meal Planner Pro"
-                    width={900}
-                    height={450}
+                    width={600}
+                    height={300}
                     className="w-auto object-contain"
-                    style={{ height: "15rem" }}
+                    style={{ height: "6rem" }}
                     priority
                   />
                 </Link>
+                {loggedIn && <AppNav />}
               </div>
               <div className="flex items-center justify-end gap-2">
                 {loggedIn ? (
