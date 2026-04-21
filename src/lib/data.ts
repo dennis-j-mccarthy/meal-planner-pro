@@ -63,13 +63,17 @@ async function resolveUserAndKitchen() {
     kitchenId = newKitchen.id;
   }
 
-  const user = await prisma.user.create({
-    data: {
+  // Use upsert to handle race conditions where two concurrent requests
+  // both miss the initial findUnique
+  const user = await prisma.user.upsert({
+    where: { clerkUserId: userId },
+    create: {
       clerkUserId: userId,
       email,
       kitchenId,
       isAdmin,
     },
+    update: {},
     include: { kitchen: true },
   });
 
