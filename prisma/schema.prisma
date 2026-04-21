@@ -52,6 +52,19 @@ enum ProposalStatus {
   ARCHIVED
 }
 
+model User {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String?
+  isAdmin     Boolean  @default(false)
+  kitchenId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  kitchen     Kitchen  @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+
+  @@index([kitchenId])
+}
+
 model Kitchen {
   id            String         @id @default(cuid())
   name          String
@@ -61,6 +74,7 @@ model Kitchen {
   notes         String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  users         User[]
   clients       Client[]
   recipes       Recipe[]
   cookDates     CookDate[]
