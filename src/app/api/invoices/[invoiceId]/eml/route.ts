@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
 import { prisma } from "@/lib/prisma";
 import { buildInvoiceHtml } from "@/lib/invoice-template";
 import { buildEml } from "@/lib/eml-builder";
+import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { format } from "date-fns";
+
+export const maxDuration = 60;
 
 export async function GET(
   _request: NextRequest,
@@ -41,20 +43,7 @@ export async function GET(
     remarks: invoice.remarks,
   });
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  });
-
-  let pdfBuffer: Buffer;
-  try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    const pdf = await page.pdf({ format: "Letter", printBackground: true });
-    pdfBuffer = Buffer.from(pdf);
-  } finally {
-    await browser.close();
-  }
+  const pdfBuffer = await generatePdfFromHtml(html);
 
   // Build .eml
   const eml = buildEml({

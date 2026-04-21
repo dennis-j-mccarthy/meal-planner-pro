@@ -4,9 +4,11 @@ import Link from "next/link";
 import { Inter } from "next/font/google";
 import { AppNav } from "@/components/app-nav";
 import { KitchenSwitcher } from "@/components/kitchen-switcher";
-import { logIn, logOut } from "@/app/actions";
+import { ThemePicker } from "@/components/theme-picker";
+import { logIn } from "@/app/actions";
 import { getKitchen, getAllKitchens } from "@/lib/data";
 import { isLoggedIn } from "@/lib/auth";
+import { getActiveTheme } from "@/lib/get-theme";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,12 +29,19 @@ export default async function RootLayout({
   const loggedIn = await isLoggedIn();
   const kitchen = await getKitchen();
   const allKitchens = await getAllKitchens();
+  const theme = await getActiveTheme();
+
+  const themeStyle = {
+    "--accent": theme.accent,
+    "--accent-strong": theme.accentStrong,
+    "--accent-light": theme.accentLight,
+  } as React.CSSProperties;
 
   const isJwb = kitchen.name.includes("Joyful Wellness");
   const displayName = isJwb ? "Chef Beth" : "Demo User";
 
   return (
-    <html lang="en">
+    <html lang="en" style={themeStyle}>
       <body className={`${inter.variable} antialiased`}>
         <div className="min-h-screen bg-white text-slate-900">
           <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
@@ -56,6 +65,7 @@ export default async function RootLayout({
               <div className="flex items-center justify-end gap-2">
                 {loggedIn ? (
                   <>
+                    <ThemePicker currentId={theme.id} />
                     {isJwb ? (
                       <Image
                         src="/beth-avatar.png"

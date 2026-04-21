@@ -63,6 +63,40 @@ function revalidateApp() {
   );
 }
 
+export async function setTheme(formData: FormData) {
+  const themeId = requiredText(formData, "themeId");
+  const cookieStore = await cookies();
+  cookieStore.set("theme", themeId, {
+    path: "/",
+    httpOnly: false,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  cookieStore.delete("theme_custom");
+  revalidateApp();
+}
+
+export async function setCustomTheme(formData: FormData) {
+  const hex = requiredText(formData, "hex");
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
+    throw new Error("Invalid hex color");
+  }
+  const cookieStore = await cookies();
+  cookieStore.set("theme_custom", hex, {
+    path: "/",
+    httpOnly: false,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  cookieStore.set("theme", "custom", {
+    path: "/",
+    httpOnly: false,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+  revalidateApp();
+}
+
 export async function logIn() {
   const cookieStore = await cookies();
   cookieStore.set("session", "active", {
@@ -245,117 +279,42 @@ export async function queueUrlRecipe(formData: FormData) {
   let servings: number | null = null;
   let cuisine: string | null = null;
 
-  // Use Puppeteer to render the page (most recipe sites are JS-rendered)
-  try {
-    const puppeteer = await import("puppeteer");
-    const browser = await puppeteer.default.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+  // Scrape the URL for structured recipe data (JSON-LD)
+  const { scrapeRecipeFromUrl, parseDuration, extractImageUrl } = await import("@/lib/recipe-scraper");
+  const r = await scrapeRecipeFromUrl(sourceUrl);
 
-    try {
-      const page = await browser.newPage();
-      await page.setUserAgent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-      await page.goto(sourceUrl, { waitUntil: "networkidle2", timeout: 15000 });
+  if (r) {
+    if (!title && r.name) title = r.name;
+    if (r.description) description = r.description;
 
-      // Extract JSON-LD recipe data from the rendered page
-      const extracted = await page.evaluate(() => {
-        const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-        for (const script of scripts) {
-          try {
-            const parsed = JSON.parse(script.textContent || "");
-            const find = (obj: Record<string, unknown>): Record<string, unknown> | null => {
-              if (obj["@type"] === "Recipe") return obj;
-              if (Array.isArray(obj)) {
-                for (const item of obj) {
-                  const found = find(item);
-                  if (found) return found;
-                }
-              }
-              if (obj["@graph"] && Array.isArray(obj["@graph"])) {
-                for (const item of obj["@graph"]) {
-                  const found = find(item);
-                  if (found) return found;
-                }
-              }
-              return null;
-            };
-            const recipe = find(parsed);
-            if (recipe) return recipe;
-          } catch { /* skip */ }
-        }
+    imageUrl = extractImageUrl(r.image);
 
-        // Fallback: gather what we can from meta tags
-        const getMetaContent = (name: string) =>
-          document.querySelector(`meta[property="${name}"], meta[name="${name}"]`)?.getAttribute("content") || null;
-
-        return {
-          "@type": "Fallback" as const,
-          name: document.title?.replace(/\s*[-|–—].*$/, "") || null,
-          description: getMetaContent("og:description") || getMetaContent("description"),
-          image: getMetaContent("og:image"),
-        };
-      });
-
-      if (extracted) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const r = extracted as any;
-
-        if (!title && r.name) title = r.name;
-        if (r.description) description = r.description;
-
-        // Image
-        if (r.image) {
-          const img = r.image;
-          if (typeof img === "string") imageUrl = img;
-          else if (Array.isArray(img)) imageUrl = typeof img[0] === "string" ? img[0] : img[0]?.url;
-          else if (img?.url) imageUrl = img.url;
-        }
-
-        // Ingredients
-        if (Array.isArray(r.recipeIngredient)) {
-          ingredientsText = r.recipeIngredient.join("\n");
-        }
-
-        // Instructions
-        if (Array.isArray(r.recipeInstructions)) {
-          instructionsText = r.recipeInstructions
-            .map((step: string | { text?: string }, i: number) => {
-              const text = typeof step === "string" ? step : step?.text || "";
-              return `${i + 1}. ${text.trim()}`;
-            })
-            .filter((s: string) => s.length > 3)
-            .join("\n");
-        }
-
-        // Timing
-        function parseDuration(dur: string | undefined): number | null {
-          if (!dur || typeof dur !== "string") return null;
-          const h = dur.match(/(\d+)H/i);
-          const m = dur.match(/(\d+)M/i);
-          const total = (h ? parseInt(h[1]) * 60 : 0) + (m ? parseInt(m[1]) : 0);
-          return total > 0 ? total : null;
-        }
-        prepMinutes = parseDuration(r.prepTime);
-        cookMinutes = parseDuration(r.cookTime);
-
-        // Servings
-        if (r.recipeYield) {
-          const yieldVal = Array.isArray(r.recipeYield) ? r.recipeYield[0] : r.recipeYield;
-          const sv = parseInt(String(yieldVal), 10);
-          if (Number.isFinite(sv) && sv > 0) servings = sv;
-        }
-
-        // Cuisine
-        if (r.recipeCuisine) {
-          cuisine = Array.isArray(r.recipeCuisine) ? r.recipeCuisine[0] : r.recipeCuisine;
-        }
-      }
-    } finally {
-      await browser.close();
+    if (Array.isArray(r.recipeIngredient)) {
+      ingredientsText = r.recipeIngredient.join("\n");
     }
-  } catch {
-    // Puppeteer failed — continue with what we have
+
+    if (Array.isArray(r.recipeInstructions)) {
+      instructionsText = r.recipeInstructions
+        .map((step: string | { text?: string }, i: number) => {
+          const text = typeof step === "string" ? step : step?.text || "";
+          return `${i + 1}. ${text.trim()}`;
+        })
+        .filter((s: string) => s.length > 3)
+        .join("\n");
+    }
+
+    prepMinutes = parseDuration(r.prepTime);
+    cookMinutes = parseDuration(r.cookTime);
+
+    if (r.recipeYield) {
+      const yieldVal = Array.isArray(r.recipeYield) ? r.recipeYield[0] : r.recipeYield;
+      const sv = parseInt(String(yieldVal), 10);
+      if (Number.isFinite(sv) && sv > 0) servings = sv;
+    }
+
+    if (r.recipeCuisine) {
+      cuisine = Array.isArray(r.recipeCuisine) ? r.recipeCuisine[0] : r.recipeCuisine;
+    }
   }
 
   // Last resort title from URL

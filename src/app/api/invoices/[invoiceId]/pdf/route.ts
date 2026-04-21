@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import puppeteer from "puppeteer";
 import { prisma } from "@/lib/prisma";
 import { buildInvoiceHtml } from "@/lib/invoice-template";
+import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { format } from "date-fns";
+
+export const maxDuration = 60;
 
 export async function GET(
   _request: NextRequest,
@@ -38,28 +40,13 @@ export async function GET(
     remarks: invoice.remarks,
   });
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  const pdfBuffer = await generatePdfFromHtml(html);
+  const filename = `${invoice.client.lastName}_Invoice_${invoice.invoiceNumber}.pdf`;
+
+  return new NextResponse(new Uint8Array(pdfBuffer), {
+    headers: {
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="${filename}"`,
+    },
   });
-
-  try {
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: "networkidle0" });
-    const pdfBuffer = await page.pdf({
-      format: "Letter",
-      printBackground: true,
-    });
-
-    const filename = `${invoice.client.lastName}_Invoice_${invoice.invoiceNumber}.pdf`;
-
-    return new NextResponse(Buffer.from(pdfBuffer), {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="${filename}"`,
-      },
-    });
-  } finally {
-    await browser.close();
-  }
 }

@@ -37,7 +37,6 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const showUsed = resolvedSearchParams?.used === "1";
   const kitchen = await getKitchen();
 
-  // Get recipe IDs that have been used in proposals or menu cards
   let usedRecipeIds: Set<string> | null = null;
   if (showUsed) {
     const [proposalRecipes, menuCardRecipes] = await Promise.all([
@@ -58,7 +57,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
     ]);
   }
 
-  const [recipes] = await Promise.all([
+  const [recipes, totalCount, starredCount] = await Promise.all([
     prisma.recipe.findMany({
       where: {
         kitchenId: kitchen.id,
@@ -86,9 +85,10 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
       },
       orderBy: { updatedAt: "desc" },
     }),
+    prisma.recipe.count({ where: { kitchenId: kitchen.id } }),
+    prisma.recipe.count({ where: { kitchenId: kitchen.id, starred: true } }),
   ]);
 
-  // Tag cloud
   const allRecipes = await prisma.recipe.findMany({
     where: { kitchenId: kitchen.id },
     select: { tags: true, dietaryFlags: true },
@@ -101,58 +101,90 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   }
   const topTags = [...tagCounts.entries()]
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .slice(0, 18);
+    .slice(0, 20);
+
+  const hasFilters = query || activeTag || showStarred || showUsed;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Recipes
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {recipes.length} recipe{recipes.length !== 1 ? "s" : ""}
-            {activeTag && ` · ${activeTag}`}
-            {query && ` · "${query}"`}
-          </p>
-        </div>
-        <AddRecipeModal />
-      </div>
+    <div className="space-y-8">
+      {/* Hero header */}
+      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-50 via-amber-50 to-rose-50 px-8 py-10 border border-orange-100">
+        {/* Decorative blobs */}
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gradient-to-br from-orange-200/40 to-pink-200/40 blur-3xl" />
+        <div className="absolute -left-16 -bottom-20 h-56 w-56 rounded-full bg-gradient-to-br from-amber-200/40 to-yellow-100/40 blur-3xl" />
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Search */}
-        <form className="flex gap-2 flex-1 min-w-64">
-          <input
-            className="field flex-1"
-            defaultValue={query}
-            name="q"
-            placeholder="Search recipes..."
-            type="search"
-          />
-          <button className="button-primary text-sm" type="submit">
+        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-600/80 mb-2">
+              Your library
+            </p>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
+              Recipes
+            </h1>
+            <p className="mt-3 text-base text-slate-600 max-w-xl">
+              {totalCount.toLocaleString()} recipes ready to inspire your next
+              menu. Search, filter, or discover something new.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Stat chips */}
+            <div className="flex gap-3">
+              <div className="rounded-2xl bg-white/70 backdrop-blur border border-white/80 px-4 py-3 shadow-sm">
+                <p className="text-2xl font-bold text-slate-900">{totalCount.toLocaleString()}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total</p>
+              </div>
+              <div className="rounded-2xl bg-white/70 backdrop-blur border border-white/80 px-4 py-3 shadow-sm">
+                <p className="text-2xl font-bold text-amber-600">{starredCount}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Starred</p>
+              </div>
+            </div>
+
+            <AddRecipeModal />
+          </div>
+        </div>
+      </section>
+
+      {/* Search + filter bar */}
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <form className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+            <input
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 py-3 text-base outline-none focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/20 focus:bg-white transition-all"
+              defaultValue={query}
+              name="q"
+              placeholder="Search by title, cuisine, ingredient, or tag..."
+              type="search"
+            />
+          </div>
+          <button className="button-primary text-sm px-5" type="submit">
             Search
           </button>
-          {(query || activeTag || showStarred || showUsed) && (
+          {hasFilters && (
             <Link className="button-secondary text-sm" href="/recipes">
-              Clear
+              Clear all
             </Link>
           )}
         </form>
 
-        {/* Quick filters */}
-        <div className="flex gap-1.5">
+        {/* Quick filter chips */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1">
+            Quick filters:
+          </span>
           <Link
             href={showStarred ? "/recipes" : "/recipes?starred=1"}
-            className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
               showStarred
-                ? "bg-amber-50 text-amber-600 ring-1 ring-amber-200"
-                : "bg-slate-100 text-slate-500 hover:bg-amber-50 hover:text-amber-500"
+                ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md"
+                : "bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-600"
             }`}
           >
             <svg
-              className="h-4 w-4"
+              className="h-3.5 w-3.5"
               viewBox="0 0 24 24"
               fill={showStarred ? "currentColor" : "none"}
               stroke="currentColor"
@@ -164,58 +196,91 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
                 d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
               />
             </svg>
-            Starred
+            Starred ({starredCount})
           </Link>
           <Link
             href={showUsed ? "/recipes" : "/recipes?used=1"}
-            className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
               showUsed
-                ? "bg-[var(--accent-light)] text-[var(--accent)] ring-1 ring-[var(--accent)]"
-                : "bg-slate-100 text-slate-500 hover:bg-[var(--accent-light)] hover:text-[var(--accent)]"
+                ? "bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] text-white shadow-md"
+                : "bg-slate-100 text-slate-600 hover:bg-[var(--accent-light)] hover:text-[var(--accent)]"
             }`}
           >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+            </svg>
             Previously used
           </Link>
         </div>
+
+        {/* Tag cloud */}
+        {topTags.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-1.5 pt-4 border-t border-slate-100">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 mr-1 self-center">
+              Tags:
+            </span>
+            <Link
+              className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                !activeTag
+                  ? "bg-slate-900 text-white"
+                  : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+              }`}
+              href={buildFilterHref(query, null)}
+            >
+              All
+            </Link>
+            {topTags.map(([tag, count]) => (
+              <Link
+                key={tag}
+                className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                  activeTag.toLowerCase() === tag.toLowerCase()
+                    ? "bg-[var(--accent)] text-white shadow-sm"
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
+                }`}
+                href={buildFilterHref(query, tag)}
+              >
+                {tag} <span className="opacity-60">({count})</span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Result count */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-slate-600">
+          <span className="font-semibold text-slate-900">
+            {recipes.length.toLocaleString()}
+          </span>{" "}
+          {recipes.length === 1 ? "recipe" : "recipes"}
+          {activeTag && <> matching <span className="font-semibold">{activeTag}</span></>}
+          {query && <> for &ldquo;<span className="font-semibold">{query}</span>&rdquo;</>}
+        </p>
       </div>
 
-      {/* Tag cloud */}
-      {topTags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          <Link
-            className={`rounded-md px-2.5 py-1 text-xs font-medium ${
-              !activeTag
-                ? "bg-slate-900 text-white"
-                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-            }`}
-            href={buildFilterHref(query, null)}
-          >
-            All
-          </Link>
-          {topTags.map(([tag, count]) => (
-            <Link
-              key={tag}
-              className={`rounded-md px-2.5 py-1 text-xs font-medium ${
-                activeTag.toLowerCase() === tag.toLowerCase()
-                  ? "bg-[var(--accent)] text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-              href={buildFilterHref(query, tag)}
-            >
-              {tag} ({count})
-            </Link>
-          ))}
-        </div>
-      )}
-
       {/* Recipe grid */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {recipes.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500 md:col-span-2 xl:col-span-3">
-            No recipes match the current filters.
+      {recipes.length === 0 ? (
+        <div className="rounded-2xl border-2 border-dashed border-slate-200 px-4 py-16 text-center">
+          <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mb-4">
+            <svg className="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
           </div>
-        ) : (
-          recipes.map((recipe) => (
+          <p className="text-base font-semibold text-slate-700 mb-1">
+            No recipes found
+          </p>
+          <p className="text-sm text-slate-500 mb-4">
+            Try a different search, clear filters, or add a new recipe.
+          </p>
+          {hasFilters && (
+            <Link className="button-secondary text-sm" href="/recipes">
+              Clear filters
+            </Link>
+          )}
+        </div>
+      ) : (
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {recipes.map((recipe) => (
             <RecipeCard
               key={recipe.id}
               recipe={{
@@ -237,9 +302,9 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
                 imageUrl: recipe.imageUrl,
               }}
             />
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

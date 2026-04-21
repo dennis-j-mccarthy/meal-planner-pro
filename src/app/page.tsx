@@ -55,10 +55,10 @@ export default async function Home() {
     <div className="space-y-8 fade-up">
       {/* Stats */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard value={clientCount} label="Clients" hint="Active client households" color="amber" icon="users" />
+        <StatCard value={clientCount} label="Clients" hint="Active client households" color="orange" icon="users" />
         <StatCard value={upcomingCookDates.length} label="Upcoming cook dates" hint="Future service visits" color="blue" icon="calendar" />
         <StatCard value={openProposalCount} label="Open meal plans" hint="Drafts, sent, and revisions" color="purple" icon="menu" />
-        <StatCard value={`$${totalRevenue.toFixed(0)}`} label="Total invoiced" hint={`${unpaidCount} unpaid`} color="teal" icon="dollar" />
+        <StatCard value={`$${totalRevenue.toFixed(0)}`} label="Total invoiced" hint={`${unpaidCount} unpaid`} color="green" icon="dollar" />
       </section>
 
       <DashboardView
