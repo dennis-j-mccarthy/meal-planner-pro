@@ -108,14 +108,14 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   return (
     <div className="space-y-8">
       {/* Hero header */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-50 via-amber-50 to-rose-50 px-8 py-10 border border-orange-100">
+      <section className="relative overflow-hidden rounded-3xl accent-hero px-8 py-10 border">
         {/* Decorative blobs */}
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-gradient-to-br from-orange-200/40 to-pink-200/40 blur-3xl" />
-        <div className="absolute -left-16 -bottom-20 h-56 w-56 rounded-full bg-gradient-to-br from-amber-200/40 to-yellow-100/40 blur-3xl" />
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--accent-light)] blur-3xl opacity-60" />
+        <div className="absolute -left-16 -bottom-20 h-56 w-56 rounded-full bg-[var(--accent-light)] blur-3xl opacity-60" />
 
         <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-orange-600/80 mb-2">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-strong)] mb-2 opacity-80">
               Your library
             </p>
             <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
@@ -135,7 +135,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total</p>
               </div>
               <div className="rounded-2xl bg-white/70 backdrop-blur border border-white/80 px-4 py-3 shadow-sm">
-                <p className="text-2xl font-bold text-amber-600">{starredCount}</p>
+                <p className="text-2xl font-bold text-[var(--accent-strong)]">{starredCount}</p>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Starred</p>
               </div>
             </div>

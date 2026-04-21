@@ -76,27 +76,6 @@ export async function setTheme(formData: FormData) {
   revalidateApp();
 }
 
-export async function setCustomTheme(formData: FormData) {
-  const hex = requiredText(formData, "hex");
-  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) {
-    throw new Error("Invalid hex color");
-  }
-  const cookieStore = await cookies();
-  cookieStore.set("theme_custom", hex, {
-    path: "/",
-    httpOnly: false,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 365,
-  });
-  cookieStore.set("theme", "custom", {
-    path: "/",
-    httpOnly: false,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24 * 365,
-  });
-  revalidateApp();
-}
-
 export async function logIn() {
   const cookieStore = await cookies();
   cookieStore.set("session", "active", {

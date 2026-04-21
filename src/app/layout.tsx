@@ -35,6 +35,7 @@ export default async function RootLayout({
     "--accent": theme.accent,
     "--accent-strong": theme.accentStrong,
     "--accent-light": theme.accentLight,
+    "--border-soft": theme.accentLight,
   } as React.CSSProperties;
 
   const isJwb = kitchen.name.includes("Joyful Wellness");

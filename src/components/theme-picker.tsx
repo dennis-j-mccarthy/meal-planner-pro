@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { setTheme, setCustomTheme } from "@/app/actions";
+import { setTheme } from "@/app/actions";
 import { THEMES } from "@/lib/themes";
 
 export function ThemePicker({ currentId }: { currentId: string }) {
   const [open, setOpen] = useState(false);
-  const [customHex, setCustomHex] = useState("#e76f51");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -31,67 +30,40 @@ export function ThemePicker({ currentId }: { currentId: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-72 rounded-lg border border-slate-200 bg-white shadow-xl z-[100] p-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+        <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-xl z-[100] p-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
             Color theme
           </p>
 
-          <div className="grid grid-cols-5 gap-2 mb-3">
+          <div className="grid grid-cols-5 gap-3">
             {THEMES.map((t) => (
-              <form key={t.id} action={setTheme}>
+              <form
+                key={t.id}
+                action={setTheme}
+                onSubmit={() => setOpen(false)}
+              >
                 <input type="hidden" name="themeId" value={t.id} />
                 <button
                   type="submit"
-                  className={`group flex flex-col items-center gap-1 rounded-lg p-1.5 hover:bg-slate-50 transition-colors ${
-                    currentId === t.id ? "bg-slate-100" : ""
-                  }`}
+                  className="group flex flex-col items-center gap-1.5 w-full"
                   title={t.name}
                 >
                   <div
-                    className={`h-8 w-8 rounded-full ring-2 transition-all ${
+                    className={`h-12 w-12 rounded-full ring-offset-2 transition-all ${
                       currentId === t.id
-                        ? "ring-slate-900 ring-offset-2"
-                        : "ring-transparent group-hover:ring-slate-300"
+                        ? "ring-2 ring-slate-900 scale-110"
+                        : "ring-2 ring-transparent group-hover:ring-slate-300 group-hover:scale-105"
                     }`}
-                    style={{ backgroundColor: t.accent }}
+                    style={{
+                      background: `linear-gradient(135deg, ${t.accent} 0%, ${t.accentStrong} 100%)`,
+                    }}
                   />
-                  <span className="text-[9px] text-slate-500 truncate w-full text-center">
-                    {t.name.split(" ")[0]}
+                  <span className="text-[10px] text-slate-600 truncate w-full text-center leading-tight">
+                    {t.name}
                   </span>
                 </button>
               </form>
             ))}
-          </div>
-
-          <div className="border-t border-slate-100 pt-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Custom color
-            </p>
-            <form
-              action={setCustomTheme}
-              className="flex items-center gap-2"
-            >
-              <input
-                type="color"
-                value={customHex}
-                onChange={(e) => setCustomHex(e.target.value)}
-                className="h-9 w-12 rounded cursor-pointer border border-slate-200"
-              />
-              <input
-                type="text"
-                name="hex"
-                value={customHex}
-                onChange={(e) => setCustomHex(e.target.value)}
-                pattern="^#[0-9a-fA-F]{6}$"
-                className="flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-sm font-mono"
-              />
-              <button
-                type="submit"
-                className="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:bg-slate-700"
-              >
-                Apply
-              </button>
-            </form>
           </div>
         </div>
       )}
