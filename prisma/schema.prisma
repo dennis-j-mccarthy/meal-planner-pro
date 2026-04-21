@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RecipeSourceType {
+  MANUAL
+  IMPORTED
+  EXTERNAL_API
+  AI_GENERATED
+  URL_IMPORT
+}
+
+enum RecipeDetailStatus {
+  STARTER
+  DRAFT
+  READY
+}
+
+enum IntakeType {
+  BULK_IMPORT
+  API_SYNC
+  AI_GENERATION
+  URL_IMPORT
+}
+
+enum IntakeStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum CookDateStatus {
+  DRAFT
+  PROPOSED
+  APPROVED
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REVISIONS_REQUESTED
+  ARCHIVED
+}
+
+model Kitchen {
+  id            String         @id @default(cuid())
+  name          String
+  city          String?
+  state         String?
+  serviceArea   String?
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  clients       Client[]
+  recipes       Recipe[]
+  cookDates     CookDate[]
+  proposals     Proposal[]
+  recipeIntakes RecipeIntake[]
+  invoices      Invoice[]
+  menuCards     MenuCard[]
+}
+
+model Client {
+  id             String     @id @default(cuid())
+  kitchenId      String
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String?
+  householdLabel String?
+  dietaryNotes   String?
+  address        String?
+  active         Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  kitchen        Kitchen    @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  cookDates      CookDate[]
+  invoices       Invoice[]
+  menuCards      MenuCard[]
+
+  @@index([kitchenId, lastName, firstName])
+}
+
+model Recipe {
+  id                String             @id @default(cuid())
+  kitchenId         String
+  title             String
+  description       String?
+  sourceDescription String?
+  cuisine           String?
+  sourceType        RecipeSourceType   @default(MANUAL)
+  detailStatus      RecipeDetailStatus @default(DRAFT)
+  sourceName        String?
+  sourceUrl         String?
+  sourceExternalId  String?
+  tags              String?
+  dietaryFlags      String?
+  ingredientsText   String?
+  instructionsText  String?
+  prepMinutes       Int?
+  cookMinutes       Int?
+  servings          Int?
+  notes             String?
+  starred           Boolean            @default(false)
+  imageUrl          String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  kitchen           Kitchen            @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  proposalRecipes   ProposalRecipe[]
+  menuCardRecipes   MenuCardRecipe[]
+
+  @@index([kitchenId, title])
+}
+
+model CookDate {
+  id                  String         @id @default(cuid())
+  kitchenId           String
+  clientId            String
+  scheduledFor        DateTime
+  startTimeLabel      String?
+  guestCount          Int?
+  status              CookDateStatus @default(DRAFT)
+  serviceNotes        String?
+  finalizedProposalId String?        @unique
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  kitchen             Kitchen        @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  client              Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  proposals           Proposal[]
+  finalizedProposal   Proposal?      @relation("FinalizedProposal", fields: [finalizedProposalId], references: [id], onDelete: SetNull)
+  menuCards           MenuCard[]
+
+  @@index([kitchenId, scheduledFor])
+  @@index([clientId, scheduledFor])
+}
+
+model Proposal {
+  id                   String           @id @default(cuid())
+  kitchenId            String
+  cookDateId           String
+  title                String
+  introMessage         String?
+  status               ProposalStatus   @default(DRAFT)
+  revisionNotes        String?
+  sentAt               DateTime?
+  approvedAt           DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  kitchen              Kitchen          @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  cookDate             CookDate         @relation(fields: [cookDateId], references: [id], onDelete: Cascade)
+  finalizedForCookDate CookDate?        @relation("FinalizedProposal")
+  recipes              ProposalRecipe[]
+
+  @@index([kitchenId, status])
+  @@index([cookDateId, createdAt])
+}
+
+model ProposalRecipe {
+  id               String   @id @default(cuid())
+  proposalId       String
+  recipeId         String
+  position         Int
+  courseLabel      String?
+  servingsOverride Int?
+  notes            String?
+  proposal         Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  recipe           Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([proposalId, recipeId])
+  @@index([proposalId, position])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  VOID
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  kitchenId       String
+  clientId        String
+  invoiceNumber   String        @unique
+  invoiceDate     DateTime
+  status          InvoiceStatus @default(DRAFT)
+  remarks         String?
+  sentAt          DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  kitchen         Kitchen       @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  client          Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  lineItems       InvoiceLineItem[]
+
+  @@index([kitchenId, invoiceDate])
+  @@index([clientId])
+}
+
+model InvoiceLineItem {
+  id          String  @id @default(cuid())
+  invoiceId   String
+  description String
+  amount      Float
+  position    Int
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, position])
+}
+
+model MenuCard {
+  id          String           @id @default(cuid())
+  kitchenId   String
+  clientId    String
+  cookDateId  String?
+  title       String
+  menuDate    DateTime
+  isCoaching  Boolean          @default(false)
+  accepted    Boolean          @default(false)
+  notes       String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  kitchen     Kitchen          @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  client      Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  cookDate    CookDate?        @relation(fields: [cookDateId], references: [id], onDelete: SetNull)
+  recipes     MenuCardRecipe[]
+
+  @@index([kitchenId, menuDate])
+  @@index([clientId])
+  @@index([cookDateId])
+}
+
+model MenuCardRecipe {
+  id          String   @id @default(cuid())
+  menuCardId  String
+  recipeId    String
+  position    Int
+  category    String?
+  menuCard    MenuCard @relation(fields: [menuCardId], references: [id], onDelete: Cascade)
+  recipe      Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([menuCardId, recipeId])
+  @@index([menuCardId, position])
+}
+
+model RecipeIntake {
+  id                 String       @id @default(cuid())
+  kitchenId          String
+  type               IntakeType
+  status             IntakeStatus @default(QUEUED)
+  label              String
+  sourceUrl          String?
+  prompt             String?
+  externalSourceName String?
+  notes              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  kitchen            Kitchen      @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+
+  @@index([kitchenId, type, status])
+}

@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Meal Planner Pro
 
-## Getting Started
+Meal Planner Pro is a Next.js MVP for professional chefs running meal-planning services. The app is structured around the service flow described for this product:
 
-First, run the development server:
+- build a recipe database
+- capture recipe intake from imports, APIs, AI prompts, and pasted URLs
+- manage client records
+- schedule cook dates
+- create proposals from recipe selections
+- approve the final menu for each cook date
+
+## Stack
+
+- Next.js 16 App Router
+- React 19
+- Tailwind CSS 4
+- Prisma 7
+- SQLite
+
+## Local setup
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create the SQLite database and load demo data:
+
+```bash
+npm run db:push
+npm run db:seed
+```
+
+Start the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Data model
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `Kitchen`: root workspace / tenant
+- `Recipe`: recipe record with source metadata
+- `RecipeIntake`: queued AI, URL, API, or bulk-import request
+- `Client`: household or account receiving the chef service
+- `CookDate`: scheduled service date for a client
+- `Proposal`: client-facing menu proposal for a cook date
+- `ProposalRecipe`: join table connecting selected recipes to proposals
 
-## Learn More
+## Current scope
 
-To learn more about Next.js, take a look at the following resources:
+This repo includes the first working workflow and UI. External recipe APIs, webpage parsing, AI generation, authentication, and a client-facing approval portal are intentionally left as next integrations. The current implementation gives those features a real schema and intake path so they can be connected cleanly later.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Validation
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npm run build
+```
