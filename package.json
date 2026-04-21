@@ -13,6 +13,7 @@
     "db:seed": "node --import tsx prisma/seed.mjs",
     "db:studio": "prisma studio",
     "backup": "node --import tsx scripts/backup-postgres.mjs",
+    "refresh-demo": "node --import tsx scripts/refresh-demo.mjs",
     "import:recipe-starters": "node --import tsx scripts/import-recipe-starters.mjs",
     "convert:recipe-starters": "node --import tsx scripts/convert-recipe-starters.mjs",
     "enrich:recipe-tags": "node --import tsx scripts/enrich-recipe-tags.mjs"
