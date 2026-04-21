@@ -60,7 +60,8 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
   return (
     <div
-      className="group relative break-inside-avoid mb-5 flex flex-col rounded-2xl border border-slate-200 bg-white overflow-hidden hover:border-[var(--accent)]/40 hover:shadow-lg transition-all duration-300 cursor-grab active:cursor-grabbing"
+      style={{ backgroundColor: "#ffffff" }}
+      className="group relative break-inside-avoid mb-5 flex flex-col rounded-2xl border border-slate-200 overflow-hidden hover:border-[var(--accent)]/40 hover:shadow-lg transition-all duration-300 cursor-grab active:cursor-grabbing"
       draggable
       onDragStart={(e) => {
         e.dataTransfer.setData("text/recipe-id", recipe.id);
@@ -108,13 +109,13 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         </div>
 
         {/* Title */}
-        <h4 className="font-bold text-slate-900 leading-snug mb-2 group-hover:text-[var(--accent)]">
+        <h4 className="font-bold leading-snug mb-2 group-hover:text-[var(--accent)]" style={{ color: "#0f172a" }}>
           {recipe.title}
         </h4>
 
         {/* Description — variable length, shown in full for masonry */}
         {recipe.description && (
-          <p className="text-sm text-slate-600 leading-relaxed">
+          <p className="text-sm leading-relaxed" style={{ color: "#475569" }}>
             {recipe.description}
           </p>
         )}
