@@ -30,13 +30,16 @@ export function ThemePicker({ currentId }: { currentId: string }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 rounded-xl border border-slate-200 bg-white shadow-xl z-[100] p-4">
+        <div
+          className="absolute right-0 mt-2 w-80 rounded-xl border shadow-xl z-[100] p-4"
+          style={{ background: "var(--panel)", borderColor: "var(--border-soft)" }}
+        >
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-            Color theme
+            Light themes
           </p>
 
-          <div className="grid grid-cols-5 gap-3">
-            {THEMES.map((t) => (
+          <div className="grid grid-cols-5 gap-3 mb-4">
+            {THEMES.filter((t) => !t.dark).map((t) => (
               <form
                 key={t.id}
                 action={setTheme}
@@ -60,6 +63,46 @@ export function ThemePicker({ currentId }: { currentId: string }) {
                   />
                   <span className="text-[10px] text-slate-600 truncate w-full text-center leading-tight">
                     {t.name}
+                  </span>
+                </button>
+              </form>
+            ))}
+          </div>
+
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+            Dark themes
+          </p>
+
+          <div className="grid grid-cols-4 gap-3">
+            {THEMES.filter((t) => t.dark).map((t) => (
+              <form
+                key={t.id}
+                action={setTheme}
+                onSubmit={() => setOpen(false)}
+              >
+                <input type="hidden" name="themeId" value={t.id} />
+                <button
+                  type="submit"
+                  className="group flex flex-col items-center gap-1.5 w-full"
+                  title={t.name}
+                >
+                  <div
+                    className={`h-12 w-12 rounded-full ring-offset-2 transition-all relative overflow-hidden ${
+                      currentId === t.id
+                        ? "ring-2 ring-slate-900 scale-110"
+                        : "ring-2 ring-transparent group-hover:ring-slate-300 group-hover:scale-105"
+                    }`}
+                    style={{ background: t.background }}
+                  >
+                    <div
+                      className="absolute inset-[25%] rounded-full"
+                      style={{
+                        background: `linear-gradient(135deg, ${t.accent} 0%, ${t.accentStrong} 100%)`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-600 truncate w-full text-center leading-tight">
+                    {t.name.replace("Dark ", "")}
                   </span>
                 </button>
               </form>

@@ -5,14 +5,40 @@
   --accent: #e76f51;
   --accent-strong: #c2563c;
   --accent-light: #fde5dd;
+  --theme-bg: #fffdfa;
 
-  --background: #fffbf7;
   --foreground: #1e293b;
   --panel: #ffffff;
   --panel-strong: #fff8f0;
   --border-soft: #fde9d4;
   --muted: #64748b;
   --surface: #fdf6ec;
+
+  --header-bg: rgba(255, 255, 255, 0.95);
+  --text-strong: #0f172a;
+  --text-body: #1e293b;
+  --text-muted: #64748b;
+  --text-subtle: #94a3b8;
+  --surface-card: #ffffff;
+  --surface-raised: #fff8f0;
+}
+
+/* Dark theme overrides */
+html.dark {
+  --foreground: #f1f5f9;
+  --panel: #1a1a24;
+  --panel-strong: #24222e;
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --muted: #94a3b8;
+  --surface: #0f0e18;
+
+  --header-bg: rgba(15, 14, 24, 0.85);
+  --text-strong: #f8fafc;
+  --text-body: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-subtle: #64748b;
+  --surface-card: #1a1a24;
+  --surface-raised: #24222e;
 }
 
 @theme inline {
@@ -34,8 +60,9 @@ html {
     radial-gradient(circle at 20% 0%, var(--accent-light) 0%, transparent 45%),
     radial-gradient(circle at 85% 15%, var(--accent-light) 0%, transparent 40%),
     radial-gradient(circle at 50% 100%, var(--accent-light) 0%, transparent 55%),
-    #fffdfa;
+    var(--theme-bg);
   background-attachment: fixed;
+  color: var(--foreground);
 }
 
 body {
@@ -43,6 +70,26 @@ body {
   font-family: var(--font-inter), system-ui, sans-serif;
   background: transparent;
 }
+
+/* Dark mode text color overrides for common Tailwind slate classes */
+html.dark .text-slate-900 { color: var(--text-strong); }
+html.dark .text-slate-800 { color: var(--text-strong); }
+html.dark .text-slate-700 { color: var(--text-body); }
+html.dark .text-slate-600 { color: var(--text-body); }
+html.dark .text-slate-500 { color: var(--text-muted); }
+html.dark .text-slate-400 { color: var(--text-subtle); }
+
+html.dark .bg-white { background-color: var(--surface-card) !important; }
+html.dark .bg-slate-50 { background-color: var(--surface-raised) !important; }
+html.dark .bg-slate-100 { background-color: rgba(255, 255, 255, 0.06) !important; }
+html.dark .bg-slate-50\/50 { background-color: rgba(255, 255, 255, 0.03) !important; }
+
+html.dark .border-slate-200 { border-color: rgba(255, 255, 255, 0.08) !important; }
+html.dark .border-slate-300 { border-color: rgba(255, 255, 255, 0.12) !important; }
+html.dark .border-slate-100 { border-color: rgba(255, 255, 255, 0.05) !important; }
+
+html.dark .hover\:bg-slate-50:hover { background-color: rgba(255, 255, 255, 0.05) !important; }
+html.dark .hover\:bg-slate-100:hover { background-color: rgba(255, 255, 255, 0.08) !important; }
 
 a,
 button,
@@ -70,15 +117,16 @@ textarea {
   box-shadow:
     0 1px 3px rgba(30, 41, 59, 0.04),
     0 4px 16px color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--foreground);
 }
 
 .field {
   width: 100%;
   border-radius: 10px;
   border: 1px solid var(--border-soft);
-  background: #ffffff;
+  background: var(--surface-card);
   padding: 0.7rem 0.875rem;
-  color: #1e293b;
+  color: var(--foreground);
   font-size: 0.875rem;
   outline: none;
 }
@@ -119,8 +167,8 @@ textarea {
   justify-content: center;
   border-radius: 10px;
   border: 1px solid var(--border-soft);
-  background: #ffffff;
-  color: #475569;
+  background: var(--surface-card);
+  color: var(--text-body);
   font-weight: 600;
   font-size: 0.875rem;
   padding: 0.625rem 1.25rem;
@@ -130,7 +178,7 @@ textarea {
 .button-secondary:hover {
   background: var(--accent-light);
   border-color: var(--accent);
-  color: var(--accent-strong);
+  color: var(--accent);
 }
 
 /* Gradient hero helper — uses accent variables */

@@ -36,16 +36,20 @@ export default async function RootLayout({
     "--accent-strong": theme.accentStrong,
     "--accent-light": theme.accentLight,
     "--border-soft": theme.accentLight,
+    "--theme-bg": theme.background,
   } as React.CSSProperties;
 
   const isJwb = kitchen.name.includes("Joyful Wellness");
   const displayName = isJwb ? "Chef Beth" : "Demo User";
 
   return (
-    <html lang="en" style={themeStyle}>
+    <html lang="en" style={themeStyle} className={theme.dark ? "dark" : ""}>
       <body className={`${inter.variable} antialiased`}>
         <div className="min-h-screen bg-white text-slate-900">
-          <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
+          <header
+            className="sticky top-0 z-50 border-b backdrop-blur-sm"
+            style={{ background: "var(--header-bg)", borderColor: "var(--border-soft)" }}
+          >
             <div className="mx-auto flex h-48 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
               <div className="flex items-center gap-6 shrink-0">
                 <Link href="/" className="block shrink-0">

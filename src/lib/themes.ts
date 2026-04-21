@@ -5,6 +5,7 @@ export interface Theme {
   accentStrong: string;
   accentLight: string;
   background: string;
+  dark?: boolean;
 }
 
 export const THEMES: Theme[] = [
@@ -87,6 +88,43 @@ export const THEMES: Theme[] = [
     accentStrong: "#00796b",
     accentLight: "#e0f7f3",
     background: "#ffffff",
+  },
+  // ───── Dark themes ─────
+  {
+    id: "dark-plum",
+    name: "Dark Plum",
+    accent: "#c084fc",
+    accentStrong: "#a855f7",
+    accentLight: "#2a1f3a",
+    background: "#13101a",
+    dark: true,
+  },
+  {
+    id: "dark-ember",
+    name: "Dark Ember",
+    accent: "#fb923c",
+    accentStrong: "#f97316",
+    accentLight: "#3a2416",
+    background: "#15110e",
+    dark: true,
+  },
+  {
+    id: "dark-ocean",
+    name: "Dark Ocean",
+    accent: "#38bdf8",
+    accentStrong: "#0ea5e9",
+    accentLight: "#172436",
+    background: "#0d1220",
+    dark: true,
+  },
+  {
+    id: "dark-forest",
+    name: "Dark Forest",
+    accent: "#4ade80",
+    accentStrong: "#22c55e",
+    accentLight: "#162821",
+    background: "#0d1512",
+    dark: true,
   },
 ];
 
