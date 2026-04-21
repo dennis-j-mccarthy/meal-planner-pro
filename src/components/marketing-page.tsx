@@ -1,4 +1,4 @@
-import { logIn } from "@/app/actions";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
 
 export function MarketingPage() {
   return (
@@ -17,11 +17,16 @@ export function MarketingPage() {
           Meal Planner Pro handles the business side so you can focus on the food.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-          <form action={logIn}>
+          <SignUpButton mode="modal">
             <button className="button-primary text-base px-6 py-3">
+              Get started free
+            </button>
+          </SignUpButton>
+          <SignInButton mode="modal">
+            <button className="button-secondary text-base px-6 py-3">
               Sign in
             </button>
-          </form>
+          </SignInButton>
           <a
             href="#features"
             className="button-secondary text-base px-6 py-3"
@@ -134,11 +139,11 @@ export function MarketingPage() {
         <p className="text-slate-300 mb-6 max-w-xl mx-auto">
           Stop juggling spreadsheets, Word docs, and email drafts. Run your entire personal chef business from one place.
         </p>
-        <form action={logIn} className="inline">
+        <SignUpButton mode="modal">
           <button className="button-primary text-base px-8 py-3">
-            Sign in to get started
+            Get started free
           </button>
-        </form>
+        </SignUpButton>
       </section>
     </div>
   );

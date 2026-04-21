@@ -1,11 +1,6 @@
-import { cookies } from "next/headers";
+import { auth } from "@clerk/nextjs/server";
 
-/**
- * Temporary auth stub until Clerk is wired in.
- * A "session" is just a cookie that marks the user as logged in.
- * When Clerk lands, replace these with Clerk's helpers.
- */
 export async function isLoggedIn(): Promise<boolean> {
-  const cookieStore = await cookies();
-  return cookieStore.get("session")?.value === "active";
+  const { userId } = await auth();
+  return !!userId;
 }

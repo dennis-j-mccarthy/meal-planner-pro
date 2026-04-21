@@ -12,12 +12,14 @@
     "db:push": "RUST_LOG=info prisma db push",
     "db:seed": "node --import tsx prisma/seed.mjs",
     "db:studio": "prisma studio",
+    "backup": "node --import tsx scripts/backup-postgres.mjs",
     "import:recipe-starters": "node --import tsx scripts/import-recipe-starters.mjs",
     "convert:recipe-starters": "node --import tsx scripts/convert-recipe-starters.mjs",
     "enrich:recipe-tags": "node --import tsx scripts/enrich-recipe-tags.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.85.0",
+    "@clerk/nextjs": "^7.2.3",
     "@fontsource/outfit": "^5.2.8",
     "@prisma/adapter-better-sqlite3": "^7.5.0",
     "@prisma/adapter-pg": "^7.7.0",
