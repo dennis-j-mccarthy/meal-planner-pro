@@ -13,8 +13,9 @@ import { AppNav } from "@/components/app-nav";
 import { KitchenSwitcher } from "@/components/kitchen-switcher";
 import { ThemePicker } from "@/components/theme-picker";
 import { getKitchen, getAllKitchens } from "@/lib/data";
-import { isLoggedIn } from "@/lib/auth";
+import { isLoggedIn, isDemoMode } from "@/lib/auth";
 import { getActiveTheme } from "@/lib/get-theme";
+import { exitDemo } from "@/app/actions";
 import "./globals.css";
 
 const inter = Inter({
@@ -33,6 +34,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const loggedIn = await isLoggedIn();
+  const demoMode = await isDemoMode();
   const kitchen = await getKitchen();
   const allKitchens = await getAllKitchens();
   const theme = await getActiveTheme();
@@ -50,6 +52,36 @@ export default async function RootLayout({
       <body className={`${inter.variable} antialiased`}>
         <ClerkProvider>
           <div className="min-h-screen text-slate-900">
+            {demoMode && (
+              <div className="sticky top-0 z-[60] bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 text-white text-sm font-semibold">
+                <div className="mx-auto max-w-7xl px-4 py-2.5 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center rounded-full bg-white/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">
+                      Demo
+                    </span>
+                    <span className="hidden sm:inline">
+                      You&apos;re exploring the Meal Planner Pro demo. Anything you change is shared with other demo visitors.
+                    </span>
+                    <span className="sm:hidden">Demo mode</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <SignUpButton mode="modal">
+                      <button className="rounded-md bg-white/20 hover:bg-white/30 px-3 py-1 text-xs font-bold transition-colors">
+                        Sign up free
+                      </button>
+                    </SignUpButton>
+                    <form action={exitDemo}>
+                      <button
+                        type="submit"
+                        className="text-xs font-semibold underline hover:no-underline"
+                      >
+                        Exit demo
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
             <header
               className="sticky top-0 z-50 border-b backdrop-blur-sm"
               style={{ background: "var(--header-bg)", borderColor: "var(--border-soft)" }}

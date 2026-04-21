@@ -82,7 +82,7 @@ async function resolveUserAndKitchen() {
 
 /**
  * Returns the active kitchen for the authenticated user.
- * Falls back to first kitchen only if not logged in (for pages that tolerate anonymous browsing).
+ * Demo-mode visitors are routed to the Demo Kitchen.
  */
 export async function getKitchen() {
   const user = await resolveUserAndKitchen();
@@ -100,7 +100,7 @@ export async function getKitchen() {
     return user.kitchen;
   }
 
-  // Not logged in — return demo kitchen for marketing/preview purposes
+  // Demo mode — always return the Demo Kitchen
   const demo = await prisma.kitchen.findFirst({
     where: { id: "kitchen_demo" },
   });

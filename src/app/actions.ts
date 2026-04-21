@@ -76,6 +76,23 @@ export async function setTheme(formData: FormData) {
   revalidateApp();
 }
 
+export async function enterDemo() {
+  const cookieStore = await cookies();
+  cookieStore.set("demo_mode", "1", {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24,
+  });
+  redirect("/");
+}
+
+export async function exitDemo() {
+  const cookieStore = await cookies();
+  cookieStore.delete("demo_mode");
+  redirect("/");
+}
+
 export async function switchKitchen(formData: FormData) {
   const kitchenId = requiredText(formData, "kitchenId");
   const cookieStore = await cookies();

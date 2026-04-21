@@ -1,4 +1,5 @@
 import { SignInButton, SignUpButton } from "@clerk/nextjs";
+import { enterDemo } from "@/app/actions";
 
 export function MarketingPage() {
   return (
@@ -22,17 +23,19 @@ export function MarketingPage() {
               Get started free
             </button>
           </SignUpButton>
+          <form action={enterDemo}>
+            <button
+              type="submit"
+              className="button-secondary text-base px-6 py-3"
+            >
+              Try the demo →
+            </button>
+          </form>
           <SignInButton mode="modal">
             <button className="button-secondary text-base px-6 py-3">
               Sign in
             </button>
           </SignInButton>
-          <a
-            href="#features"
-            className="button-secondary text-base px-6 py-3"
-          >
-            See how it works
-          </a>
         </div>
       </section>
 
@@ -139,11 +142,21 @@ export function MarketingPage() {
         <p className="text-slate-300 mb-6 max-w-xl mx-auto">
           Stop juggling spreadsheets, Word docs, and email drafts. Run your entire personal chef business from one place.
         </p>
-        <SignUpButton mode="modal">
-          <button className="button-primary text-base px-8 py-3">
-            Get started free
-          </button>
-        </SignUpButton>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <SignUpButton mode="modal">
+            <button className="button-primary text-base px-8 py-3">
+              Get started free
+            </button>
+          </SignUpButton>
+          <form action={enterDemo}>
+            <button
+              type="submit"
+              className="rounded-lg border border-slate-600 bg-slate-800 px-8 py-3 text-base font-semibold text-white hover:bg-slate-700 transition-colors"
+            >
+              Try the demo
+            </button>
+          </form>
+        </div>
       </section>
     </div>
   );
