@@ -253,7 +253,7 @@ export function ProposalRecipeManager({
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-4 xl:h-[calc(100vh-320px)]">
       {/* ===== LEFT: Current menu ===== */}
       <div
-        className={`rounded-xl border-2 border-dashed p-4 transition-all min-h-64 xl:overflow-y-auto ${
+        className={`rounded-xl border-2 border-dashed p-6 transition-all min-h-64 xl:overflow-y-auto ${
           dropOver
             ? "border-[var(--accent)] bg-[var(--accent-light)]"
             : "border-slate-200 bg-slate-50/50"
@@ -262,7 +262,7 @@ export function ProposalRecipeManager({
         onDragOver={(e) => { e.preventDefault(); setDropOver(true); }}
         onDragLeave={() => setDropOver(false)}
       >
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Menu ({visibleCurrentRecipes.length})
           </p>
@@ -272,7 +272,7 @@ export function ProposalRecipeManager({
         </div>
 
         {visibleCurrentRecipes.length > 0 ? (
-          <div className="space-y-1">
+          <div className="space-y-3">
             {(() => {
               let lastCategory: string | null = null;
               return visibleCurrentRecipes.map((item, index) => {
@@ -281,62 +281,79 @@ export function ProposalRecipeManager({
                 return (
                   <div key={item.id}>
                     {showHeader && (
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-3 mb-1 first:mt-0">
+                      <div className="text-xs font-bold uppercase tracking-widest text-[var(--accent-strong)] mt-6 mb-2 first:mt-0">
                         {item.courseLabel}
                       </div>
                     )}
-                    <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-white">
+                    <div
+                      className="flex items-start gap-3 rounded-xl border border-slate-200 px-4 py-3.5 shadow-sm hover:shadow-md hover:border-slate-300 transition-all"
+                      style={{ backgroundColor: "#ffffff" }}
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-white mt-0.5">
                         {index + 1}
                       </span>
                       <div className="flex-1 min-w-0">
                         <button
                           type="button"
                           onClick={() => setOpenLeft(prev => { const next = new Set(prev); next.has(item.id) ? next.delete(item.id) : next.add(item.id); return next; })}
-                          className="text-left text-sm font-medium text-slate-700 truncate hover:text-[var(--accent)] block w-full"
+                          className="text-left text-sm font-semibold leading-snug hover:text-[var(--accent)] block w-full"
+                          style={{ color: "#0f172a" }}
                         >
                           {item.recipe.title}
                         </button>
-                        <select
-                          className="mt-0.5 w-full rounded border-0 bg-transparent px-0 py-0 text-[10px] text-slate-400 focus:ring-0 cursor-pointer"
-                          defaultValue={item.courseLabel || ""}
-                          onChange={(e) => {
-                            const fd = new FormData();
-                            fd.set("proposalRecipeId", item.id);
-                            fd.set("courseLabel", e.target.value);
-                            startTransition(() => updateProposalRecipeCategory(fd));
-                          }}
-                        >
-                          <option value="">No category</option>
-                          {COURSE_CATEGORIES.map((cat) => (
-                            <option key={cat} value={cat}>{cat}</option>
-                          ))}
-                        </select>
+
+                        {/* Category chips — clickable to change */}
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {COURSE_CATEGORIES.map((cat) => {
+                            const active = item.courseLabel === cat;
+                            return (
+                              <button
+                                key={cat}
+                                type="button"
+                                onClick={() => {
+                                  const fd = new FormData();
+                                  fd.set("proposalRecipeId", item.id);
+                                  fd.set("courseLabel", active ? "" : cat);
+                                  startTransition(() => updateProposalRecipeCategory(fd));
+                                }}
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                                  active
+                                    ? "bg-[var(--accent)] text-white shadow-sm"
+                                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                }`}
+                              >
+                                {cat}
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
-                  <button
-                    type="button"
-                    onClick={() => setOpenLeft(prev => { const next = new Set(prev); next.has(item.id) ? next.delete(item.id) : next.add(item.id); return next; })}
-                    className="shrink-0 p-1 text-slate-400 hover:text-slate-600"
-                  >
-                    <svg
-                      className={`h-3.5 w-3.5 transition-transform ${openLeft.has(item.id) ? "rotate-180" : ""}`}
-                      fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"
-                    >
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    disabled={isPending}
-                    onClick={() => handleRemove(item.id)}
-                    className="shrink-0 rounded-md p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50"
-                    title="Remove"
-                  >
-                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
+                      <div className="flex items-center gap-0.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setOpenLeft(prev => { const next = new Set(prev); next.has(item.id) ? next.delete(item.id) : next.add(item.id); return next; })}
+                          className="p-1.5 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                        >
+                          <svg
+                            className={`h-4 w-4 transition-transform ${openLeft.has(item.id) ? "rotate-180" : ""}`}
+                            fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isPending}
+                          onClick={() => handleRemove(item.id)}
+                          className="p-1.5 rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-500 disabled:opacity-50"
+                          title="Remove"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                 <RecipeAccordion
                   {...item.recipe}
                   isOpen={openLeft.has(item.id)}
