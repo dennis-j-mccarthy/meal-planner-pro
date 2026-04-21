@@ -54,6 +54,10 @@ Open [http://localhost:3000](http://localhost:3000).
 
 This repo includes the first working workflow and UI. External recipe APIs, webpage parsing, AI generation, authentication, and a client-facing approval portal are intentionally left as next integrations. The current implementation gives those features a real schema and intake path so they can be connected cleanly later.
 
+## Deployment
+
+Deployed on Vercel. Environment variables required: `DATABASE_URL`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `RESEND_API_KEY`, `EDAMAM_APP_ID`, `EDAMAM_APP_KEY`.
+
 ## Validation
 
 ```bash
