@@ -13,7 +13,7 @@ export default async function Home() {
 
   const kitchen = await getKitchen();
   const today = startOfToday();
-  const [clientCount, allCookDates, openProposalCount, invoices] =
+  const [clientCount, allCookDates, openProposalCount, invoices, clients] =
     await Promise.all([
       prisma.client.count({ where: { kitchenId: kitchen.id } }),
       prisma.cookDate.findMany({
@@ -37,6 +37,11 @@ export default async function Home() {
           lineItems: { select: { amount: true } },
         },
         orderBy: { invoiceDate: "desc" },
+      }),
+      prisma.client.findMany({
+        where: { kitchenId: kitchen.id, active: true },
+        select: { id: true, firstName: true, lastName: true },
+        orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
       }),
     ]);
 
@@ -80,6 +85,7 @@ export default async function Home() {
           clientName: `${inv.client.firstName} ${inv.client.lastName}`,
           total: inv.lineItems.reduce((sum, li) => sum + li.amount, 0),
         }))}
+        clients={clients}
       />
     </div>
   );

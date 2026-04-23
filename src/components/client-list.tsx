@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { approveProposal, requestProposalRevision, sendBonAppetitEmail } from "@/app/actions";
 import { QuickCookDate } from "@/components/quick-cook-date";
+import { EditClientModal } from "@/components/edit-client-modal";
 
 interface ProposalSummary {
   id: string;
@@ -400,6 +401,18 @@ export function ClientList({ clients }: { clients: ClientData[] }) {
 
                   {/* Action buttons — text + icon */}
                   <div className="flex items-center gap-2 shrink-0">
+                    <EditClientModal
+                      client={{
+                        id: client.id,
+                        firstName: client.firstName,
+                        lastName: client.lastName,
+                        email: client.email,
+                        phone: client.phone,
+                        householdLabel: client.householdLabel,
+                        dietaryNotes: client.dietaryNotes,
+                        address: client.address,
+                      }}
+                    />
                     <QuickCookDate clientId={client.id} />
                     <Link
                       href={`/invoices?clientId=${client.id}`}

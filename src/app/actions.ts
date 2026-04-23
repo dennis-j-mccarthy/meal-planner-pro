@@ -158,6 +158,32 @@ export async function createClient(formData: FormData) {
   revalidateApp();
 }
 
+export async function updateClient(formData: FormData) {
+  const clientId = requiredText(formData, "clientId");
+  const emailValue = optionalText(formData, "email")?.toLowerCase();
+
+  await prisma.client.update({
+    where: { id: clientId },
+    data: {
+      firstName: requiredText(formData, "firstName"),
+      lastName: requiredText(formData, "lastName"),
+      email: emailValue ?? null,
+      phone: optionalText(formData, "phone"),
+      householdLabel: optionalText(formData, "householdLabel"),
+      dietaryNotes: optionalText(formData, "dietaryNotes"),
+      address: optionalText(formData, "address"),
+    },
+  });
+
+  revalidateApp();
+}
+
+export async function deleteClient(formData: FormData) {
+  const clientId = requiredText(formData, "clientId");
+  await prisma.client.delete({ where: { id: clientId } });
+  revalidateApp();
+}
+
 export async function createCookDate(formData: FormData) {
   const kitchen = await getKitchen();
   const clientId = requiredText(formData, "clientId");

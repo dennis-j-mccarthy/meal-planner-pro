@@ -41,6 +41,7 @@ export function CookDatesView({
           cookDates={cookDates}
           initialMonth={new Date().getMonth()}
           initialYear={new Date().getFullYear()}
+          clients={clients}
           onDateSelect={(d) => setDate(d)}
         />
       </section>

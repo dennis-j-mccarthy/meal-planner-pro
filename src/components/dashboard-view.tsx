@@ -54,12 +54,20 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+interface DashboardClient {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
 export function DashboardView({
   cookDates,
   invoices,
+  clients,
 }: {
   cookDates: CookDateItem[];
   invoices: InvoiceItem[];
+  clients: DashboardClient[];
 }) {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
@@ -102,6 +110,7 @@ export function DashboardView({
           cookDates={cookDates}
           initialMonth={now.getMonth()}
           initialYear={now.getFullYear()}
+          clients={clients}
           onMonthChange={handleMonthChange}
         />
       </section>

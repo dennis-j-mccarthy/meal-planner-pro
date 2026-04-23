@@ -14,10 +14,17 @@ type CalendarCookDate = {
   proposalTitle: string | null;
 };
 
+type CalendarClient = {
+  id: string;
+  firstName: string;
+  lastName: string;
+};
+
 type CookDateCalendarProps = {
   cookDates: CalendarCookDate[];
   initialMonth: number; // 0-11
   initialYear: number;
+  clients?: CalendarClient[];
   onDateSelect?: (dateStr: string) => void;
   onMonthChange?: (month: number, year: number) => void;
 };
@@ -53,11 +60,13 @@ function formatStatus(status: string) {
     .join(" ");
 }
 
-export function CookDateCalendar({ cookDates, initialMonth, initialYear, onDateSelect, onMonthChange }: CookDateCalendarProps) {
+export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients, onDateSelect, onMonthChange }: CookDateCalendarProps) {
   const router = useRouter();
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [quickClientId, setQuickClientId] = useState("");
+  const [quickSubmitting, setQuickSubmitting] = useState(false);
 
   const firstDay = new Date(year, month, 1);
   const startDow = firstDay.getDay();
@@ -186,6 +195,7 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, onDateS
                 key={cell.key}
                 onClick={() => {
                   setSelectedDate(isSelected ? null : dateKey);
+                  setQuickClientId("");
                   if (!isSelected && onDateSelect) {
                     // Format as YYYY-MM-DD for date input
                     const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(cell.day).padStart(2, "0")}`;
@@ -244,6 +254,55 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, onDateS
               return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
             })()}
           </h3>
+
+          {/* Instant add cook date — only when clients provided */}
+          {clients && clients.length > 0 && (
+            <div className="mt-3 flex items-center gap-2">
+              <select
+                className="field flex-1 text-sm"
+                value={quickClientId}
+                onChange={(e) => setQuickClientId(e.target.value)}
+                disabled={quickSubmitting}
+              >
+                <option value="">+ Add cook date — pick a client…</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.firstName} {c.lastName}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={!quickClientId || quickSubmitting}
+                onClick={async () => {
+                  const parts = selectedDate.split("-");
+                  const isoDate = `${parts[0]}-${String(Number(parts[1]) + 1).padStart(2, "0")}-${String(parts[2]).padStart(2, "0")}`;
+                  setQuickSubmitting(true);
+                  try {
+                    const res = await fetch("/api/cook-dates/quick-create", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ clientId: quickClientId, date: isoDate }),
+                    });
+                    const data = await res.json();
+                    if (data.proposalUrl) {
+                      window.location.href = data.proposalUrl;
+                    } else {
+                      setQuickSubmitting(false);
+                      alert(data.error || "Failed to create cook date");
+                    }
+                  } catch {
+                    setQuickSubmitting(false);
+                    alert("Failed to create cook date");
+                  }
+                }}
+                className="button-primary text-sm px-4 py-2 disabled:opacity-50"
+              >
+                {quickSubmitting ? "Creating…" : "Add"}
+              </button>
+            </div>
+          )}
+
           {selectedCookDates.length === 0 ? (
             <p className="mt-3 text-sm text-slate-500">No cook dates scheduled.</p>
           ) : (
