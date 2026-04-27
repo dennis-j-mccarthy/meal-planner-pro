@@ -43,12 +43,20 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
     grouped.get(cat)!.push(recipe);
   }
 
+  // Reorder categories so the menu reads in a natural meal flow:
+  // breakfast → salads/soups → entrees/sides → other → desserts → "Gift from Beth"
+  const sortedGrouped = new Map<string, MenuRecipe[]>(
+    [...grouped.entries()].sort(
+      ([a], [b]) => categoryRank(a) - categoryRank(b),
+    ),
+  );
+
   // Build recipe HTML blocks.
   // The category header is placed INSIDE the first recipe block of each category
   // so it never gets orphaned at the bottom of a column.
   // Subsequent recipes in the same category flow freely for better balancing.
   const recipeBlocks: string[] = [];
-  for (const [category, recipes] of grouped) {
+  for (const [category, recipes] of sortedGrouped) {
     for (let i = 0; i < recipes.length; i++) {
       const recipe = recipes[i];
       let blockHtml = `<div class="recipe-block">`;
@@ -266,6 +274,19 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
   </div>
 </body>
 </html>`;
+}
+
+function categoryRank(category: string): number {
+  const c = category.toLowerCase();
+  if (!c) return 50;
+  if (c.includes("breakfast") || c.includes("morning")) return 10;
+  if (c.includes("smoothie") || c.includes("juice") || c.includes("drink")) return 15;
+  if (c.includes("appetizer") || c.includes("snack")) return 20;
+  if (c.includes("salad") || c.includes("soup")) return 30;
+  if (c.includes("entree") || c.includes("entrée") || c.includes("side")) return 40;
+  if (c.includes("dessert")) return 70;
+  if (c.includes("gift from beth")) return 80;
+  return 50;
 }
 
 function escapeHtml(str: string): string {
