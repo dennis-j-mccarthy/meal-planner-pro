@@ -32,6 +32,28 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
+
+    // If the first block of column 2 is a recipe (not a category header),
+    // nudge it down so its title aligns vertically with the column-1 category header.
+    await page.evaluate(() => {
+      const columns = document.querySelector(".columns") as HTMLElement | null;
+      const blocks = Array.from(
+        document.querySelectorAll<HTMLElement>(".columns .recipe-block"),
+      );
+      if (!columns || blocks.length === 0) return;
+
+      const firstLeft = blocks[0].offsetLeft;
+      const col2First = blocks.find((b) => b.offsetLeft > firstLeft + 1);
+      if (!col2First) return;
+
+      const startsWithHeader = col2First.firstElementChild?.classList.contains(
+        "category-header",
+      );
+      if (!startsWithHeader) {
+        col2First.style.marginTop = "28px";
+      }
+    });
+
     const pdf = await page.pdf({ format: "Letter", printBackground: true });
     return Buffer.from(pdf);
   } finally {
