@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { updateInvoiceStatus, deleteInvoice, sendInvoiceEmail } from "@/app/actions";
 
@@ -33,6 +34,17 @@ export function InvoiceActions({ invoiceId, status }: InvoiceActionsProps) {
 
   return (
     <div className="flex flex-wrap gap-2">
+      {/* Edit */}
+      <Link
+        href={`/invoices/${invoiceId}/edit`}
+        className="button-secondary text-sm"
+      >
+        <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+        </svg>
+        Edit
+      </Link>
+
       {/* PDF actions */}
       <a
         href={`/api/invoices/${invoiceId}/pdf`}

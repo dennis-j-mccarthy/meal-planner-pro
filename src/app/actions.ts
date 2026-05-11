@@ -831,6 +831,45 @@ export async function createInvoice(formData: FormData) {
   redirect(`/invoices/${invoice.id}`);
 }
 
+export async function updateInvoice(formData: FormData) {
+  const invoiceId = requiredText(formData, "invoiceId");
+  const clientId = requiredText(formData, "clientId");
+  const invoiceDate = parseDateInput(requiredText(formData, "invoiceDate"));
+  const remarks = optionalText(formData, "remarks");
+
+  const descriptions = formData.getAll("lineDescription");
+  const amounts = formData.getAll("lineAmount");
+
+  const lineItems: { description: string; amount: number; position: number }[] = [];
+  for (let i = 0; i < descriptions.length; i++) {
+    const desc = typeof descriptions[i] === "string" ? (descriptions[i] as string).trim() : "";
+    const amt = typeof amounts[i] === "string" ? parseFloat(amounts[i] as string) : NaN;
+    if (desc && Number.isFinite(amt) && amt !== 0) {
+      lineItems.push({ description: desc, amount: amt, position: i + 1 });
+    }
+  }
+
+  if (lineItems.length === 0) {
+    throw new Error("At least one line item is required");
+  }
+
+  await prisma.invoice.update({
+    where: { id: invoiceId },
+    data: {
+      clientId,
+      invoiceDate,
+      remarks,
+      lineItems: {
+        deleteMany: {},
+        create: lineItems,
+      },
+    },
+  });
+
+  revalidateApp();
+  redirect(`/invoices/${invoiceId}`);
+}
+
 export async function updateInvoiceStatus(formData: FormData) {
   const invoiceId = requiredText(formData, "invoiceId");
   const status = requiredText(formData, "status") as InvoiceStatus;
