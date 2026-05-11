@@ -25,9 +25,14 @@ function parseQuickInput(
   input: string,
   clients: ClientOption[],
 ): { clientId: string; date: string; lines: LineItem[]; remarks: string } | null {
-  // Extract dollar amounts
-  const amountMatches = [...input.matchAll(/\$[\d,]+(?:\.\d{2})?/g)];
-  const amounts = amountMatches.map((m) => m[0].replace(/[$,]/g, ""));
+  // Extract dollar amounts (supports -$50, $-50, $50)
+  const amountMatches = [...input.matchAll(/-?\$-?[\d,]+(?:\.\d{2})?/g)];
+  const amounts = amountMatches.map((m) => {
+    const raw = m[0];
+    const negative = raw.startsWith("-$") || raw.includes("$-");
+    const digits = raw.replace(/[-$,]/g, "");
+    return negative ? `-${digits}` : digits;
+  });
   if (amounts.length === 0) return null;
 
   // Extract parenthetical remarks
@@ -310,11 +315,13 @@ export function InvoiceCreateForm({
                 </div>
               ))}
             </div>
-            {total > 0 && (
+            {lines.some((l) => l.amount) && (
               <div className="mt-3 flex justify-end">
                 <div className="rounded-lg bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700">
                   Total:{" "}
-                  <span className="text-[#60a5fa]">${total.toFixed(2)}</span>
+                  <span className="text-[#60a5fa]">
+                    {total < 0 ? `-$${Math.abs(total).toFixed(2)}` : `$${total.toFixed(2)}`}
+                  </span>
                 </div>
               </div>
             )}

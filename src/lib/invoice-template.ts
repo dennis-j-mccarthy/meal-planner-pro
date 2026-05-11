@@ -29,6 +29,10 @@ export function buildInvoiceHtml(data: InvoiceData): string {
 
   const total = data.lineItems.reduce((sum, item) => sum + item.amount, 0);
 
+  function formatMoney(n: number): string {
+    return n < 0 ? `-$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`;
+  }
+
   const lineItemRows = data.lineItems
     .map(
       (item) => `
@@ -37,7 +41,7 @@ export function buildInvoiceHtml(data: InvoiceData): string {
           ${escapeHtml(item.description)}
         </td>
         <td style="padding: 10px 12px; border: 1px solid #e0e0e0; font-size: 10px; color: #333; text-align: right; width: 100px;">
-          $${item.amount.toFixed(2)}
+          ${formatMoney(item.amount)}
         </td>
       </tr>`,
     )
@@ -251,7 +255,7 @@ export function buildInvoiceHtml(data: InvoiceData): string {
         ${lineItemRows}
         <tr class="total-row">
           <td style="padding: 10px 12px; border: 1px solid #e0e0e0; font-size: 10px;">Total</td>
-          <td class="total-amount" style="padding: 10px 12px; border: 1px solid #e0e0e0;">$${total.toFixed(2)}</td>
+          <td class="total-amount" style="padding: 10px 12px; border: 1px solid #e0e0e0;">${formatMoney(total)}</td>
         </tr>
       </tbody>
     </table>
