@@ -28,7 +28,7 @@ export function renderNewsletterHtml(
   const introBlock = data.intro
     ? `
       <tr>
-        <td class="nl-body" style="padding:0 32px 24px 32px;font-family:'Outfit',Arial,sans-serif;font-size:15px;line-height:1.6;color:#444;">
+        <td class="nl-body" style="padding:0 32px 24px 32px;font-family:Verdana,Geneva,sans-serif;font-size:15px;line-height:1.6;color:#444;">
           ${renderRichBody(data.intro)}
         </td>
       </tr>`
@@ -46,7 +46,7 @@ export function renderNewsletterHtml(
               </td>
             </tr>
             <tr>
-              <td style="font-family:'Outfit',Arial,sans-serif;font-size:20px;font-weight:700;color:#5B9BD5;padding-bottom:10px;">
+              <td style="font-family:Verdana,Geneva,sans-serif;font-size:20px;font-weight:700;color:#5B9BD5;padding-bottom:10px;">
                 ${escapeHtml(a.title)}
               </td>
             </tr>
@@ -60,7 +60,7 @@ export function renderNewsletterHtml(
                 : ""
             }
             <tr>
-              <td class="nl-body" style="font-family:'Outfit',Arial,sans-serif;font-size:15px;line-height:1.6;color:#444;">
+              <td class="nl-body" style="font-family:Verdana,Geneva,sans-serif;font-size:15px;line-height:1.6;color:#444;">
                 ${renderRichBody(a.body)}
               </td>
             </tr>
@@ -71,7 +71,7 @@ export function renderNewsletterHtml(
     .join("");
 
   const dateLine = data.publishDate
-    ? `<div style="font-family:'Outfit',Arial,sans-serif;font-size:12px;color:#888;margin-top:6px;">${escapeHtml(data.publishDate)}</div>`
+    ? `<div style="font-family:Verdana,Geneva,sans-serif;font-size:12px;color:#888;margin-top:6px;">${escapeHtml(data.publishDate)}</div>`
     : "";
 
   return `<!DOCTYPE html>
@@ -93,7 +93,7 @@ export function renderNewsletterHtml(
   .nl-body em { font-style: italic; }
 </style>
 </head>
-<body style="margin:0;padding:0;background:#f6f4f0;font-family:'Outfit',Arial,sans-serif;">
+<body style="margin:0;padding:0;background:#f6f4f0;font-family:Verdana,Geneva,sans-serif;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f6f4f0;">
     <tr>
       <td align="center" style="padding:32px 12px;">
@@ -105,7 +105,7 @@ export function renderNewsletterHtml(
           </tr>
           <tr>
             <td align="center" style="padding:0 32px 28px 32px;">
-              <div style="font-family:'Georgia',serif;font-style:italic;font-size:30px;line-height:1.2;color:#5B9BD5;">
+              <div style="font-family:Verdana,Geneva,sans-serif;font-weight:700;font-size:28px;line-height:1.2;color:#5B9BD5;">
                 ${escapeHtml(data.title)}
               </div>
               ${dateLine}
