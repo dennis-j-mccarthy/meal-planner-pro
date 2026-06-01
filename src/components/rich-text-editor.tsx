@@ -6,6 +6,8 @@ import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import { useEffect, useRef } from "react";
 
+
+
 interface RichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
@@ -19,6 +21,7 @@ export function RichTextEditor({
   placeholder,
   resizeImage,
 }: RichTextEditorProps) {
+  const editorRef = useRef<Editor | null>(null);
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -45,7 +48,7 @@ export function RichTextEditor({
         class:
           "prose prose-sm max-w-none min-h-32 px-3 py-2 focus:outline-none [&_p]:my-2 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:mt-3 [&_h2]:mb-2 [&_h3]:text-base [&_h3]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5 [&_blockquote]:border-l-4 [&_blockquote]:border-slate-300 [&_blockquote]:pl-3 [&_blockquote]:italic [&_a]:text-[var(--accent)] [&_a]:underline",
       },
-      handlePaste(view, event) {
+      handlePaste(_view, event) {
         const items = event.clipboardData?.items;
         if (!items || !resizeImage) return false;
         for (let i = 0; i < items.length; i++) {
@@ -55,7 +58,7 @@ export function RichTextEditor({
             if (!file) continue;
             event.preventDefault();
             resizeImage(file).then((src) => {
-              editor?.chain().focus().setImage({ src }).run();
+              editorRef.current?.chain().focus().setImage({ src }).run();
             });
             return true;
           }
@@ -64,6 +67,11 @@ export function RichTextEditor({
       },
     },
   });
+
+  // Track editor for closures that need a live reference.
+  useEffect(() => {
+    editorRef.current = editor;
+  }, [editor]);
 
   // Keep external value in sync (e.g., when initial loads after first render).
   const lastApplied = useRef<string>(value);

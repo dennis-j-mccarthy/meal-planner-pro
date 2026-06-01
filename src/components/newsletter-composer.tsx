@@ -1,9 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { createNewsletter, updateNewsletter } from "@/app/actions";
 import { renderNewsletterHtml } from "@/lib/newsletter-render";
-import { RichTextEditor } from "@/components/rich-text-editor";
+
+const RichTextEditor = dynamic(
+  () => import("@/components/rich-text-editor").then((m) => m.RichTextEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-lg border border-slate-200 min-h-32 bg-slate-50" />
+    ),
+  },
+);
 
 const LOGO_URL = "https://meal-planner-pro-puce.vercel.app/jwblogo600.png";
 const MAX_IMAGE_WIDTH = 1200;
