@@ -28,7 +28,7 @@ export function renderNewsletterHtml(
   const introBlock = data.intro
     ? `
       <tr>
-        <td class="nl-body" style="padding:0 32px 24px 32px;font-family:Verdana,Geneva,sans-serif;font-size:15px;line-height:1.6;color:#444;">
+        <td class="nl-body" style="padding:0 32px 24px 32px;font-family:Verdana,Geneva,sans-serif;font-size:13px;line-height:1.6;color:#444;">
           ${renderRichBody(data.intro)}
         </td>
       </tr>`
@@ -60,7 +60,7 @@ export function renderNewsletterHtml(
                 : ""
             }
             <tr>
-              <td class="nl-body" style="font-family:Verdana,Geneva,sans-serif;font-size:15px;line-height:1.6;color:#444;">
+              <td class="nl-body" style="font-family:Verdana,Geneva,sans-serif;font-size:13px;line-height:1.6;color:#444;">
                 ${renderRichBody(a.body)}
               </td>
             </tr>
