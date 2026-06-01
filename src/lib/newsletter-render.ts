@@ -55,8 +55,8 @@ export function renderNewsletterHtml(
                 : ""
             }
             <tr>
-              <td style="font-family:'Outfit',Arial,sans-serif;font-size:15px;line-height:1.6;color:#444;">
-                ${formatParagraphs(a.body)}
+              <td class="nl-body" style="font-family:'Outfit',Arial,sans-serif;font-size:15px;line-height:1.6;color:#444;">
+                ${renderArticleBody(a.body)}
               </td>
             </tr>
           </table>
@@ -75,6 +75,18 @@ export function renderNewsletterHtml(
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(data.title)}</title>
+<style>
+  .nl-body p { margin: 0 0 12px 0; }
+  .nl-body h2 { font-size: 18px; font-weight: 700; color: #333; margin: 18px 0 8px 0; }
+  .nl-body h3 { font-size: 16px; font-weight: 600; color: #333; margin: 16px 0 6px 0; }
+  .nl-body ul, .nl-body ol { margin: 0 0 12px 0; padding-left: 22px; }
+  .nl-body li { margin: 4px 0; }
+  .nl-body blockquote { border-left: 3px solid #5B9BD5; padding-left: 12px; margin: 12px 0; color: #666; font-style: italic; }
+  .nl-body a { color: #5B9BD5; text-decoration: underline; }
+  .nl-body img { display: block; max-width: 100%; height: auto; border-radius: 6px; margin: 8px 0; }
+  .nl-body strong { font-weight: 700; }
+  .nl-body em { font-style: italic; }
+</style>
 </head>
 <body style="margin:0;padding:0;background:#f6f4f0;font-family:'Outfit',Arial,sans-serif;">
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f6f4f0;">
@@ -129,4 +141,15 @@ function formatParagraphs(text: string): string {
         `<p style="margin:0 0 12px 0;">${escapeHtml(p).replace(/\n/g, "<br>")}</p>`,
     )
     .join("");
+}
+
+/**
+ * Article body can be either plain text (legacy / pre-rich-editor) or
+ * rich HTML from Tiptap. Detect by looking for block-level tags.
+ */
+function renderArticleBody(body: string): string {
+  const looksLikeHtml = /<(p|h[1-6]|ul|ol|li|blockquote|br|img|strong|em|a)\b/i.test(
+    body,
+  );
+  return looksLikeHtml ? body : formatParagraphs(body);
 }
