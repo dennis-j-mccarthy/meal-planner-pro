@@ -109,12 +109,6 @@ export function renderNewsletterHtml(
           ${introImageBlock}
           ${introBlock}
           ${articleBlocks}
-          <tr>
-            <td style="padding:24px 32px 32px 32px;border-top:1px solid #eee;font-family:'Outfit',Arial,sans-serif;font-size:13px;color:#888;text-align:center;">
-              To your health and happiness,<br>
-              <span style="font-family:'Georgia',serif;font-style:italic;font-size:20px;color:#333;">Chef Beth</span>
-            </td>
-          </tr>
         </table>
       </td>
     </tr>
