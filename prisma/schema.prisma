@@ -82,6 +82,7 @@ model Kitchen {
   recipeIntakes RecipeIntake[]
   invoices      Invoice[]
   menuCards     MenuCard[]
+  newsletters   Newsletter[]
 }
 
 model Client {
@@ -265,6 +266,32 @@ model MenuCardRecipe {
 
   @@unique([menuCardId, recipeId])
   @@index([menuCardId, position])
+}
+
+model Newsletter {
+  id          String              @id @default(cuid())
+  kitchenId   String
+  title       String
+  intro       String?
+  publishDate DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  kitchen     Kitchen             @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  articles    NewsletterArticle[]
+
+  @@index([kitchenId, createdAt])
+}
+
+model NewsletterArticle {
+  id            String     @id @default(cuid())
+  newsletterId  String
+  position      Int
+  title         String
+  body          String
+  imageData     String?
+  newsletter    Newsletter @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
+
+  @@index([newsletterId, position])
 }
 
 model RecipeIntake {

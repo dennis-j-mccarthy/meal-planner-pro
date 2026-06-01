@@ -1184,3 +1184,87 @@ export async function sendBonAppetitEmail(formData: FormData) {
 
   revalidateApp();
 }
+
+function collectArticles(formData: FormData) {
+  const titles = formData.getAll("articleTitle");
+  const bodies = formData.getAll("articleBody");
+  const images = formData.getAll("articleImage");
+
+  const articles: { title: string; body: string; imageData: string | null; position: number }[] = [];
+  for (let i = 0; i < titles.length; i++) {
+    const title = typeof titles[i] === "string" ? (titles[i] as string).trim() : "";
+    const body = typeof bodies[i] === "string" ? (bodies[i] as string).trim() : "";
+    const image = typeof images[i] === "string" ? (images[i] as string).trim() : "";
+    if (!title && !body) continue;
+    articles.push({
+      title: title || "Untitled",
+      body,
+      imageData: image || null,
+      position: articles.length + 1,
+    });
+  }
+  return articles;
+}
+
+export async function createNewsletter(formData: FormData) {
+  const kitchen = await getKitchen();
+  const title = requiredText(formData, "title");
+  const intro = optionalText(formData, "intro");
+  const publishDateValue = optionalText(formData, "publishDate");
+  const publishDate = publishDateValue ? parseDateInput(publishDateValue) : null;
+
+  const articles = collectArticles(formData);
+  if (articles.length === 0) {
+    throw new Error("At least one article is required");
+  }
+
+  const newsletter = await prisma.newsletter.create({
+    data: {
+      kitchenId: kitchen.id,
+      title,
+      intro,
+      publishDate,
+      articles: {
+        create: articles,
+      },
+    },
+  });
+
+  revalidateApp();
+  redirect(`/newsletters/${newsletter.id}`);
+}
+
+export async function updateNewsletter(formData: FormData) {
+  const newsletterId = requiredText(formData, "newsletterId");
+  const title = requiredText(formData, "title");
+  const intro = optionalText(formData, "intro");
+  const publishDateValue = optionalText(formData, "publishDate");
+  const publishDate = publishDateValue ? parseDateInput(publishDateValue) : null;
+
+  const articles = collectArticles(formData);
+  if (articles.length === 0) {
+    throw new Error("At least one article is required");
+  }
+
+  await prisma.newsletter.update({
+    where: { id: newsletterId },
+    data: {
+      title,
+      intro,
+      publishDate,
+      articles: {
+        deleteMany: {},
+        create: articles,
+      },
+    },
+  });
+
+  revalidateApp();
+  redirect(`/newsletters/${newsletterId}`);
+}
+
+export async function deleteNewsletter(formData: FormData) {
+  const newsletterId = requiredText(formData, "newsletterId");
+  await prisma.newsletter.delete({ where: { id: newsletterId } });
+  revalidateApp();
+}

@@ -1,0 +1,365 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { createNewsletter, updateNewsletter } from "@/app/actions";
+
+interface Article {
+  title: string;
+  body: string;
+  imageData: string | null;
+}
+
+interface NewsletterInitial {
+  id?: string;
+  title: string;
+  intro: string;
+  publishDate: string;
+  articles: Article[];
+}
+
+export function NewsletterComposer({
+  initial,
+}: {
+  initial?: NewsletterInitial;
+}) {
+  const isEdit = !!initial?.id;
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [intro, setIntro] = useState(initial?.intro ?? "");
+  const [publishDate, setPublishDate] = useState(
+    initial?.publishDate ?? new Date().toISOString().slice(0, 10),
+  );
+  const [articles, setArticles] = useState<Article[]>(
+    initial?.articles && initial.articles.length > 0
+      ? initial.articles
+      : [{ title: "", body: "", imageData: null }],
+  );
+  const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  async function refreshPreview() {
+    const res = await fetch("/api/newsletters/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, intro, publishDate, articles }),
+    });
+    const html = await res.text();
+    setPreviewHtml(html);
+  }
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      refreshPreview();
+    }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, intro, publishDate, articles]);
+
+  useEffect(() => {
+    if (iframeRef.current && previewHtml) {
+      iframeRef.current.srcdoc = previewHtml;
+    }
+  }, [previewHtml]);
+
+  function updateArticle<K extends keyof Article>(
+    index: number,
+    field: K,
+    value: Article[K],
+  ) {
+    setArticles((prev) =>
+      prev.map((a, i) => (i === index ? { ...a, [field]: value } : a)),
+    );
+  }
+
+  function addArticle() {
+    setArticles((prev) => [...prev, { title: "", body: "", imageData: null }]);
+  }
+
+  function removeArticle(index: number) {
+    if (articles.length <= 1) return;
+    setArticles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function moveArticle(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= articles.length) return;
+    setArticles((prev) => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  }
+
+  async function fileToDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function handlePaste(
+    e: React.ClipboardEvent<HTMLDivElement>,
+    index: number,
+  ) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        e.preventDefault();
+        const dataUrl = await fileToDataUrl(file);
+        updateArticle(index, "imageData", dataUrl);
+        return;
+      }
+    }
+  }
+
+  async function handleFile(
+    e: React.ChangeEvent<HTMLInputElement>,
+    index: number,
+  ) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    updateArticle(index, "imageData", dataUrl);
+    e.target.value = "";
+  }
+
+  async function handleCopyHtml() {
+    try {
+      await navigator.clipboard.writeText(previewHtml);
+      setCopyState("copied");
+      setTimeout(() => setCopyState("idle"), 1800);
+    } catch {
+      setCopyState("error");
+      setTimeout(() => setCopyState("idle"), 2400);
+    }
+  }
+
+  return (
+    <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+      {/* Composer */}
+      <form
+        action={isEdit ? updateNewsletter : createNewsletter}
+        className="panel p-6 space-y-5"
+      >
+        {isEdit && (
+          <input type="hidden" name="newsletterId" value={initial!.id} />
+        )}
+
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">
+            {isEdit ? "Edit newsletter" : "New newsletter"}
+          </h2>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-slate-700">
+            Title
+          </label>
+          <input
+            className="field"
+            name="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="What's cooking with Beth — May edition"
+            required
+          />
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-sm font-semibold text-slate-700">
+              Publish date
+            </label>
+            <input
+              className="field"
+              name="publishDate"
+              type="date"
+              value={publishDate}
+              onChange={(e) => setPublishDate(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-slate-700">
+            Intro{" "}
+            <span className="font-normal text-slate-400">(optional)</span>
+          </label>
+          <textarea
+            className="field min-h-24"
+            name="intro"
+            value={intro}
+            onChange={(e) => setIntro(e.target.value)}
+            placeholder="A short hello to open the newsletter…"
+          />
+        </div>
+
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-semibold text-slate-700">
+              Articles
+            </label>
+            <button
+              type="button"
+              onClick={addArticle}
+              className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
+            >
+              + Add article
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {articles.map((article, index) => (
+              <div
+                key={index}
+                className="rounded-lg border border-slate-200 p-4 space-y-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    Article {index + 1}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveArticle(index, -1)}
+                      disabled={index === 0}
+                      className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                      title="Move up"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveArticle(index, 1)}
+                      disabled={index === articles.length - 1}
+                      className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30 disabled:hover:bg-transparent"
+                      title="Move down"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                      </svg>
+                    </button>
+                    {articles.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeArticle(index)}
+                        className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                        title="Remove"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <input
+                  className="field"
+                  name="articleTitle"
+                  placeholder="Article title"
+                  value={article.title}
+                  onChange={(e) => updateArticle(index, "title", e.target.value)}
+                />
+
+                <div
+                  onPaste={(e) => handlePaste(e, index)}
+                  className="rounded-lg border border-dashed border-slate-300 p-3 space-y-2"
+                >
+                  {article.imageData ? (
+                    <div className="space-y-2">
+                      <img
+                        src={article.imageData}
+                        alt=""
+                        className="max-h-48 rounded-md border border-slate-200"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateArticle(index, "imageData", null)}
+                        className="text-xs font-semibold text-red-500 hover:text-red-700"
+                      >
+                        Remove image
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500">
+                      Paste an image into this box, or{" "}
+                      <label className="font-semibold text-[var(--accent)] hover:underline cursor-pointer">
+                        choose a file
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={(e) => handleFile(e, index)}
+                        />
+                      </label>
+                    </div>
+                  )}
+                  <input
+                    type="hidden"
+                    name="articleImage"
+                    value={article.imageData ?? ""}
+                  />
+                </div>
+
+                <textarea
+                  className="field min-h-32"
+                  name="articleBody"
+                  placeholder="Article body. Blank lines separate paragraphs."
+                  value={article.body}
+                  onChange={(e) => updateArticle(index, "body", e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={handleCopyHtml}
+            className="button-secondary text-sm"
+          >
+            {copyState === "copied"
+              ? "Copied!"
+              : copyState === "error"
+                ? "Copy failed"
+                : "Copy HTML"}
+          </button>
+          <button type="submit" className="button-primary text-sm">
+            {isEdit ? "Save changes" : "Save newsletter"}
+          </button>
+        </div>
+      </form>
+
+      {/* Preview */}
+      <div className="panel p-3 lg:sticky lg:top-52 lg:self-start">
+        <div className="flex items-center justify-between px-2 pb-2">
+          <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            Preview
+          </span>
+          <button
+            type="button"
+            onClick={refreshPreview}
+            className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
+          >
+            Refresh
+          </button>
+        </div>
+        <iframe
+          ref={iframeRef}
+          title="Newsletter preview"
+          className="w-full h-[78vh] rounded-lg border border-slate-200 bg-white"
+        />
+      </div>
+    </div>
+  );
+}
