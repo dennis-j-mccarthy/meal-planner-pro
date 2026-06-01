@@ -114,6 +114,24 @@ export function renderNewsletterHtml(
           ${introImageBlock}
           ${introBlock}
           ${articleBlocks}
+          <tr>
+            <td style="padding:24px 32px 32px 32px;border-top:1px solid #e5e5e5;font-family:Verdana,Geneva,sans-serif;font-size:15px;line-height:1.6;color:#444;">
+              <img
+                src="https://q35qgefmldvolfk0.public.blob.vercel-storage.com/newsletters/kitchen_jwb/beth-chef-coat-l0E6L8O6eBC0suT2rZJHmGoltiZ0Dt.png"
+                alt="Chef Beth"
+                width="180"
+                style="float:right;width:180px;height:auto;margin-left:20px;margin-bottom:8px;border-radius:8px;"
+              />
+              <p style="margin:0 0 12px 0;">For more information, and to book your summer gathering, be in touch!</p>
+              <p style="margin:0 0 12px 0;">719-440-2815</p>
+              <p style="margin:0 0 12px 0;"><a href="mailto:Yogabeth@mac.com" style="color:#5B9BD5;text-decoration:underline;">Yogabeth@mac.com</a></p>
+              <p style="margin:0 0 12px 0;"><a href="https://floridahealthychef.com" style="color:#5B9BD5;text-decoration:underline;">floridahealthychef.com</a></p>
+              <p style="margin:0 0 12px 0;">Have a beautiful summer, dear friends. May you find moments to slow down, savor the simple joys of the season, and delight in the stillness, birdsong, and beauty that surrounds you.</p>
+              <p style="margin:0 0 12px 0;">With love and gratitude,</p>
+              <p style="margin:0;">Beth</p>
+              <div style="clear:both;"></div>
+            </td>
+          </tr>
         </table>
       </td>
     </tr>
