@@ -15,6 +15,14 @@ const nextConfig: NextConfig = {
     "@sparticuz/chromium-min",
     "puppeteer",
   ],
+  transpilePackages: [
+    "@tiptap/react",
+    "@tiptap/core",
+    "@tiptap/pm",
+    "@tiptap/starter-kit",
+    "@tiptap/extension-link",
+    "@tiptap/extension-image",
+  ],
 };
 
 export default nextConfig;
