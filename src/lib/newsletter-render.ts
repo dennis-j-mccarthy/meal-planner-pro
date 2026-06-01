@@ -41,6 +41,11 @@ export function renderNewsletterHtml(
         <td style="padding:0 32px 28px 32px;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
             <tr>
+              <td style="padding-bottom:18px;">
+                <hr style="border:0;border-top:1px solid #e5e5e5;margin:0;" />
+              </td>
+            </tr>
+            <tr>
               <td style="font-family:'Outfit',Arial,sans-serif;font-size:20px;font-weight:700;color:#5B9BD5;padding-bottom:10px;">
                 ${escapeHtml(a.title)}
               </td>
