@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createNewsletter, updateNewsletter } from "@/app/actions";
 import { renderNewsletterHtml } from "@/lib/newsletter-render";
-import { RichTextEditor } from "@/components/rich-text-editor";
 
 const LOGO_URL = "https://meal-planner-pro-puce.vercel.app/jwblogo600.png";
 const MAX_IMAGE_WIDTH = 1200;
@@ -408,16 +407,12 @@ export function NewsletterComposer({
                   />
                 </div>
 
-                <RichTextEditor
-                  value={article.body}
-                  onChange={(html) => updateArticle(index, "body", html)}
-                  resizeImage={resizeImage}
-                  placeholder="Article body…"
-                />
-                <input
-                  type="hidden"
+                <textarea
+                  className="field min-h-32"
                   name="articleBody"
+                  placeholder="Article body. Blank lines separate paragraphs."
                   value={article.body}
+                  onChange={(e) => updateArticle(index, "body", e.target.value)}
                 />
               </div>
             ))}
