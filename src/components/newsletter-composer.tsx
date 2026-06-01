@@ -19,16 +19,16 @@ const LOGO_URL = "https://meal-planner-pro-puce.vercel.app/jwblogo600.png";
 const MAX_IMAGE_WIDTH = 1200;
 const JPEG_QUALITY = 0.82;
 
-async function resizeImage(file: File): Promise<string> {
+async function resizeToBlob(file: File): Promise<Blob> {
+  // SVGs pass through untouched.
+  if (file.type === "image/svg+xml") return file;
+
   const dataUrl: string = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-
-  // Decode → resize → re-encode as JPEG. SVGs and tiny images skip the resize.
-  if (file.type === "image/svg+xml") return dataUrl;
 
   const img = new Image();
   await new Promise<void>((resolve, reject) => {
@@ -37,7 +37,8 @@ async function resizeImage(file: File): Promise<string> {
     img.src = dataUrl;
   });
 
-  if (img.width <= MAX_IMAGE_WIDTH && file.size < 400_000) return dataUrl;
+  // Tiny images skip the resize.
+  if (img.width <= MAX_IMAGE_WIDTH && file.size < 400_000) return file;
 
   const ratio = Math.min(1, MAX_IMAGE_WIDTH / img.width);
   const w = Math.round(img.width * ratio);
@@ -47,9 +48,32 @@ async function resizeImage(file: File): Promise<string> {
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return dataUrl;
+  if (!ctx) return file;
   ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
+      "image/jpeg",
+      JPEG_QUALITY,
+    );
+  });
+}
+
+async function resizeAndUpload(file: File): Promise<string> {
+  const resized = await resizeToBlob(file);
+  const fd = new FormData();
+  const safeName = file.name?.replace(/\.[^.]+$/, ".jpg") || "image.jpg";
+  fd.append("file", resized, safeName);
+  const res = await fetch("/api/newsletters/upload-image", {
+    method: "POST",
+    body: fd,
+  });
+  if (!res.ok) {
+    throw new Error(`Upload failed: ${res.status}`);
+  }
+  const data = await res.json();
+  return data.url as string;
 }
 
 interface Article {
@@ -182,8 +206,8 @@ export function NewsletterComposer({
         const file = item.getAsFile();
         if (!file) continue;
         e.preventDefault();
-        const dataUrl = await resizeImage(file);
-        setArticleImage(index, dataUrl);
+        const url = await resizeAndUpload(file);
+        setArticleImage(index, url);
         return;
       }
     }
@@ -198,8 +222,8 @@ export function NewsletterComposer({
         const file = item.getAsFile();
         if (!file) continue;
         e.preventDefault();
-        const dataUrl = await resizeImage(file);
-        setIntroImageDirtied(dataUrl);
+        const url = await resizeAndUpload(file);
+        setIntroImageDirtied(url);
         return;
       }
     }
@@ -208,8 +232,8 @@ export function NewsletterComposer({
   async function handleIntroFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const dataUrl = await resizeImage(file);
-    setIntroImageDirtied(dataUrl);
+    const url = await resizeAndUpload(file);
+    setIntroImageDirtied(url);
     e.target.value = "";
   }
 
@@ -219,8 +243,8 @@ export function NewsletterComposer({
   ) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const dataUrl = await resizeImage(file);
-    setArticleImage(index, dataUrl);
+    const url = await resizeAndUpload(file);
+    setArticleImage(index, url);
     e.target.value = "";
   }
 
@@ -289,7 +313,7 @@ export function NewsletterComposer({
           <RichTextEditor
             value={intro}
             onChange={setIntro}
-            resizeImage={resizeImage}
+            resizeImage={resizeAndUpload}
             placeholder="A short hello to open the newsletter…"
           />
           <input type="hidden" name="intro" value={intro} />
@@ -467,7 +491,7 @@ export function NewsletterComposer({
                 <RichTextEditor
                   value={article.body}
                   onChange={(html) => updateArticle(index, "body", html)}
-                  resizeImage={resizeImage}
+                  resizeImage={resizeAndUpload}
                   placeholder="Article body…"
                 />
                 <input
