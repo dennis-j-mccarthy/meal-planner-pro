@@ -41,12 +41,12 @@ export function renderNewsletterHtml(
         <td style="padding:0 32px 28px 32px;">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
             <tr>
-              <td style="padding-bottom:18px;">
+              <td>
                 <hr style="border:0;border-top:1px solid #e5e5e5;margin:0;" />
               </td>
             </tr>
             <tr>
-              <td style="font-family:Verdana,Geneva,sans-serif;font-size:20px;font-weight:700;color:#5B9BD5;padding-bottom:10px;">
+              <td style="font-family:'Georgia',serif;font-size:24px;font-weight:400;color:#5B9BD5;padding-top:20px;padding-bottom:20px;line-height:1.25;">
                 ${escapeHtml(a.title)}
               </td>
             </tr>
