@@ -28,8 +28,8 @@ export function renderNewsletterHtml(
   const introBlock = data.intro
     ? `
       <tr>
-        <td style="padding:0 32px 24px 32px;font-family:'Outfit',Arial,sans-serif;font-size:15px;line-height:1.6;color:#444;">
-          ${formatParagraphs(data.intro)}
+        <td class="nl-body" style="padding:0 32px 24px 32px;font-family:'Outfit',Arial,sans-serif;font-size:15px;line-height:1.6;color:#444;">
+          ${renderRichBody(data.intro)}
         </td>
       </tr>`
     : "";
@@ -56,7 +56,7 @@ export function renderNewsletterHtml(
             }
             <tr>
               <td class="nl-body" style="font-family:'Outfit',Arial,sans-serif;font-size:15px;line-height:1.6;color:#444;">
-                ${renderArticleBody(a.body)}
+                ${renderRichBody(a.body)}
               </td>
             </tr>
           </table>
@@ -147,7 +147,11 @@ function formatParagraphs(text: string): string {
  * Article body can be either plain text (legacy / pre-rich-editor) or
  * rich HTML from Tiptap. Detect by looking for block-level tags.
  */
-function renderArticleBody(body: string): string {
+/**
+ * Body text can be either plain text (legacy / pre-rich-editor) or
+ * rich HTML from Tiptap. Detect by looking for block-level tags.
+ */
+function renderRichBody(body: string): string {
   const looksLikeHtml = /<(p|h[1-6]|ul|ol|li|blockquote|br|img|strong|em|a)\b/i.test(
     body,
   );

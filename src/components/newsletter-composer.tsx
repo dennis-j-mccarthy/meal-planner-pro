@@ -286,13 +286,13 @@ export function NewsletterComposer({
             Intro{" "}
             <span className="font-normal text-slate-400">(optional)</span>
           </label>
-          <textarea
-            className="field min-h-24"
-            name="intro"
+          <RichTextEditor
             value={intro}
-            onChange={(e) => setIntro(e.target.value)}
+            onChange={setIntro}
+            resizeImage={resizeImage}
             placeholder="A short hello to open the newsletter…"
           />
+          <input type="hidden" name="intro" value={intro} />
         </div>
 
         <div>
