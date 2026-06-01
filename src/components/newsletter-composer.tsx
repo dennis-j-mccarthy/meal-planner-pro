@@ -2,6 +2,44 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createNewsletter, updateNewsletter } from "@/app/actions";
+import { renderNewsletterHtml } from "@/lib/newsletter-render";
+
+const LOGO_URL = "https://meal-planner-pro-puce.vercel.app/jwblogo600.png";
+const MAX_IMAGE_WIDTH = 1200;
+const JPEG_QUALITY = 0.82;
+
+async function resizeImage(file: File): Promise<string> {
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  // Decode → resize → re-encode as JPEG. SVGs and tiny images skip the resize.
+  if (file.type === "image/svg+xml") return dataUrl;
+
+  const img = new Image();
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+
+  if (img.width <= MAX_IMAGE_WIDTH && file.size < 400_000) return dataUrl;
+
+  const ratio = Math.min(1, MAX_IMAGE_WIDTH / img.width);
+  const w = Math.round(img.width * ratio);
+  const h = Math.round(img.height * ratio);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+}
 
 interface Article {
   title: string;
@@ -41,13 +79,11 @@ export function NewsletterComposer({
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  async function refreshPreview() {
-    const res = await fetch("/api/newsletters/render", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, intro, introImage, publishDate, articles }),
-    });
-    const html = await res.text();
+  function refreshPreview() {
+    const html = renderNewsletterHtml(
+      { title, intro, introImage, publishDate, articles },
+      LOGO_URL,
+    );
     setPreviewHtml(html);
   }
 
@@ -94,15 +130,6 @@ export function NewsletterComposer({
     });
   }
 
-  async function fileToDataUrl(file: File): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-
   async function handlePaste(
     e: React.ClipboardEvent<HTMLDivElement>,
     index: number,
@@ -115,7 +142,7 @@ export function NewsletterComposer({
         const file = item.getAsFile();
         if (!file) continue;
         e.preventDefault();
-        const dataUrl = await fileToDataUrl(file);
+        const dataUrl = await resizeImage(file);
         updateArticle(index, "imageData", dataUrl);
         return;
       }
@@ -131,7 +158,7 @@ export function NewsletterComposer({
         const file = item.getAsFile();
         if (!file) continue;
         e.preventDefault();
-        const dataUrl = await fileToDataUrl(file);
+        const dataUrl = await resizeImage(file);
         setIntroImage(dataUrl);
         return;
       }
@@ -141,7 +168,7 @@ export function NewsletterComposer({
   async function handleIntroFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await resizeImage(file);
     setIntroImage(dataUrl);
     e.target.value = "";
   }
@@ -152,7 +179,7 @@ export function NewsletterComposer({
   ) {
     const file = e.target.files?.[0];
     if (!file) return;
-    const dataUrl = await fileToDataUrl(file);
+    const dataUrl = await resizeImage(file);
     updateArticle(index, "imageData", dataUrl);
     e.target.value = "";
   }
