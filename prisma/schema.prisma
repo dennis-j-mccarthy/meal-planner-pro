@@ -273,6 +273,7 @@ model Newsletter {
   kitchenId   String
   title       String
   intro       String?
+  introImage  String?
   publishDate DateTime?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt

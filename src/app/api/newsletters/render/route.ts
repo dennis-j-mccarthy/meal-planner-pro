@@ -6,6 +6,10 @@ export async function POST(request: NextRequest) {
   const html = buildNewsletterHtml({
     title: typeof data.title === "string" ? data.title : "Untitled newsletter",
     intro: typeof data.intro === "string" && data.intro.trim() ? data.intro : null,
+    introImage:
+      typeof data.introImage === "string" && data.introImage
+        ? data.introImage
+        : null,
     publishDate:
       typeof data.publishDate === "string" && data.publishDate.trim()
         ? data.publishDate

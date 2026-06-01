@@ -10,6 +10,7 @@ interface NewsletterArticleData {
 interface NewsletterData {
   title: string;
   intro: string | null;
+  introImage: string | null;
   publishDate: string | null;
   articles: NewsletterArticleData[];
 }
@@ -22,6 +23,15 @@ function loadAssetBase64(relativePath: string, mime: string): string {
 
 export function buildNewsletterHtml(data: NewsletterData): string {
   const logoSrc = loadAssetBase64("jwblogo600.png", "image/png");
+
+  const introImageBlock = data.introImage
+    ? `
+      <tr>
+        <td style="padding:0 32px 16px 32px;">
+          <img src="${data.introImage}" alt="" style="display:block;width:100%;max-width:560px;height:auto;border-radius:8px;" />
+        </td>
+      </tr>`
+    : "";
 
   const introBlock = data.intro
     ? `
@@ -92,6 +102,7 @@ export function buildNewsletterHtml(data: NewsletterData): string {
               ${dateLine}
             </td>
           </tr>
+          ${introImageBlock}
           ${introBlock}
           ${articleBlocks}
           <tr>

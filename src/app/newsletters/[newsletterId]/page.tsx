@@ -24,6 +24,7 @@ export default async function NewsletterDetailPage({
   const html = buildNewsletterHtml({
     title: newsletter.title,
     intro: newsletter.intro,
+    introImage: newsletter.introImage,
     publishDate: newsletter.publishDate
       ? formatDateShort(newsletter.publishDate)
       : null,

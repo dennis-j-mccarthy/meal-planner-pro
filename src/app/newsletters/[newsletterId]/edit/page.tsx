@@ -41,6 +41,7 @@ export default async function NewsletterEditPage({
           id: newsletter.id,
           title: newsletter.title,
           intro: newsletter.intro ?? "",
+          introImage: newsletter.introImage,
           publishDate: newsletter.publishDate
             ? newsletter.publishDate.toISOString().slice(0, 10)
             : "",

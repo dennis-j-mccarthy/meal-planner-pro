@@ -13,6 +13,7 @@ interface NewsletterInitial {
   id?: string;
   title: string;
   intro: string;
+  introImage: string | null;
   publishDate: string;
   articles: Article[];
 }
@@ -25,6 +26,9 @@ export function NewsletterComposer({
   const isEdit = !!initial?.id;
   const [title, setTitle] = useState(initial?.title ?? "");
   const [intro, setIntro] = useState(initial?.intro ?? "");
+  const [introImage, setIntroImage] = useState<string | null>(
+    initial?.introImage ?? null,
+  );
   const [publishDate, setPublishDate] = useState(
     initial?.publishDate ?? new Date().toISOString().slice(0, 10),
   );
@@ -41,7 +45,7 @@ export function NewsletterComposer({
     const res = await fetch("/api/newsletters/render", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, intro, publishDate, articles }),
+      body: JSON.stringify({ title, intro, introImage, publishDate, articles }),
     });
     const html = await res.text();
     setPreviewHtml(html);
@@ -53,7 +57,7 @@ export function NewsletterComposer({
     }, 400);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, intro, publishDate, articles]);
+  }, [title, intro, introImage, publishDate, articles]);
 
   useEffect(() => {
     if (iframeRef.current && previewHtml) {
@@ -116,6 +120,30 @@ export function NewsletterComposer({
         return;
       }
     }
+  }
+
+  async function handleIntroPaste(e: React.ClipboardEvent<HTMLDivElement>) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.type.startsWith("image/")) {
+        const file = item.getAsFile();
+        if (!file) continue;
+        e.preventDefault();
+        const dataUrl = await fileToDataUrl(file);
+        setIntroImage(dataUrl);
+        return;
+      }
+    }
+  }
+
+  async function handleIntroFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const dataUrl = await fileToDataUrl(file);
+    setIntroImage(dataUrl);
+    e.target.value = "";
   }
 
   async function handleFile(
@@ -198,6 +226,48 @@ export function NewsletterComposer({
             onChange={(e) => setIntro(e.target.value)}
             placeholder="A short hello to open the newsletter…"
           />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-semibold text-slate-700">
+            Intro image{" "}
+            <span className="font-normal text-slate-400">(optional)</span>
+          </label>
+          <div
+            onPaste={handleIntroPaste}
+            className="rounded-lg border border-dashed border-slate-300 p-3 space-y-2"
+          >
+            {introImage ? (
+              <div className="space-y-2">
+                <img
+                  src={introImage}
+                  alt=""
+                  className="max-h-48 rounded-md border border-slate-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIntroImage(null)}
+                  className="text-xs font-semibold text-red-500 hover:text-red-700"
+                >
+                  Remove image
+                </button>
+              </div>
+            ) : (
+              <div className="text-xs text-slate-500">
+                Paste an image into this box, or{" "}
+                <label className="font-semibold text-[var(--accent)] hover:underline cursor-pointer">
+                  choose a file
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    onChange={handleIntroFile}
+                  />
+                </label>
+              </div>
+            )}
+            <input type="hidden" name="introImage" value={introImage ?? ""} />
+          </div>
         </div>
 
         <div>

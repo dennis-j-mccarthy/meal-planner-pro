@@ -1210,6 +1210,7 @@ export async function createNewsletter(formData: FormData) {
   const kitchen = await getKitchen();
   const title = requiredText(formData, "title");
   const intro = optionalText(formData, "intro");
+  const introImage = optionalText(formData, "introImage");
   const publishDateValue = optionalText(formData, "publishDate");
   const publishDate = publishDateValue ? parseDateInput(publishDateValue) : null;
 
@@ -1223,6 +1224,7 @@ export async function createNewsletter(formData: FormData) {
       kitchenId: kitchen.id,
       title,
       intro,
+      introImage,
       publishDate,
       articles: {
         create: articles,
@@ -1238,6 +1240,7 @@ export async function updateNewsletter(formData: FormData) {
   const newsletterId = requiredText(formData, "newsletterId");
   const title = requiredText(formData, "title");
   const intro = optionalText(formData, "intro");
+  const introImage = optionalText(formData, "introImage");
   const publishDateValue = optionalText(formData, "publishDate");
   const publishDate = publishDateValue ? parseDateInput(publishDateValue) : null;
 
@@ -1251,6 +1254,7 @@ export async function updateNewsletter(formData: FormData) {
     data: {
       title,
       intro,
+      introImage,
       publishDate,
       articles: {
         deleteMany: {},
