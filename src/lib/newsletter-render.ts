@@ -105,7 +105,7 @@ export function renderNewsletterHtml(
           </tr>
           <tr>
             <td align="center" style="padding:0 32px 28px 32px;">
-              <div style="font-family:Verdana,Geneva,sans-serif;font-weight:700;font-size:28px;line-height:1.2;color:#5B9BD5;">
+              <div style="font-family:'Georgia',serif;font-size:30px;line-height:1.2;color:#5B9BD5;">
                 ${escapeHtml(data.title)}
               </div>
               ${dateLine}
