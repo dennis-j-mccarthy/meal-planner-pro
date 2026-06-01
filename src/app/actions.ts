@@ -1185,21 +1185,43 @@ export async function sendBonAppetitEmail(formData: FormData) {
   revalidateApp();
 }
 
-function collectArticles(formData: FormData) {
+const KEEP_SENTINEL = "__KEEP__";
+
+interface CollectedArticle {
+  title: string;
+  body: string;
+  imageData: string | null;
+  imageRef: string | null; // existing article id when keeping the stored image
+  position: number;
+}
+
+function collectArticles(formData: FormData): CollectedArticle[] {
   const titles = formData.getAll("articleTitle");
   const bodies = formData.getAll("articleBody");
   const images = formData.getAll("articleImage");
+  const imageRefs = formData.getAll("articleImageRef");
 
-  const articles: { title: string; body: string; imageData: string | null; position: number }[] = [];
+  const articles: CollectedArticle[] = [];
   for (let i = 0; i < titles.length; i++) {
     const title = typeof titles[i] === "string" ? (titles[i] as string).trim() : "";
     const body = typeof bodies[i] === "string" ? (bodies[i] as string).trim() : "";
-    const image = typeof images[i] === "string" ? (images[i] as string).trim() : "";
+    const image = typeof images[i] === "string" ? (images[i] as string) : "";
+    const ref = typeof imageRefs[i] === "string" ? (imageRefs[i] as string).trim() : "";
     if (!title && !body) continue;
+
+    let imageData: string | null = null;
+    let imageRef: string | null = null;
+    if (image === KEEP_SENTINEL) {
+      imageRef = ref || null;
+    } else if (image) {
+      imageData = image;
+    }
+
     articles.push({
       title: title || "Untitled",
       body,
-      imageData: image || null,
+      imageData,
+      imageRef,
       position: articles.length + 1,
     });
   }
@@ -1210,7 +1232,11 @@ export async function createNewsletter(formData: FormData) {
   const kitchen = await getKitchen();
   const title = requiredText(formData, "title");
   const intro = optionalText(formData, "intro");
-  const introImage = optionalText(formData, "introImage");
+  const introImageRaw = formData.get("introImage");
+  const introImage =
+    typeof introImageRaw === "string" && introImageRaw && introImageRaw !== KEEP_SENTINEL
+      ? introImageRaw
+      : null;
   const publishDateValue = optionalText(formData, "publishDate");
   const publishDate = publishDateValue ? parseDateInput(publishDateValue) : null;
 
@@ -1227,7 +1253,12 @@ export async function createNewsletter(formData: FormData) {
       introImage,
       publishDate,
       articles: {
-        create: articles,
+        create: articles.map((a) => ({
+          title: a.title,
+          body: a.body,
+          imageData: a.imageData,
+          position: a.position,
+        })),
       },
     },
   });
@@ -1240,7 +1271,7 @@ export async function updateNewsletter(formData: FormData) {
   const newsletterId = requiredText(formData, "newsletterId");
   const title = requiredText(formData, "title");
   const intro = optionalText(formData, "intro");
-  const introImage = optionalText(formData, "introImage");
+  const introImageRaw = formData.get("introImage");
   const publishDateValue = optionalText(formData, "publishDate");
   const publishDate = publishDateValue ? parseDateInput(publishDateValue) : null;
 
@@ -1248,6 +1279,43 @@ export async function updateNewsletter(formData: FormData) {
   if (articles.length === 0) {
     throw new Error("At least one article is required");
   }
+
+  // Pull existing record so we can merge KEEP-sentinel images without
+  // requiring the client to re-upload them.
+  const existing = await prisma.newsletter.findUnique({
+    where: { id: newsletterId },
+    include: { articles: { orderBy: { position: "asc" } } },
+  });
+  if (!existing) {
+    throw new Error("Newsletter not found");
+  }
+  const existingArticlesById = new Map(
+    existing.articles.map((a) => [a.id, a]),
+  );
+
+  let introImage: string | null;
+  if (typeof introImageRaw !== "string") {
+    introImage = null;
+  } else if (introImageRaw === KEEP_SENTINEL) {
+    introImage = existing.introImage;
+  } else if (introImageRaw === "") {
+    introImage = null;
+  } else {
+    introImage = introImageRaw;
+  }
+
+  const mergedArticles = articles.map((a) => {
+    let imageData: string | null = a.imageData;
+    if (a.imageData === null && a.imageRef) {
+      imageData = existingArticlesById.get(a.imageRef)?.imageData ?? null;
+    }
+    return {
+      title: a.title,
+      body: a.body,
+      imageData,
+      position: a.position,
+    };
+  });
 
   await prisma.newsletter.update({
     where: { id: newsletterId },
@@ -1258,7 +1326,7 @@ export async function updateNewsletter(formData: FormData) {
       publishDate,
       articles: {
         deleteMany: {},
-        create: articles,
+        create: mergedArticles,
       },
     },
   });

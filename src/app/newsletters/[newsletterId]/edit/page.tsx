@@ -46,6 +46,7 @@ export default async function NewsletterEditPage({
             ? newsletter.publishDate.toISOString().slice(0, 10)
             : "",
           articles: newsletter.articles.map((a) => ({
+            existingId: a.id,
             title: a.title,
             body: a.body,
             imageData: a.imageData,

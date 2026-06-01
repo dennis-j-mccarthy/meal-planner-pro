@@ -53,9 +53,13 @@ async function resizeImage(file: File): Promise<string> {
 }
 
 interface Article {
+  // Existing article id from the DB, when editing. Used to send a
+  // "keep this image" reference without re-uploading.
+  existingId?: string;
   title: string;
   body: string;
   imageData: string | null;
+  imageDirty: boolean;
 }
 
 interface NewsletterInitial {
@@ -64,8 +68,10 @@ interface NewsletterInitial {
   intro: string;
   introImage: string | null;
   publishDate: string;
-  articles: Article[];
+  articles: { existingId?: string; title: string; body: string; imageData: string | null }[];
 }
+
+const KEEP_SENTINEL = "__KEEP__";
 
 export function NewsletterComposer({
   initial,
@@ -78,13 +84,20 @@ export function NewsletterComposer({
   const [introImage, setIntroImage] = useState<string | null>(
     initial?.introImage ?? null,
   );
+  const [introImageDirty, setIntroImageDirty] = useState(false);
   const [publishDate, setPublishDate] = useState(
     initial?.publishDate ?? new Date().toISOString().slice(0, 10),
   );
   const [articles, setArticles] = useState<Article[]>(
     initial?.articles && initial.articles.length > 0
-      ? initial.articles
-      : [{ title: "", body: "", imageData: null }],
+      ? initial.articles.map((a) => ({
+          existingId: a.existingId,
+          title: a.title,
+          body: a.body,
+          imageData: a.imageData,
+          imageDirty: false,
+        }))
+      : [{ title: "", body: "", imageData: null, imageDirty: false }],
   );
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
@@ -123,7 +136,18 @@ export function NewsletterComposer({
   }
 
   function addArticle() {
-    setArticles((prev) => [...prev, { title: "", body: "", imageData: null }]);
+    setArticles((prev) => [
+      ...prev,
+      { title: "", body: "", imageData: null, imageDirty: true },
+    ]);
+  }
+
+  function setArticleImage(index: number, data: string | null) {
+    setArticles((prev) =>
+      prev.map((a, i) =>
+        i === index ? { ...a, imageData: data, imageDirty: true } : a,
+      ),
+    );
   }
 
   function removeArticle(index: number) {
@@ -141,6 +165,11 @@ export function NewsletterComposer({
     });
   }
 
+  function setIntroImageDirtied(data: string | null) {
+    setIntroImage(data);
+    setIntroImageDirty(true);
+  }
+
   async function handlePaste(
     e: React.ClipboardEvent<HTMLDivElement>,
     index: number,
@@ -154,7 +183,7 @@ export function NewsletterComposer({
         if (!file) continue;
         e.preventDefault();
         const dataUrl = await resizeImage(file);
-        updateArticle(index, "imageData", dataUrl);
+        setArticleImage(index, dataUrl);
         return;
       }
     }
@@ -170,7 +199,7 @@ export function NewsletterComposer({
         if (!file) continue;
         e.preventDefault();
         const dataUrl = await resizeImage(file);
-        setIntroImage(dataUrl);
+        setIntroImageDirtied(dataUrl);
         return;
       }
     }
@@ -180,7 +209,7 @@ export function NewsletterComposer({
     const file = e.target.files?.[0];
     if (!file) return;
     const dataUrl = await resizeImage(file);
-    setIntroImage(dataUrl);
+    setIntroImageDirtied(dataUrl);
     e.target.value = "";
   }
 
@@ -191,7 +220,7 @@ export function NewsletterComposer({
     const file = e.target.files?.[0];
     if (!file) return;
     const dataUrl = await resizeImage(file);
-    updateArticle(index, "imageData", dataUrl);
+    setArticleImage(index, dataUrl);
     e.target.value = "";
   }
 
@@ -284,7 +313,7 @@ export function NewsletterComposer({
                 />
                 <button
                   type="button"
-                  onClick={() => setIntroImage(null)}
+                  onClick={() => setIntroImageDirtied(null)}
                   className="text-xs font-semibold text-red-500 hover:text-red-700"
                 >
                   Remove image
@@ -304,7 +333,15 @@ export function NewsletterComposer({
                 </label>
               </div>
             )}
-            <input type="hidden" name="introImage" value={introImage ?? ""} />
+            <input
+              type="hidden"
+              name="introImage"
+              value={
+                isEdit && !introImageDirty
+                  ? KEEP_SENTINEL
+                  : (introImage ?? "")
+              }
+            />
           </div>
         </div>
 
@@ -391,7 +428,7 @@ export function NewsletterComposer({
                       />
                       <button
                         type="button"
-                        onClick={() => updateArticle(index, "imageData", null)}
+                        onClick={() => setArticleImage(index, null)}
                         className="text-xs font-semibold text-red-500 hover:text-red-700"
                       >
                         Remove image
@@ -414,7 +451,16 @@ export function NewsletterComposer({
                   <input
                     type="hidden"
                     name="articleImage"
-                    value={article.imageData ?? ""}
+                    value={
+                      !article.imageDirty && article.existingId
+                        ? KEEP_SENTINEL
+                        : (article.imageData ?? "")
+                    }
+                  />
+                  <input
+                    type="hidden"
+                    name="articleImageRef"
+                    value={article.existingId ?? ""}
                   />
                 </div>
 
