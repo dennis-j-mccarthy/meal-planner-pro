@@ -1,29 +1,69 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export function UploadRecipeImage({ recipeId, hasImage }: { recipeId: string; hasImage: boolean }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
-  async function handleFile(file: File) {
-    setUploading(true);
-    const fd = new FormData();
-    fd.set("image", file);
-    try {
-      const res = await fetch(`/api/recipes/${recipeId}/upload-image`, {
-        method: "POST",
-        body: fd,
-      });
-      if (res.ok) {
-        window.location.reload();
-      } else {
-        alert("Upload failed");
+  const handleFile = useCallback(
+    async (file: File) => {
+      setUploading(true);
+      const fd = new FormData();
+      fd.set("image", file);
+      try {
+        const res = await fetch(`/api/recipes/${recipeId}/upload-image`, {
+          method: "POST",
+          body: fd,
+        });
+        if (res.ok) {
+          window.location.reload();
+        } else {
+          alert("Upload failed");
+        }
+      } finally {
+        setUploading(false);
       }
-    } finally {
-      setUploading(false);
+    },
+    [recipeId],
+  );
+
+  // Paste an image anywhere on the page (⌘V / Ctrl+V) to set the photo.
+  useEffect(() => {
+    function onPaste(e: ClipboardEvent) {
+      const target = e.target as HTMLElement | null;
+      // Don't hijack paste while typing into a text field.
+      if (target && /^(INPUT|TEXTAREA)$/.test(target.tagName)) return;
+      const file = Array.from(e.clipboardData?.items ?? [])
+        .find((item) => item.type.startsWith("image/"))
+        ?.getAsFile();
+      if (file) {
+        e.preventDefault();
+        handleFile(file);
+      }
     }
-  }
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [handleFile]);
+
+  // "Paste image" button — reads an image directly from the clipboard.
+  const handlePasteClick = useCallback(async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const type = item.types.find((t) => t.startsWith("image/"));
+        if (type) {
+          const blob = await item.getType(type);
+          const ext = type.split("/")[1] || "png";
+          await handleFile(new File([blob], `pasted.${ext}`, { type }));
+          return;
+        }
+      }
+      alert("No image on the clipboard. Copy an image first, then click Paste image.");
+    } catch {
+      alert("Couldn't read the clipboard. Copy an image, then press ⌘V on this page.");
+    }
+  }, [handleFile]);
 
   return (
     <>
@@ -43,7 +83,16 @@ export function UploadRecipeImage({ recipeId, hasImage }: { recipeId: string; ha
         onClick={() => fileRef.current?.click()}
         className="button-secondary text-sm disabled:opacity-50"
       >
-        {uploading ? "Uploading..." : "Upload photo"}
+        {uploading ? "Uploading..." : hasImage ? "Replace photo" : "Upload photo"}
+      </button>
+      <button
+        type="button"
+        disabled={uploading}
+        onClick={handlePasteClick}
+        title="Copy an image, then click here — or press ⌘V anywhere on this page"
+        className="button-secondary text-sm disabled:opacity-50"
+      >
+        Paste image
       </button>
       {hasImage && (
         <button

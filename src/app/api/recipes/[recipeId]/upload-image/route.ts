@@ -1,44 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir, unlink } from "fs/promises";
+import { put, del } from "@vercel/blob";
+import { unlink } from "fs/promises";
 import { join } from "path";
+import { getKitchen } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
+
+// Vercel serverless functions cap body size at ~4.5MB and have a read-only
+// filesystem, so recipe photos are stored in Vercel Blob (same store the
+// newsletter images use) rather than written to public/.
+export const maxDuration = 30;
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ recipeId: string }> },
 ) {
   const { recipeId } = await params;
-  const formData = await request.formData();
-  const file = formData.get("image") as File | null;
 
-  if (!file) {
-    return NextResponse.json({ error: "No file provided" }, { status: 400 });
+  // Kitchen-scoped: only authenticated users (or demo mode) can upload, and
+  // only to recipes in their own kitchen.
+  const kitchen = await getKitchen();
+  if (!kitchen) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const recipe = await prisma.recipe.findUnique({ where: { id: recipeId } });
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: recipeId, kitchenId: kitchen.id },
+  });
   if (!recipe) {
     return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
   }
 
-  // Save to public/recipe-images/
-  const dir = join(process.cwd(), "public", "recipe-images");
-  await mkdir(dir, { recursive: true });
+  const form = await request.formData();
+  const file = form.get("image");
+  if (!(file instanceof Blob)) {
+    return NextResponse.json({ error: "No file provided" }, { status: 400 });
+  }
 
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-  const filename = `${recipeId}.${ext}`;
-  const filepath = join(dir, filename);
+  const originalName =
+    file instanceof File && file.name ? file.name : "image.jpg";
+  const safeName = originalName.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const key = `recipes/${kitchen.id}/${recipeId}-${safeName}`;
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(filepath, buffer);
+  const blob = await put(key, file, {
+    access: "public",
+    contentType: file.type || "image/jpeg",
+    addRandomSuffix: true,
+  });
 
-  const imageUrl = `/recipe-images/${filename}`;
+  // Best-effort cleanup of the previously stored blob image.
+  if (recipe.imageUrl?.includes("blob.vercel-storage.com")) {
+    try { await del(recipe.imageUrl); } catch { /* already gone */ }
+  }
 
   await prisma.recipe.update({
     where: { id: recipeId },
-    data: { imageUrl },
+    data: { imageUrl: blob.url },
   });
 
-  return NextResponse.json({ imageUrl });
+  return NextResponse.json({ imageUrl: blob.url });
 }
 
 export async function DELETE(
@@ -47,15 +66,23 @@ export async function DELETE(
 ) {
   const { recipeId } = await params;
 
-  const recipe = await prisma.recipe.findUnique({ where: { id: recipeId } });
+  const kitchen = await getKitchen();
+  if (!kitchen) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: recipeId, kitchenId: kitchen.id },
+  });
   if (!recipe) {
     return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
   }
 
-  // Delete local file if it's a local path
-  if (recipe.imageUrl?.startsWith("/recipe-images/")) {
-    const filepath = join(process.cwd(), "public", recipe.imageUrl);
-    try { await unlink(filepath); } catch { /* file may not exist */ }
+  if (recipe.imageUrl?.includes("blob.vercel-storage.com")) {
+    try { await del(recipe.imageUrl); } catch { /* already gone */ }
+  } else if (recipe.imageUrl?.startsWith("/recipe-images/")) {
+    // Legacy local file (pre-Blob uploads).
+    try { await unlink(join(process.cwd(), "public", recipe.imageUrl)); } catch { /* may not exist */ }
   }
 
   await prisma.recipe.update({

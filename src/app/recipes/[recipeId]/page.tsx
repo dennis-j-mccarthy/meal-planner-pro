@@ -6,6 +6,7 @@ import { DeleteRecipeButton } from "@/components/delete-recipe-button";
 import { FetchFullRecipeButton } from "@/components/fetch-full-recipe-button";
 import { GenerateImageButton } from "@/components/generate-image-button";
 import { UploadRecipeImage } from "@/components/upload-recipe-image";
+import { EditRecipeModal } from "@/components/edit-recipe-modal";
 import { RegenerateTextButton } from "@/components/regenerate-text-button";
 import { StarButton } from "@/components/star-button";
 import {
@@ -100,6 +101,21 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
             )}
             {/* Actions */}
             <div className="mt-4 flex flex-wrap items-center gap-3">
+              <EditRecipeModal
+                recipe={{
+                  id: recipe.id,
+                  title: recipe.title,
+                  cuisine: recipe.cuisine,
+                  servings: recipe.servings,
+                  prepMinutes: recipe.prepMinutes,
+                  cookMinutes: recipe.cookMinutes,
+                  tags: recipe.tags,
+                  dietaryFlags: recipe.dietaryFlags,
+                  description: recipe.description,
+                  ingredientsText: recipe.ingredientsText,
+                  instructionsText: recipe.instructionsText,
+                }}
+              />
               <UploadRecipeImage recipeId={recipe.id} hasImage={!!recipe.imageUrl} />
               <GenerateImageButton recipeId={recipe.id} hasImage={!!recipe.imageUrl} />
               <RegenerateTextButton recipeId={recipe.id} />

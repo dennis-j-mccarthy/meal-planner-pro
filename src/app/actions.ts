@@ -126,6 +126,39 @@ export async function toggleRecipeStar(formData: FormData) {
   revalidateApp();
 }
 
+export async function updateRecipe(formData: FormData) {
+  const kitchen = await getKitchen();
+  const recipeId = requiredText(formData, "recipeId");
+
+  // Ensure the recipe belongs to the active kitchen before editing.
+  const existing = await prisma.recipe.findFirst({
+    where: { id: recipeId, kitchenId: kitchen.id },
+    select: { id: true },
+  });
+  if (!existing) {
+    throw new Error("Recipe not found");
+  }
+
+  await prisma.recipe.update({
+    where: { id: recipeId },
+    data: {
+      title: requiredText(formData, "title"),
+      cuisine: optionalText(formData, "cuisine"),
+      servings: optionalNumber(formData, "servings"),
+      prepMinutes: optionalNumber(formData, "prepMinutes"),
+      cookMinutes: optionalNumber(formData, "cookMinutes"),
+      tags: optionalText(formData, "tags"),
+      dietaryFlags: optionalText(formData, "dietaryFlags"),
+      description: optionalText(formData, "description"),
+      ingredientsText: optionalText(formData, "ingredientsText"),
+      instructionsText: optionalText(formData, "instructionsText"),
+    },
+  });
+
+  revalidateApp();
+  revalidatePath(`/recipes/${recipeId}`);
+}
+
 export async function deleteRecipe(formData: FormData) {
   const recipeId = requiredText(formData, "recipeId");
 
