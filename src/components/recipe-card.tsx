@@ -81,17 +81,11 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
   return (
     <div
       style={{ backgroundColor: "#ffffff" }}
-      className={`group relative break-inside-avoid mb-5 flex flex-col rounded-2xl border border-slate-200 overflow-hidden hover:border-[var(--accent)]/40 hover:shadow-lg transition-all duration-300 cursor-grab active:cursor-grabbing ${
+      className={`group relative break-inside-avoid mb-5 flex flex-col rounded-2xl border border-slate-200 overflow-hidden hover:border-[var(--accent)]/40 hover:shadow-lg transition-all duration-300 cursor-pointer ${
         isDeleting ? "pointer-events-none opacity-50" : ""
       }`}
-      title="⌘+⌥ click to delete"
-      draggable
+      title="Click to open · ⌘+⌥ click to delete"
       onClickCapture={handleCardClick}
-      onDragStart={(e) => {
-        e.dataTransfer.setData("text/recipe-id", recipe.id);
-        e.dataTransfer.setData("text/plain", recipe.title);
-        e.dataTransfer.effectAllowed = "copy";
-      }}
     >
       <Link
         href={`/recipes/${recipe.id}`}
@@ -102,7 +96,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
 
       {/* Image — only when present */}
       {recipe.imageUrl && (
-        <div className="relative z-0 overflow-hidden">
+        <div className="relative z-0 overflow-hidden pointer-events-none">
           <Image
             src={recipe.imageUrl}
             alt={recipe.title}
@@ -113,8 +107,9 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
         </div>
       )}
 
-      {/* Content */}
-      <div className="relative z-10 p-4 flex-1">
+      {/* Content — pointer-events-none so clicks fall through to the full-card
+          link; interactive bits (the star) re-enable pointer events. */}
+      <div className="relative z-10 p-4 flex-1 pointer-events-none">
         {/* Header row: icon (no image) + star */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 min-w-0">
