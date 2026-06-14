@@ -72,7 +72,7 @@ export function DashboardView({
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());
   const [year, setYear] = useState(now.getFullYear());
-  const [showPast, setShowPast] = useState(false);
+  const [showPast, setShowPast] = useState(true);
 
   // Filter cook dates for selected month
   const monthCookDates = cookDates.filter((cd) => {
