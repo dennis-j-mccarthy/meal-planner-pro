@@ -91,6 +91,7 @@ model Client {
   firstName      String
   lastName       String
   email          String?
+  secondaryEmail String?
   phone          String?
   householdLabel String?
   dietaryNotes   String?
@@ -99,6 +100,10 @@ model Client {
   profileNotes   String?
   dishQuota      String?
   address        String?
+  street         String?
+  city           String?
+  state          String?
+  zip            String?
   active         Boolean    @default(true)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt

@@ -86,6 +86,7 @@ export default async function ClientDetailPage({
             )}
             <div className="mt-2 space-y-0.5 text-sm text-slate-500">
               {client.email && <p>{client.email}</p>}
+              {client.secondaryEmail && <p>{client.secondaryEmail}</p>}
               {client.phone && <p>{client.phone}</p>}
               {client.address && (
                 <p className="whitespace-pre-line">{client.address}</p>

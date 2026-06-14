@@ -187,8 +187,24 @@ export async function deleteRecipe(formData: FormData) {
   redirect("/recipes");
 }
 
+// Compose a printable address from structured parts (street / city / state /
+// zip) so existing consumers that read Client.address (invoices, menu cards,
+// PDFs) keep working. First line is the street, second is "City, ST ZIP".
+function clientAddressFields(formData: FormData) {
+  const street = optionalText(formData, "street");
+  const city = optionalText(formData, "city");
+  const state = optionalText(formData, "state");
+  const zip = optionalText(formData, "zip");
+  const cityStateZip = [[city, state].filter(Boolean).join(", "), zip]
+    .filter(Boolean)
+    .join(" ");
+  const address = [street, cityStateZip].filter(Boolean).join("\n") || null;
+  return { street, city, state, zip, address };
+}
+
 export async function createClient(formData: FormData) {
   const kitchen = await getKitchen();
+  const addr = clientAddressFields(formData);
 
   await prisma.client.create({
     data: {
@@ -196,6 +212,7 @@ export async function createClient(formData: FormData) {
       firstName: requiredText(formData, "firstName"),
       lastName: requiredText(formData, "lastName"),
       email: requiredText(formData, "email").toLowerCase(),
+      secondaryEmail: optionalText(formData, "secondaryEmail")?.toLowerCase() ?? null,
       phone: optionalText(formData, "phone"),
       householdLabel: optionalText(formData, "householdLabel"),
       dietaryNotes: optionalText(formData, "dietaryNotes"),
@@ -203,7 +220,11 @@ export async function createClient(formData: FormData) {
       exclusions: textList(formData, "exclusions"),
       profileNotes: optionalText(formData, "profileNotes"),
       dishQuota: serializeDishQuota(parseDishQuota(optionalText(formData, "dishQuota"))),
-      address: optionalText(formData, "address"),
+      street: addr.street,
+      city: addr.city,
+      state: addr.state,
+      zip: addr.zip,
+      address: addr.address,
     },
   });
 
@@ -212,6 +233,7 @@ export async function createClient(formData: FormData) {
 
 export async function updateClient(formData: FormData) {
   const clientId = requiredText(formData, "clientId");
+  const addr = clientAddressFields(formData);
 
   await prisma.client.update({
     where: { id: clientId },
@@ -219,6 +241,7 @@ export async function updateClient(formData: FormData) {
       firstName: requiredText(formData, "firstName"),
       lastName: requiredText(formData, "lastName"),
       email: requiredText(formData, "email").toLowerCase(),
+      secondaryEmail: optionalText(formData, "secondaryEmail")?.toLowerCase() ?? null,
       phone: optionalText(formData, "phone"),
       householdLabel: optionalText(formData, "householdLabel"),
       dietaryNotes: optionalText(formData, "dietaryNotes"),
@@ -226,7 +249,13 @@ export async function updateClient(formData: FormData) {
       exclusions: textList(formData, "exclusions"),
       profileNotes: optionalText(formData, "profileNotes"),
       dishQuota: serializeDishQuota(parseDishQuota(optionalText(formData, "dishQuota"))),
-      address: optionalText(formData, "address"),
+      street: addr.street,
+      city: addr.city,
+      state: addr.state,
+      zip: addr.zip,
+      // Only recompose address when structured parts were supplied, so we don't
+      // wipe a legacy free-text address on clients that predate these fields.
+      ...(addr.address ? { address: addr.address } : {}),
     },
   });
 

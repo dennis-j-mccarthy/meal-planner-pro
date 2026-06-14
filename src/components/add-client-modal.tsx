@@ -60,6 +60,7 @@ export function AddClientModal() {
               <input className="field" name="firstName" placeholder="First name" required />
               <input className="field" name="lastName" placeholder="Last name" required />
               <input className="field md:col-span-2" name="email" type="email" placeholder="Email" required />
+              <input className="field md:col-span-2" name="secondaryEmail" type="email" placeholder="Secondary email (optional)" />
               <input className="field" name="phone" placeholder="Phone" />
               <input className="field" name="householdLabel" placeholder="Household label" />
               <textarea
@@ -90,11 +91,10 @@ export function AddClientModal() {
                 name="profileNotes"
                 placeholder="Profile notes (anything else worth remembering)"
               />
-              <textarea
-                className="field md:col-span-2 min-h-20"
-                name="address"
-                placeholder="Service address or neighborhood"
-              />
+              <input className="field md:col-span-2" name="street" placeholder="Street address" />
+              <input className="field md:col-span-2" name="city" placeholder="City" />
+              <input className="field" name="state" placeholder="State" />
+              <input className="field" name="zip" placeholder="ZIP" />
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button

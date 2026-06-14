@@ -42,6 +42,7 @@ interface ClientData {
   firstName: string;
   lastName: string;
   email: string | null;
+  secondaryEmail: string | null;
   phone: string | null;
   householdLabel: string | null;
   dietaryNotes: string | null;
@@ -50,6 +51,10 @@ interface ClientData {
   profileNotes: string | null;
   dishQuota: string | null;
   address: string | null;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   active: boolean;
   nextCookDate: string | null;
   cookDateCount: number;
@@ -411,6 +416,7 @@ export function ClientList({ clients }: { clients: ClientData[] }) {
                         firstName: client.firstName,
                         lastName: client.lastName,
                         email: client.email,
+                        secondaryEmail: client.secondaryEmail,
                         phone: client.phone,
                         householdLabel: client.householdLabel,
                         dietaryNotes: client.dietaryNotes,
@@ -418,7 +424,10 @@ export function ClientList({ clients }: { clients: ClientData[] }) {
                         exclusions: client.exclusions,
                         profileNotes: client.profileNotes,
                         dishQuota: client.dishQuota,
-                        address: client.address,
+                        street: client.street,
+                        city: client.city,
+                        state: client.state,
+                        zip: client.zip,
                       }}
                     />
                     <QuickCookDate clientId={client.id} />

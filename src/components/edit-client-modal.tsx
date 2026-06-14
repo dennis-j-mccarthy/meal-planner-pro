@@ -12,6 +12,7 @@ interface ClientInitial {
   firstName: string;
   lastName: string;
   email: string | null;
+  secondaryEmail: string | null;
   phone: string | null;
   householdLabel: string | null;
   dietaryNotes: string | null;
@@ -19,7 +20,10 @@ interface ClientInitial {
   exclusions: string | null;
   profileNotes: string | null;
   dishQuota: string | null;
-  address: string | null;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
 }
 
 export function EditClientModal({ client }: { client: ClientInitial }) {
@@ -101,6 +105,13 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
                 required
               />
               <input
+                className="field md:col-span-2"
+                name="secondaryEmail"
+                type="email"
+                placeholder="Secondary email (optional)"
+                defaultValue={client.secondaryEmail ?? ""}
+              />
+              <input
                 className="field"
                 name="phone"
                 placeholder="Phone"
@@ -150,11 +161,29 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
                 placeholder="Profile notes (anything else worth remembering)"
                 defaultValue={client.profileNotes ?? ""}
               />
-              <textarea
-                className="field md:col-span-2 min-h-20"
-                name="address"
-                placeholder="Service address or neighborhood"
-                defaultValue={client.address ?? ""}
+              <input
+                className="field md:col-span-2"
+                name="street"
+                placeholder="Street address"
+                defaultValue={client.street ?? ""}
+              />
+              <input
+                className="field md:col-span-2"
+                name="city"
+                placeholder="City"
+                defaultValue={client.city ?? ""}
+              />
+              <input
+                className="field"
+                name="state"
+                placeholder="State"
+                defaultValue={client.state ?? ""}
+              />
+              <input
+                className="field"
+                name="zip"
+                placeholder="ZIP"
+                defaultValue={client.zip ?? ""}
               />
             </div>
             <div className="mt-5 flex items-center justify-between gap-2">
