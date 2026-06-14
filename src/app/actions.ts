@@ -428,7 +428,13 @@ export async function queueUrlRecipe(formData: FormData) {
   });
 
   revalidateApp();
-  redirect(`/recipes/${recipe.id}`);
+  // Returned (rather than redirected) so the client can show progress and tell
+  // the user when a site didn't cooperate — "draft" means no ingredients were
+  // scraped and the recipe needs filling in.
+  return {
+    recipeId: recipe.id,
+    status: ingredientsText ? ("ready" as const) : ("draft" as const),
+  };
 }
 
 export async function queueApiRecipeSync(formData: FormData) {

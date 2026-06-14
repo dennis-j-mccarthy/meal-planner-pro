@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   createManualRecipe,
   createRecipeFromPhoto,
@@ -16,6 +17,16 @@ type Tab = "discover" | "search" | "url" | "ai" | "manual" | "photo";
 // under the body-size limit while preserving enough resolution for OCR.
 const OCR_MAX_DIM = 1600;
 const OCR_QUALITY = 0.85;
+
+// Recipe scraping renders the page in a headless browser, so it can take a
+// while — especially on sites that block or stall automated readers. These
+// messages reassure the user the import is still working.
+function urlStageMessage(elapsed: number): string {
+  if (elapsed < 3) return "Opening the page…";
+  if (elapsed < 8) return "Reading the recipe…";
+  if (elapsed < 16) return "Some sites are slow — still working…";
+  return "Almost there — this site is taking a while…";
+}
 
 async function resizeForOcr(file: File): Promise<File> {
   if (file.type === "image/svg+xml") return file;
@@ -105,6 +116,12 @@ export function AddRecipeModal() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("discover");
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const router = useRouter();
+
+  // URL-import progress state
+  const [urlBusy, setUrlBusy] = useState(false);
+  const [urlElapsed, setUrlElapsed] = useState(0);
+  const [urlError, setUrlError] = useState<string | null>(null);
 
   // Edamam search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -159,6 +176,31 @@ export function AddRecipeModal() {
     window.addEventListener("paste", onPaste);
     return () => window.removeEventListener("paste", onPaste);
   }, [open, tab]);
+
+  // Tick an elapsed-seconds counter while a URL import is in flight.
+  useEffect(() => {
+    if (!urlBusy) {
+      setUrlElapsed(0);
+      return;
+    }
+    const id = setInterval(() => setUrlElapsed((s) => s + 1), 1000);
+    return () => clearInterval(id);
+  }, [urlBusy]);
+
+  async function handleUrlSubmit(fd: FormData) {
+    setUrlError(null);
+    setUrlBusy(true);
+    try {
+      const res = await queueUrlRecipe(fd);
+      // Navigate to the new recipe; keep the busy state through the transition.
+      router.push(`/recipes/${res.recipeId}`);
+    } catch {
+      setUrlError(
+        "That site couldn't be read. Double-check the link, or try again — some recipe sites block automated readers.",
+      );
+      setUrlBusy(false);
+    }
+  }
 
   async function handlePhotoSubmit() {
     if (!photoFile) return;
@@ -584,21 +626,34 @@ export function AddRecipeModal() {
 
           {/* ===== URL TAB ===== */}
           {tab === "url" && (
-            <form
-              action={async (fd) => {
-                await queueUrlRecipe(fd);
-                setOpen(false);
-              }}
-            >
+            <form action={handleUrlSubmit}>
               <div className="grid gap-3">
-                <input className="field" name="sourceUrl" placeholder="https://example.com/recipe" type="url" required />
-                <input className="field" name="label" placeholder="Recipe name (auto-detected from page)" />
-                <textarea className="field min-h-20" name="notes" placeholder="Parsing notes (optional)" />
+                <input className="field" name="sourceUrl" placeholder="https://example.com/recipe" type="url" required disabled={urlBusy} />
+                <input className="field" name="label" placeholder="Recipe name (auto-detected from page)" disabled={urlBusy} />
+                <textarea className="field min-h-20" name="notes" placeholder="Parsing notes (optional)" disabled={urlBusy} />
               </div>
-              <div className="mt-5 flex justify-end gap-2">
-                <button type="button" onClick={() => setOpen(false)} className="button-secondary text-sm">Cancel</button>
-                <button type="submit" className="button-primary text-sm">Import from URL</button>
-              </div>
+
+              {urlError && !urlBusy && (
+                <p className="mt-3 text-sm text-red-600">{urlError}</p>
+              )}
+
+              {urlBusy ? (
+                <div className="mt-5 flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                  <svg className="h-5 w-5 shrink-0 animate-spin text-[var(--accent)]" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4Z" />
+                  </svg>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-700">{urlStageMessage(urlElapsed)}</p>
+                    <p className="text-xs text-slate-400">{urlElapsed}s elapsed · recipe sites can take 15–20s</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-5 flex justify-end gap-2">
+                  <button type="button" onClick={() => setOpen(false)} className="button-secondary text-sm">Cancel</button>
+                  <button type="submit" className="button-primary text-sm">Import from URL</button>
+                </div>
+              )}
             </form>
           )}
 
