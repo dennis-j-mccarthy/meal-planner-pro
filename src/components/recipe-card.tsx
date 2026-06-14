@@ -1,7 +1,10 @@
 "use client";
 
+import { useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { deleteRecipe } from "@/app/actions";
 import { StarButton } from "./star-button";
 
 type RecipeCardRecipe = {
@@ -57,12 +60,33 @@ function firstTag(...values: Array<string | null | undefined>) {
 export function RecipeCard({ recipe }: RecipeCardProps) {
   const icon = iconFor(recipe.title, recipe.cuisine);
   const topTag = firstTag(recipe.tags, recipe.dietaryFlags);
+  const router = useRouter();
+  const [isDeleting, startDeleting] = useTransition();
+
+  // ⌘+⌥ (Cmd+Option) click deletes the recipe. Capture phase so we intercept
+  // before the full-card <Link> navigates.
+  const handleCardClick = (e: React.MouseEvent) => {
+    if (!(e.metaKey && e.altKey)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (!window.confirm(`Delete "${recipe.title}"? This can't be undone.`)) return;
+    const formData = new FormData();
+    formData.set("recipeId", recipe.id);
+    startDeleting(async () => {
+      await deleteRecipe(formData);
+      router.refresh();
+    });
+  };
 
   return (
     <div
       style={{ backgroundColor: "#ffffff" }}
-      className="group relative break-inside-avoid mb-5 flex flex-col rounded-2xl border border-slate-200 overflow-hidden hover:border-[var(--accent)]/40 hover:shadow-lg transition-all duration-300 cursor-grab active:cursor-grabbing"
+      className={`group relative break-inside-avoid mb-5 flex flex-col rounded-2xl border border-slate-200 overflow-hidden hover:border-[var(--accent)]/40 hover:shadow-lg transition-all duration-300 cursor-grab active:cursor-grabbing ${
+        isDeleting ? "pointer-events-none opacity-50" : ""
+      }`}
+      title="⌘+⌥ click to delete"
       draggable
+      onClickCapture={handleCardClick}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/recipe-id", recipe.id);
         e.dataTransfer.setData("text/plain", recipe.title);
