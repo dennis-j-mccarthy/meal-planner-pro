@@ -7,6 +7,7 @@ import { FetchFullRecipeButton } from "@/components/fetch-full-recipe-button";
 import { GenerateImageButton } from "@/components/generate-image-button";
 import { UploadRecipeImage } from "@/components/upload-recipe-image";
 import { EditRecipeModal } from "@/components/edit-recipe-modal";
+import { AddRecipeDetailsButton } from "@/components/add-recipe-details-button";
 import { RegenerateTextButton } from "@/components/regenerate-text-button";
 import { StarButton } from "@/components/star-button";
 import {
@@ -101,6 +102,9 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
             )}
             {/* Actions */}
             <div className="mt-4 flex flex-wrap items-center gap-3">
+              {recipe.description && ingredients.length === 0 && instructions.length === 0 && (
+                <AddRecipeDetailsButton recipeId={recipe.id} hasImage={!!recipe.imageUrl} />
+              )}
               <EditRecipeModal
                 recipe={{
                   id: recipe.id,

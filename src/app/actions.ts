@@ -961,6 +961,55 @@ export async function regenerateRecipeTextAction(formData: FormData) {
   revalidateApp();
 }
 
+/**
+ * Fills in ingredients + steps for a recipe that currently only has a blurb,
+ * using the existing description as context. Keeps the blurb (only writes the
+ * description if there wasn't one).
+ */
+export async function generateRecipeDetailsAction(formData: FormData) {
+  const recipeId = requiredText(formData, "recipeId");
+
+  const recipe = await prisma.recipe.findUnique({
+    where: { id: recipeId },
+    select: {
+      title: true,
+      description: true,
+      cuisine: true,
+      tags: true,
+      dietaryFlags: true,
+      servings: true,
+      sourceDescription: true,
+    },
+  });
+
+  if (!recipe) {
+    throw new Error("Recipe not found");
+  }
+
+  const result = await generateRecipeText(
+    recipe.title,
+    recipe.cuisine,
+    recipe.tags,
+    recipe.dietaryFlags,
+    recipe.servings,
+    recipe.description || recipe.sourceDescription,
+  );
+
+  await prisma.recipe.update({
+    where: { id: recipeId },
+    data: {
+      ingredientsText: result.ingredients,
+      instructionsText: result.instructions,
+      // Preserve the existing blurb; only set a description if it was empty.
+      ...(recipe.description ? {} : { description: result.description }),
+      detailStatus: RecipeDetailStatus.READY,
+    },
+  });
+
+  revalidateApp();
+  revalidatePath(`/recipes/${recipeId}`);
+}
+
 export async function regenerateAllRecipeTextAction() {
   const kitchen = await getKitchen();
 

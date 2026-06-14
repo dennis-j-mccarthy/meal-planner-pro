@@ -1,5 +1,4 @@
-import { writeFile, mkdir } from "fs/promises";
-import { join } from "path";
+import { put } from "@vercel/blob";
 
 const API_KEY = process.env.GEMINI_API_KEY;
 
@@ -109,14 +108,14 @@ export async function generateRecipeImage(
     buffer = await generateWithFoodish(title, cuisine);
   }
 
-  const imageDir = join(process.cwd(), "public", "recipe-images");
-  await mkdir(imageDir, { recursive: true });
+  // Store in Vercel Blob (serverless filesystem is read-only on Vercel).
+  const blob = await put("recipes/generated/dish.jpg", buffer, {
+    access: "public",
+    contentType: "image/jpeg",
+    addRandomSuffix: true,
+  });
 
-  const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const filePath = join(imageDir, filename);
-  await writeFile(filePath, buffer);
-
-  return `/recipe-images/${filename}`;
+  return blob.url;
 }
 
 type RecipeTextResult = {
