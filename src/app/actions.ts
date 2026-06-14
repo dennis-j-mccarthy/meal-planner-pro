@@ -13,6 +13,7 @@ import {
 import { getKitchen } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 import { deriveAttributeTagsFromTitle, mergeTagValues } from "@/lib/recipe-tags";
+import { parseDishQuota, serializeDishQuota } from "@/lib/dish-quota";
 import { generateRecipeImage, generateRecipeText, extractRecipeFromImage } from "@/lib/gemini";
 import { getNextInvoiceNumber } from "@/lib/invoice-number";
 import { sendEmail, sendPlainEmail } from "@/lib/email";
@@ -203,6 +204,7 @@ export async function createClient(formData: FormData) {
       inclusions: textList(formData, "inclusions"),
       exclusions: textList(formData, "exclusions"),
       profileNotes: optionalText(formData, "profileNotes"),
+      dishQuota: serializeDishQuota(parseDishQuota(optionalText(formData, "dishQuota"))),
       address: optionalText(formData, "address"),
     },
   });
@@ -226,6 +228,7 @@ export async function updateClient(formData: FormData) {
       inclusions: textList(formData, "inclusions"),
       exclusions: textList(formData, "exclusions"),
       profileNotes: optionalText(formData, "profileNotes"),
+      dishQuota: serializeDishQuota(parseDishQuota(optionalText(formData, "dishQuota"))),
       address: optionalText(formData, "address"),
     },
   });

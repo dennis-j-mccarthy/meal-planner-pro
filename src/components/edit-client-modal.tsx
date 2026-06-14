@@ -4,6 +4,8 @@ import { useState, useRef, useEffect } from "react";
 import { updateClient, deleteClient } from "@/app/actions";
 import { PreferenceCheckboxes } from "@/components/preference-checkboxes";
 import { parsePreferenceList } from "@/lib/preference-options";
+import { DishQuotaEditor } from "@/components/dish-quota-editor";
+import { parseDishQuota } from "@/lib/dish-quota";
 
 interface ClientInitial {
   id: string;
@@ -16,6 +18,7 @@ interface ClientInitial {
   inclusions: string | null;
   exclusions: string | null;
   profileNotes: string | null;
+  dishQuota: string | null;
   address: string | null;
 }
 
@@ -133,6 +136,12 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
                   tone="exclude"
                   selected={parsePreferenceList(client.exclusions)}
                 />
+              </div>
+              <div className="md:col-span-2">
+                <p className="mb-1.5 text-xs font-semibold text-slate-500">
+                  Dish plan — how many of each per proposal
+                </p>
+                <DishQuotaEditor defaultValue={parseDishQuota(client.dishQuota)} />
               </div>
               <textarea
                 className="field md:col-span-2 min-h-20"

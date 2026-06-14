@@ -48,6 +48,7 @@ export default async function ClientsPage() {
       inclusions: client.inclusions,
       exclusions: client.exclusions,
       profileNotes: client.profileNotes,
+      dishQuota: client.dishQuota,
       address: client.address,
       active: client.active,
       nextCookDate: nextCookDate?.scheduledFor.toISOString() ?? null,

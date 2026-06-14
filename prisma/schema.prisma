@@ -97,6 +97,7 @@ model Client {
   inclusions     String?
   exclusions     String?
   profileNotes   String?
+  dishQuota      String?
   address        String?
   active         Boolean    @default(true)
   createdAt      DateTime   @default(now())

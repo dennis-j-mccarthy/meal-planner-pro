@@ -9,6 +9,7 @@ async function main() {
     ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "inclusions" TEXT;
     ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "exclusions" TEXT;
     ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "profileNotes" TEXT;
+    ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "dishQuota" TEXT;
 
     -- Proposal client-review fields
     ALTER TABLE "Proposal" ADD COLUMN IF NOT EXISTS "shareToken" TEXT;

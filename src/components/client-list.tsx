@@ -48,6 +48,7 @@ interface ClientData {
   inclusions: string | null;
   exclusions: string | null;
   profileNotes: string | null;
+  dishQuota: string | null;
   address: string | null;
   active: boolean;
   nextCookDate: string | null;
@@ -416,6 +417,7 @@ export function ClientList({ clients }: { clients: ClientData[] }) {
                         inclusions: client.inclusions,
                         exclusions: client.exclusions,
                         profileNotes: client.profileNotes,
+                        dishQuota: client.dishQuota,
                         address: client.address,
                       }}
                     />

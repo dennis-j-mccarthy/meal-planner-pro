@@ -4,6 +4,7 @@ import { createCookDate } from "@/app/actions";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDateShort, formatDateLong, formatEnum } from "@/lib/format";
 import { parsePreferenceList } from "@/lib/preference-options";
+import { parseDishQuota, totalDishes } from "@/lib/dish-quota";
 import { getKitchen } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 
@@ -154,6 +155,35 @@ export default async function ClientDetailPage({
           )}
         </div>
       )}
+
+      {/* Dish plan */}
+      {(() => {
+        const quota = parseDishQuota(client.dishQuota);
+        if (quota.length === 0) return null;
+        return (
+          <div className="panel p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+                Dish plan
+              </h2>
+              <span className="text-xs text-slate-400">
+                {totalDishes(quota)} dishes per proposal
+              </span>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {quota.map((row) => (
+                <span
+                  key={row.category}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm"
+                >
+                  <span className="font-bold text-slate-900">{row.count}</span>
+                  <span className="text-slate-600">{row.category}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-2">

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/app/actions";
 import { PreferenceCheckboxes } from "@/components/preference-checkboxes";
+import { DishQuotaEditor } from "@/components/dish-quota-editor";
 
 export function AddClientModal() {
   const [open, setOpen] = useState(false);
@@ -77,6 +78,12 @@ export function AddClientModal() {
                   Exclusions — foods to always avoid
                 </p>
                 <PreferenceCheckboxes name="exclusions" tone="exclude" selected={[]} />
+              </div>
+              <div className="md:col-span-2">
+                <p className="mb-1.5 text-xs font-semibold text-slate-500">
+                  Dish plan — how many of each per proposal
+                </p>
+                <DishQuotaEditor defaultValue={[]} />
               </div>
               <textarea
                 className="field md:col-span-2 min-h-20"
