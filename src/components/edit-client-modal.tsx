@@ -96,8 +96,9 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
                 className="field md:col-span-2"
                 name="email"
                 type="email"
-                placeholder="Email (optional)"
+                placeholder="Email"
                 defaultValue={client.email ?? ""}
+                required
               />
               <input
                 className="field"

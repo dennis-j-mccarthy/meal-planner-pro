@@ -37,13 +37,15 @@ export function DishQuotaEditor({ defaultValue }: { defaultValue: DishQuotaRow[]
         {rows.map((row, i) => (
           <div key={i} className="flex items-center gap-2">
             <input
-              className="field flex-1"
+              className="field"
+              style={{ flex: "1 1 0%", minWidth: 0 }}
               value={row.category}
               placeholder="Category (e.g. Entrées)"
               onChange={(e) => setRow(i, { category: e.target.value })}
             />
             <input
-              className="field w-20 text-center"
+              className="field text-center"
+              style={{ flex: "0 0 4.5rem", width: "4.5rem" }}
               type="number"
               min={0}
               value={row.count}

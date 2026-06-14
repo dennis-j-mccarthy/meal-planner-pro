@@ -59,7 +59,7 @@ export function AddClientModal() {
             <div className="grid gap-3 md:grid-cols-2">
               <input className="field" name="firstName" placeholder="First name" required />
               <input className="field" name="lastName" placeholder="Last name" required />
-              <input className="field md:col-span-2" name="email" type="email" placeholder="Email (optional)" />
+              <input className="field md:col-span-2" name="email" type="email" placeholder="Email" required />
               <input className="field" name="phone" placeholder="Phone" />
               <input className="field" name="householdLabel" placeholder="Household label" />
               <textarea

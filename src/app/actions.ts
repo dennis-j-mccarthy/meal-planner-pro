@@ -190,14 +190,12 @@ export async function deleteRecipe(formData: FormData) {
 export async function createClient(formData: FormData) {
   const kitchen = await getKitchen();
 
-  const emailValue = optionalText(formData, "email")?.toLowerCase();
-
   await prisma.client.create({
     data: {
       kitchen: { connect: { id: kitchen.id } },
       firstName: requiredText(formData, "firstName"),
       lastName: requiredText(formData, "lastName"),
-      ...(emailValue ? { email: emailValue } : {}),
+      email: requiredText(formData, "email").toLowerCase(),
       phone: optionalText(formData, "phone"),
       householdLabel: optionalText(formData, "householdLabel"),
       dietaryNotes: optionalText(formData, "dietaryNotes"),
@@ -214,14 +212,13 @@ export async function createClient(formData: FormData) {
 
 export async function updateClient(formData: FormData) {
   const clientId = requiredText(formData, "clientId");
-  const emailValue = optionalText(formData, "email")?.toLowerCase();
 
   await prisma.client.update({
     where: { id: clientId },
     data: {
       firstName: requiredText(formData, "firstName"),
       lastName: requiredText(formData, "lastName"),
-      email: emailValue ?? null,
+      email: requiredText(formData, "email").toLowerCase(),
       phone: optionalText(formData, "phone"),
       householdLabel: optionalText(formData, "householdLabel"),
       dietaryNotes: optionalText(formData, "dietaryNotes"),
