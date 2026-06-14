@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Image from "next/image";
 import { addRecipeToProposal, removeRecipeFromProposal, updateProposalRecipeCategory } from "@/app/actions";
+import { categoriesMatch, totalDishes, type DishQuotaRow } from "@/lib/dish-quota";
 
 type Recipe = {
   id: string;
@@ -54,6 +55,7 @@ type ProposalRecipeManagerProps = {
   proposalId: string;
   currentRecipes: ProposalRecipeItem[];
   allRecipes: Recipe[];
+  dishPlan?: DishQuotaRow[];
 };
 
 function RecipeAccordion({
@@ -147,6 +149,7 @@ export function ProposalRecipeManager({
   proposalId,
   currentRecipes,
   allRecipes,
+  dishPlan = [],
 }: ProposalRecipeManagerProps) {
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState("");
@@ -166,6 +169,16 @@ export function ProposalRecipeManager({
   const visibleCurrentRecipes = currentRecipes.filter(
     (r) => !justRemoved.has(r.id),
   );
+
+  // Dish-plan guideline: how many recipes currently match each target category.
+  const planProgress = dishPlan.map((row) => ({
+    category: row.category,
+    target: row.count,
+    current: visibleCurrentRecipes.filter(
+      (r) => r.courseLabel && categoriesMatch(r.courseLabel, row.category),
+    ).length,
+  }));
+  const planTarget = totalDishes(dishPlan);
 
   // Build tag list for filters
   const tagCounts = new Map<string, number>();
@@ -262,6 +275,35 @@ export function ProposalRecipeManager({
         onDragOver={(e) => { e.preventDefault(); setDropOver(true); }}
         onDragLeave={() => setDropOver(false)}
       >
+        {planProgress.length > 0 && (
+          <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                Dish plan ({visibleCurrentRecipes.length}/{planTarget})
+              </p>
+              <span className="text-[10px] text-slate-400">guideline — override freely</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {planProgress.map((p) => {
+                const cls =
+                  p.current >= p.target
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : p.current > 0
+                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      : "border-slate-200 bg-slate-50 text-slate-500";
+                return (
+                  <span
+                    key={p.category}
+                    className={`rounded-full border px-2.5 py-0.5 text-xs font-medium ${cls}`}
+                  >
+                    {p.category} {p.current}/{p.target}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
             Menu ({visibleCurrentRecipes.length})

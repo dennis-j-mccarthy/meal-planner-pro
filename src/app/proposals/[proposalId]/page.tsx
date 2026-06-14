@@ -8,6 +8,7 @@ import {
 import { StatusBadge } from "@/components/status-badge";
 import { ProposalRecipeManager } from "@/components/proposal-recipe-manager";
 import { ShareLinkBox } from "@/components/share-link-box";
+import { parseDishQuota } from "@/lib/dish-quota";
 import { formatDateShort, formatEnum, formatMinutes } from "@/lib/format";
 import { getKitchen } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
@@ -258,6 +259,7 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
               },
             }))}
             allRecipes={recipesForManager}
+            dishPlan={parseDishQuota(client.dishQuota)}
           />
         </div>
       </section>
