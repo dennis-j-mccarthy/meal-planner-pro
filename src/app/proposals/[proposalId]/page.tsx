@@ -7,6 +7,7 @@ import {
 } from "@/app/actions";
 import { StatusBadge } from "@/components/status-badge";
 import { ProposalRecipeManager } from "@/components/proposal-recipe-manager";
+import { ShareLinkBox } from "@/components/share-link-box";
 import { formatDateShort, formatEnum, formatMinutes } from "@/lib/format";
 import { getKitchen } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
@@ -158,6 +159,78 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
           </div>
         </div>
       </section>
+
+      {/* Client review link */}
+      {proposal.shareToken && (
+        <section className="panel p-6 sm:p-8">
+          <ShareLinkBox
+            token={proposal.shareToken}
+            proposalId={proposal.id}
+            clientHasEmail={!!client.email}
+          />
+        </section>
+      )}
+
+      {/* Client's response from the review link */}
+      {proposal.clientSubmittedAt && (
+        <section
+          className={`panel p-6 sm:p-8 border ${
+            proposal.clientApproved ? "border-emerald-200" : "border-amber-200"
+          }`}
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <StatusBadge
+              label={proposal.clientApproved ? "Client approved" : "Client requested changes"}
+            />
+            <span className="text-xs text-slate-400">
+              submitted {formatDateShort(proposal.clientSubmittedAt)}
+            </span>
+          </div>
+
+          {proposal.clientComment && (
+            <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                Client comment
+              </p>
+              <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
+                {proposal.clientComment}
+              </p>
+            </div>
+          )}
+
+          {(() => {
+            const removed = proposal.recipes.filter((r) => r.clientRemoved);
+            if (removed.length === 0) {
+              return (
+                <p className="mt-4 text-sm text-slate-500">
+                  The client didn&apos;t remove any dishes.
+                </p>
+              );
+            }
+            return (
+              <div className="mt-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Dishes the client removed
+                </p>
+                <ul className="mt-1 space-y-1">
+                  {removed.map((r) => (
+                    <li key={r.id} className="text-sm text-slate-700 line-through decoration-red-400">
+                      {r.recipe.title}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-2 text-xs text-slate-400">
+                  These are suggestions — remove them from the menu below if you agree.
+                </p>
+              </div>
+            );
+          })()}
+
+          <p className="mt-4 text-xs text-slate-400">
+            Use <strong>Client approved</strong> to finalize, or <strong>Client wants changes</strong> to send a second pass.
+          </p>
+        </section>
+      )}
 
       {/* Recipe management or recipe list */}
       <section className="panel p-6 sm:p-8">

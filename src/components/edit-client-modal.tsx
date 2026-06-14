@@ -11,6 +11,9 @@ interface ClientInitial {
   phone: string | null;
   householdLabel: string | null;
   dietaryNotes: string | null;
+  inclusions: string | null;
+  exclusions: string | null;
+  profileNotes: string | null;
   address: string | null;
 }
 
@@ -108,6 +111,24 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
                 name="dietaryNotes"
                 placeholder="Dietary preferences, dislikes, allergen notes"
                 defaultValue={client.dietaryNotes ?? ""}
+              />
+              <textarea
+                className="field min-h-20"
+                name="inclusions"
+                placeholder="Inclusions — foods they love / want more of"
+                defaultValue={client.inclusions ?? ""}
+              />
+              <textarea
+                className="field min-h-20"
+                name="exclusions"
+                placeholder="Exclusions — foods to always avoid"
+                defaultValue={client.exclusions ?? ""}
+              />
+              <textarea
+                className="field md:col-span-2 min-h-20"
+                name="profileNotes"
+                placeholder="Profile notes (anything else worth remembering)"
+                defaultValue={client.profileNotes ?? ""}
               />
               <textarea
                 className="field md:col-span-2 min-h-20"

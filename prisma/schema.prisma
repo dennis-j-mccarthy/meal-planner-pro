@@ -94,6 +94,9 @@ model Client {
   phone          String?
   householdLabel String?
   dietaryNotes   String?
+  inclusions     String?
+  exclusions     String?
+  profileNotes   String?
   address        String?
   active         Boolean    @default(true)
   createdAt      DateTime   @default(now())
@@ -167,6 +170,10 @@ model Proposal {
   introMessage         String?
   status               ProposalStatus   @default(DRAFT)
   revisionNotes        String?
+  shareToken           String?          @unique
+  clientComment        String?
+  clientApproved       Boolean?
+  clientSubmittedAt    DateTime?
   sentAt               DateTime?
   approvedAt           DateTime?
   createdAt            DateTime         @default(now())
@@ -188,6 +195,7 @@ model ProposalRecipe {
   courseLabel      String?
   servingsOverride Int?
   notes            String?
+  clientRemoved    Boolean  @default(false)
   proposal         Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   recipe           Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 

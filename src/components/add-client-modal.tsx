@@ -66,6 +66,21 @@ export function AddClientModal() {
                 placeholder="Dietary preferences, dislikes, allergen notes"
               />
               <textarea
+                className="field min-h-20"
+                name="inclusions"
+                placeholder="Inclusions — foods they love / want more of"
+              />
+              <textarea
+                className="field min-h-20"
+                name="exclusions"
+                placeholder="Exclusions — foods to always avoid"
+              />
+              <textarea
+                className="field md:col-span-2 min-h-20"
+                name="profileNotes"
+                placeholder="Profile notes (anything else worth remembering)"
+              />
+              <textarea
                 className="field md:col-span-2 min-h-20"
                 name="address"
                 placeholder="Service address or neighborhood"

@@ -15,7 +15,7 @@ import { prisma } from "@/lib/prisma";
 import { deriveAttributeTagsFromTitle, mergeTagValues } from "@/lib/recipe-tags";
 import { generateRecipeImage, generateRecipeText, extractRecipeFromImage } from "@/lib/gemini";
 import { getNextInvoiceNumber } from "@/lib/invoice-number";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, sendPlainEmail } from "@/lib/email";
 import { buildInvoiceHtml } from "@/lib/invoice-template";
 import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
@@ -55,6 +55,13 @@ function optionalNumber(formData: FormData, key: string) {
 
 function parseDateInput(value: string) {
   return new Date(`${value}T12:00:00`);
+}
+
+function appBaseUrl() {
+  return (
+    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+    "https://meal-planner-pro-puce.vercel.app"
+  );
 }
 
 function revalidateApp() {
@@ -184,6 +191,9 @@ export async function createClient(formData: FormData) {
       phone: optionalText(formData, "phone"),
       householdLabel: optionalText(formData, "householdLabel"),
       dietaryNotes: optionalText(formData, "dietaryNotes"),
+      inclusions: optionalText(formData, "inclusions"),
+      exclusions: optionalText(formData, "exclusions"),
+      profileNotes: optionalText(formData, "profileNotes"),
       address: optionalText(formData, "address"),
     },
   });
@@ -204,6 +214,9 @@ export async function updateClient(formData: FormData) {
       phone: optionalText(formData, "phone"),
       householdLabel: optionalText(formData, "householdLabel"),
       dietaryNotes: optionalText(formData, "dietaryNotes"),
+      inclusions: optionalText(formData, "inclusions"),
+      exclusions: optionalText(formData, "exclusions"),
+      profileNotes: optionalText(formData, "profileNotes"),
       address: optionalText(formData, "address"),
     },
   });
@@ -553,7 +566,7 @@ export async function sendProposal(formData: FormData) {
   const proposalId = requiredText(formData, "proposalId");
   const proposal = await prisma.proposal.findUnique({
     where: { id: proposalId },
-    select: { cookDateId: true },
+    select: { cookDateId: true, shareToken: true },
   });
 
   if (!proposal) {
@@ -567,6 +580,8 @@ export async function sendProposal(formData: FormData) {
         status: ProposalStatus.SENT,
         sentAt: new Date(),
         revisionNotes: null,
+        // Mint the public review link on first send.
+        shareToken: proposal.shareToken ?? crypto.randomUUID(),
       },
     }),
     prisma.cookDate.update({
@@ -660,6 +675,131 @@ export async function approveProposal(formData: FormData) {
 
   revalidateApp();
   redirect(`/menu-cards/${bonAppetit.id}`);
+}
+
+/**
+ * Public, no-login submission from the client review page. Looked up by
+ * shareToken only — never kitchen-scoped. Records the client's comment,
+ * approve/changes choice, and which dishes they removed, then notifies Beth.
+ */
+export async function submitProposalReview(formData: FormData) {
+  const token = requiredText(formData, "token");
+  const decision = requiredText(formData, "decision"); // "approve" | "changes"
+  const comment = optionalText(formData, "comment");
+  const removedIds = formData.getAll("removed").map(String).filter(Boolean);
+
+  const proposal = await prisma.proposal.findUnique({
+    where: { shareToken: token },
+    include: {
+      cookDate: { include: { client: true } },
+      recipes: { include: { recipe: { select: { title: true } } } },
+    },
+  });
+
+  if (!proposal) {
+    throw new Error("This review link is no longer active.");
+  }
+
+  const approved = decision === "approve";
+  const removedSet = new Set(removedIds);
+
+  await prisma.$transaction([
+    prisma.proposal.update({
+      where: { id: proposal.id },
+      data: {
+        clientApproved: approved,
+        clientComment: comment,
+        clientSubmittedAt: new Date(),
+      },
+    }),
+    // Flag the dishes the client subtracted (reset the rest) — advisory only.
+    ...proposal.recipes.map((pr) =>
+      prisma.proposalRecipe.update({
+        where: { id: pr.id },
+        data: { clientRemoved: removedSet.has(pr.id) },
+      }),
+    ),
+  ]);
+
+  // Notify Beth that the client responded.
+  const clientName = `${proposal.cookDate.client.firstName} ${proposal.cookDate.client.lastName}`.trim();
+  const removedTitles = proposal.recipes
+    .filter((pr) => removedSet.has(pr.id))
+    .map((pr) => pr.recipe.title);
+  const notifyEmail = process.env.REVIEW_NOTIFY_EMAIL || "yogabeth@mac.com";
+
+  try {
+    await sendPlainEmail({
+      to: notifyEmail,
+      subject: `${clientName} ${approved ? "approved" : "requested changes to"} their meal plan`,
+      text: [
+        `${clientName} just reviewed "${proposal.title}".`,
+        "",
+        `Response: ${approved ? "Approved 👍" : "Requested changes"}`,
+        removedTitles.length
+          ? `Removed: ${removedTitles.join(", ")}`
+          : "Removed: (none)",
+        comment ? `\nComment:\n${comment}` : "\nComment: (none)",
+        "",
+        `Review and finalize: ${appBaseUrl()}/proposals/${proposal.id}`,
+      ].join("\n"),
+    });
+  } catch {
+    // Don't fail the client's submission if the email can't be sent.
+  }
+
+  revalidatePath(`/proposals/${proposal.id}`);
+  return { ok: true };
+}
+
+/** Email the client their no-login review link. Kitchen-scoped. */
+export async function emailProposalLinkToClient(formData: FormData) {
+  const kitchen = await getKitchen();
+  const proposalId = requiredText(formData, "proposalId");
+
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: proposalId, kitchenId: kitchen.id },
+    include: { cookDate: { include: { client: true } } },
+  });
+
+  if (!proposal) {
+    throw new Error("Proposal not found");
+  }
+
+  const clientEmail = proposal.cookDate.client.email;
+  if (!clientEmail) {
+    throw new Error("This client has no email address on file.");
+  }
+
+  let token = proposal.shareToken;
+  if (!token) {
+    token = crypto.randomUUID();
+    await prisma.proposal.update({
+      where: { id: proposal.id },
+      data: { shareToken: token },
+    });
+  }
+
+  const reviewUrl = `${appBaseUrl()}/review/${token}`;
+  const firstName = proposal.cookDate.client.firstName;
+
+  await sendPlainEmail({
+    to: clientEmail,
+    subject: `Your meal plan from ${kitchen.name} is ready to review`,
+    text: [
+      `Hi ${firstName},`,
+      "",
+      `Your proposed meal plan "${proposal.title}" is ready. Open the link below to view it, remove anything you'd like to skip, leave a comment, and approve — no login needed:`,
+      "",
+      reviewUrl,
+      "",
+      `Thank you,`,
+      kitchen.name,
+    ].join("\n"),
+  });
+
+  revalidatePath(`/proposals/${proposal.id}`);
+  return { ok: true };
 }
 
 export async function addRecipeToProposal(formData: FormData) {

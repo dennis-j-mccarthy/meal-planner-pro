@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import {
   ClerkProvider,
@@ -33,6 +34,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Public client-facing review pages render chrome-free (no app nav, no auth).
+  const pathname = (await headers()).get("x-pathname") || "";
+  if (pathname.startsWith("/review")) {
+    return (
+      <html lang="en">
+        <body className={`${inter.variable} antialiased`}>{children}</body>
+      </html>
+    );
+  }
+
   const loggedIn = await isLoggedIn();
   const demoMode = await isDemoMode();
   const kitchen = await getKitchen();

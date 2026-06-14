@@ -13,6 +13,7 @@
     "db:seed": "node --import tsx prisma/seed.mjs",
     "db:studio": "prisma studio",
     "backup": "node --import tsx scripts/backup-postgres.mjs",
+    "apply:review": "node --import tsx scripts/apply-meal-plan-review.mjs",
     "refresh-demo": "node --import tsx scripts/refresh-demo.mjs",
     "import:recipe-starters": "node --import tsx scripts/import-recipe-starters.mjs",
     "convert:recipe-starters": "node --import tsx scripts/convert-recipe-starters.mjs",

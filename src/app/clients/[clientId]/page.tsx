@@ -105,6 +105,41 @@ export default async function ClientDetailPage({
         </div>
       </div>
 
+      {/* Preferences profile */}
+      {(client.inclusions || client.exclusions || client.profileNotes) && (
+        <div className="panel p-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400">
+            Preferences
+          </h2>
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            {client.inclusions && (
+              <div>
+                <p className="text-xs font-semibold text-emerald-600">Inclusions</p>
+                <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
+                  {client.inclusions}
+                </p>
+              </div>
+            )}
+            {client.exclusions && (
+              <div>
+                <p className="text-xs font-semibold text-red-600">Exclusions</p>
+                <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
+                  {client.exclusions}
+                </p>
+              </div>
+            )}
+          </div>
+          {client.profileNotes && (
+            <div className="mt-4">
+              <p className="text-xs font-semibold text-slate-500">Notes</p>
+              <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
+                {client.profileNotes}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Quick actions */}
       <div className="flex flex-wrap gap-2">
         <Link
