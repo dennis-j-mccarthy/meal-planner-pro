@@ -13,7 +13,7 @@ import {
 import { getKitchen } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 import { deriveAttributeTagsFromTitle, mergeTagValues } from "@/lib/recipe-tags";
-import { generateRecipeImage, generateRecipeText } from "@/lib/gemini";
+import { generateRecipeImage, generateRecipeText, extractRecipeFromImage } from "@/lib/gemini";
 import { getNextInvoiceNumber } from "@/lib/invoice-number";
 import { sendEmail } from "@/lib/email";
 import { buildInvoiceHtml } from "@/lib/invoice-template";
@@ -273,6 +273,45 @@ export async function createManualRecipe(formData: FormData) {
   });
 
   revalidateApp();
+}
+
+export async function createRecipeFromPhoto(formData: FormData) {
+  const kitchen = await getKitchen();
+
+  const file = formData.get("photo");
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("No photo provided");
+  }
+
+  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+  const mimeType = file.type || "image/jpeg";
+
+  const extracted = await extractRecipeFromImage(base64, mimeType);
+
+  const recipe = await prisma.recipe.create({
+    data: {
+      kitchenId: kitchen.id,
+      title: extracted.title,
+      description: extracted.description || null,
+      sourceDescription: "Imported from a photo of a recipe",
+      cuisine: extracted.cuisine,
+      servings: extracted.servings,
+      prepMinutes: extracted.prepMinutes,
+      cookMinutes: extracted.cookMinutes,
+      tags: mergeTagValues(
+        extracted.tags,
+        deriveAttributeTagsFromTitle(extracted.title),
+      ),
+      ingredientsText: extracted.ingredients || null,
+      instructionsText: extracted.instructions || null,
+      sourceType: RecipeSourceType.IMPORTED,
+      detailStatus: RecipeDetailStatus.READY,
+      sourceName: "Photo import",
+    },
+  });
+
+  revalidateApp();
+  redirect(`/recipes/${recipe.id}`);
 }
 
 export async function queueAiRecipe(formData: FormData) {

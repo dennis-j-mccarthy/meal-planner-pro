@@ -4,12 +4,57 @@ import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   createManualRecipe,
+  createRecipeFromPhoto,
   queueAiRecipe,
   queueUrlRecipe,
   importEdamamRecipe,
 } from "@/app/actions";
 
-type Tab = "discover" | "search" | "url" | "ai" | "manual";
+type Tab = "discover" | "search" | "url" | "ai" | "manual" | "photo";
+
+// Downscale a recipe photo before sending it to the server action: keeps it
+// under the body-size limit while preserving enough resolution for OCR.
+const OCR_MAX_DIM = 1600;
+const OCR_QUALITY = 0.85;
+
+async function resizeForOcr(file: File): Promise<File> {
+  if (file.type === "image/svg+xml") return file;
+
+  const dataUrl: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  // `Image` is shadowed by the next/image import; use the DOM constructor.
+  const img = new window.Image();
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+
+  const longest = Math.max(img.width, img.height);
+  if (longest <= OCR_MAX_DIM && file.size < 900_000) return file;
+
+  const ratio = Math.min(1, OCR_MAX_DIM / longest);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width * ratio);
+  canvas.height = Math.round(img.height * ratio);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const blob: Blob = await new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
+      "image/jpeg",
+      OCR_QUALITY,
+    ),
+  );
+  return new File([blob], "recipe-photo.jpg", { type: "image/jpeg" });
+}
 
 const HEALTH_FILTERS = [
   "gluten-free",
@@ -75,6 +120,13 @@ export function AddRecipeModal() {
   const [activeCategory, setActiveCategory] = useState("");
   const [importingIds, setImportingIds] = useState<Set<string>>(new Set());
 
+  // Photo-import state
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (open) {
       dialogRef.current?.showModal();
@@ -82,6 +134,49 @@ export function AddRecipeModal() {
       dialogRef.current?.close();
     }
   }, [open]);
+
+  function pickPhoto(file: File) {
+    setPhotoError(null);
+    setPhotoFile(file);
+    setPhotoPreview((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return URL.createObjectURL(file);
+    });
+  }
+
+  // Paste a screenshot/photo straight into the modal while the photo tab is open.
+  useEffect(() => {
+    if (!open || tab !== "photo") return;
+    function onPaste(e: ClipboardEvent) {
+      const file = Array.from(e.clipboardData?.items ?? [])
+        .find((item) => item.type.startsWith("image/"))
+        ?.getAsFile();
+      if (file) {
+        e.preventDefault();
+        pickPhoto(file);
+      }
+    }
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [open, tab]);
+
+  async function handlePhotoSubmit() {
+    if (!photoFile) return;
+    setPhotoBusy(true);
+    setPhotoError(null);
+    try {
+      const resized = await resizeForOcr(photoFile);
+      const fd = new FormData();
+      fd.set("photo", resized);
+      // Server action extracts the recipe and redirects to the new page.
+      await createRecipeFromPhoto(fd);
+    } catch (err) {
+      setPhotoError(
+        err instanceof Error ? err.message : "Couldn't read that photo. Try another image.",
+      );
+      setPhotoBusy(false);
+    }
+  }
 
   function toggleHealth(label: string) {
     setHealthFilters((prev) =>
@@ -173,6 +268,7 @@ export function AddRecipeModal() {
     { key: "discover", label: "Discover", icon: "M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" },
     { key: "search", label: "Search", icon: "m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" },
     { key: "url", label: "From URL", icon: "M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" },
+    { key: "photo", label: "From Photo", icon: "M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" },
     { key: "ai", label: "AI Assist", icon: "M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 0 0-2.455 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z" },
     { key: "manual", label: "Manual", icon: "M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" },
   ];
@@ -504,6 +600,81 @@ export function AddRecipeModal() {
                 <button type="submit" className="button-primary text-sm">Import from URL</button>
               </div>
             </form>
+          )}
+
+          {/* ===== PHOTO TAB ===== */}
+          {tab === "photo" && (
+            <div>
+              <p className="text-sm text-slate-500 mb-3">
+                Snap a cookbook page or upload a screenshot of a recipe — AI reads it and fills in the title, ingredients, and steps. You can edit everything afterward.
+              </p>
+
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) pickPhoto(file);
+                }}
+              />
+
+              {!photoPreview ? (
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 px-4 py-10 text-center hover:border-[var(--accent)] hover:bg-slate-50 transition-colors"
+                >
+                  <svg className="h-10 w-10 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 0 1 5.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 0 0-1.134-.175 2.31 2.31 0 0 1-1.64-1.055l-.822-1.316a2.192 2.192 0 0 0-1.736-1.039 48.774 48.774 0 0 0-5.232 0 2.192 2.192 0 0 0-1.736 1.039l-.821 1.316Z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0Z" />
+                  </svg>
+                  <span className="text-sm font-medium text-slate-700">
+                    Take a photo or choose an image
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    or paste a screenshot with ⌘V
+                  </span>
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={photoPreview}
+                    alt="Recipe to import"
+                    className="max-h-72 w-full rounded-xl object-contain border border-slate-200 bg-slate-50"
+                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={photoBusy}
+                      onClick={() => photoInputRef.current?.click()}
+                      className="button-secondary text-sm disabled:opacity-50"
+                    >
+                      Choose another
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {photoError && (
+                <p className="mt-3 text-sm text-red-600">{photoError}</p>
+              )}
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button type="button" onClick={() => setOpen(false)} className="button-secondary text-sm">Cancel</button>
+                <button
+                  type="button"
+                  onClick={handlePhotoSubmit}
+                  disabled={!photoFile || photoBusy}
+                  className="button-primary text-sm disabled:opacity-50"
+                >
+                  {photoBusy ? "Reading recipe..." : "Extract recipe"}
+                </button>
+              </div>
+            </div>
           )}
 
           {/* ===== AI TAB ===== */}
