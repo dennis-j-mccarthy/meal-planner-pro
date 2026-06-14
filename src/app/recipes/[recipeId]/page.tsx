@@ -8,6 +8,7 @@ import { GenerateImageButton } from "@/components/generate-image-button";
 import { UploadRecipeImage } from "@/components/upload-recipe-image";
 import { EditRecipeModal } from "@/components/edit-recipe-modal";
 import { AddRecipeDetailsButton } from "@/components/add-recipe-details-button";
+import { NutritionButton } from "@/components/nutrition-button";
 import { RegenerateTextButton } from "@/components/regenerate-text-button";
 import { StarButton } from "@/components/star-button";
 import {
@@ -61,6 +62,23 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 
   const ingredients = toList(recipe.ingredientsText);
   const instructions = toList(recipe.instructionsText);
+
+  type Nutrition = {
+    calories: number | null;
+    protein: string | null;
+    carbs: string | null;
+    fat: string | null;
+    fiber: string | null;
+    sodium: string | null;
+  };
+  let nutrition: Nutrition | null = null;
+  if (recipe.nutrition) {
+    try {
+      nutrition = JSON.parse(recipe.nutrition) as Nutrition;
+    } catch {
+      nutrition = null;
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -122,6 +140,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
               />
               <UploadRecipeImage recipeId={recipe.id} hasImage={!!recipe.imageUrl} />
               <GenerateImageButton recipeId={recipe.id} hasImage={!!recipe.imageUrl} />
+              <NutritionButton recipeId={recipe.id} hasNutrition={!!nutrition} />
               <RegenerateTextButton recipeId={recipe.id} />
               {recipe.sourceUrl && (!recipe.instructionsText || (recipe.ingredientsText && recipe.ingredientsText.split("\n").length < 3)) && (
                 <FetchFullRecipeButton recipeId={recipe.id} sourceUrl={recipe.sourceUrl} />
@@ -142,6 +161,38 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
           ) : null}
         </div>
       </section>
+
+      {/* Nutrition — only if estimated */}
+      {nutrition && (
+        <section className="panel p-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900">Nutrition</h2>
+            <span className="text-xs text-slate-400">AI estimate · per serving</span>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+            {[
+              { label: "Calories", value: nutrition.calories != null ? String(nutrition.calories) : null },
+              { label: "Protein", value: nutrition.protein },
+              { label: "Carbs", value: nutrition.carbs },
+              { label: "Fat", value: nutrition.fat },
+              { label: "Fiber", value: nutrition.fiber },
+              { label: "Sodium", value: nutrition.sodium },
+            ]
+              .filter((m) => m.value)
+              .map((m) => (
+                <div
+                  key={m.label}
+                  className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-center"
+                >
+                  <p className="text-lg font-bold text-slate-900">{m.value}</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                    {m.label}
+                  </p>
+                </div>
+              ))}
+          </div>
+        </section>
+      )}
 
       {/* Ingredients — only if present */}
       {ingredients.length > 0 && (

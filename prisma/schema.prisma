@@ -130,6 +130,7 @@ model Recipe {
   cookMinutes       Int?
   servings          Int?
   notes             String?
+  nutrition         String?
   starred           Boolean            @default(false)
   imageUrl          String?
   createdAt         DateTime           @default(now())

@@ -14,7 +14,7 @@ import { getKitchen } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 import { deriveAttributeTagsFromTitle, mergeTagValues } from "@/lib/recipe-tags";
 import { parseDishQuota, serializeDishQuota } from "@/lib/dish-quota";
-import { generateRecipeImage, generateRecipeText, extractRecipeFromImage } from "@/lib/gemini";
+import { generateRecipeImage, generateRecipeText, extractRecipeFromImage, generateRecipeNutrition } from "@/lib/gemini";
 import { getNextInvoiceNumber } from "@/lib/invoice-number";
 import { sendEmail, sendPlainEmail } from "@/lib/email";
 import { buildInvoiceHtml } from "@/lib/invoice-template";
@@ -1004,6 +1004,33 @@ export async function generateRecipeDetailsAction(formData: FormData) {
       ...(recipe.description ? {} : { description: result.description }),
       detailStatus: RecipeDetailStatus.READY,
     },
+  });
+
+  revalidateApp();
+  revalidatePath(`/recipes/${recipeId}`);
+}
+
+export async function generateNutritionAction(formData: FormData) {
+  const recipeId = requiredText(formData, "recipeId");
+
+  const recipe = await prisma.recipe.findUnique({
+    where: { id: recipeId },
+    select: { title: true, ingredientsText: true, servings: true },
+  });
+
+  if (!recipe) {
+    throw new Error("Recipe not found");
+  }
+
+  const nutrition = await generateRecipeNutrition(
+    recipe.title,
+    recipe.ingredientsText,
+    recipe.servings,
+  );
+
+  await prisma.recipe.update({
+    where: { id: recipeId },
+    data: { nutrition: JSON.stringify(nutrition) },
   });
 
   revalidateApp();
