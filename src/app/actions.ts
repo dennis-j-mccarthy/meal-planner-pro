@@ -42,6 +42,15 @@ function optionalText(formData: FormData, key: string) {
   return value.length > 0 ? value : null;
 }
 
+/** Join repeated checkbox values (formData.getAll) into a comma-separated string. */
+function textList(formData: FormData, key: string) {
+  const values = formData
+    .getAll(key)
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+  return values.length > 0 ? values.join(", ") : null;
+}
+
 function optionalNumber(formData: FormData, key: string) {
   const value = optionalText(formData, key);
 
@@ -191,8 +200,8 @@ export async function createClient(formData: FormData) {
       phone: optionalText(formData, "phone"),
       householdLabel: optionalText(formData, "householdLabel"),
       dietaryNotes: optionalText(formData, "dietaryNotes"),
-      inclusions: optionalText(formData, "inclusions"),
-      exclusions: optionalText(formData, "exclusions"),
+      inclusions: textList(formData, "inclusions"),
+      exclusions: textList(formData, "exclusions"),
       profileNotes: optionalText(formData, "profileNotes"),
       address: optionalText(formData, "address"),
     },
@@ -214,8 +223,8 @@ export async function updateClient(formData: FormData) {
       phone: optionalText(formData, "phone"),
       householdLabel: optionalText(formData, "householdLabel"),
       dietaryNotes: optionalText(formData, "dietaryNotes"),
-      inclusions: optionalText(formData, "inclusions"),
-      exclusions: optionalText(formData, "exclusions"),
+      inclusions: textList(formData, "inclusions"),
+      exclusions: textList(formData, "exclusions"),
       profileNotes: optionalText(formData, "profileNotes"),
       address: optionalText(formData, "address"),
     },

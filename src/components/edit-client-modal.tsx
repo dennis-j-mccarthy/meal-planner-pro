@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { updateClient, deleteClient } from "@/app/actions";
+import { PreferenceCheckboxes } from "@/components/preference-checkboxes";
+import { parsePreferenceList } from "@/lib/preference-options";
 
 interface ClientInitial {
   id: string;
@@ -112,18 +114,26 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
                 placeholder="Dietary preferences, dislikes, allergen notes"
                 defaultValue={client.dietaryNotes ?? ""}
               />
-              <textarea
-                className="field min-h-20"
-                name="inclusions"
-                placeholder="Inclusions — foods they love / want more of"
-                defaultValue={client.inclusions ?? ""}
-              />
-              <textarea
-                className="field min-h-20"
-                name="exclusions"
-                placeholder="Exclusions — foods to always avoid"
-                defaultValue={client.exclusions ?? ""}
-              />
+              <div className="md:col-span-2">
+                <p className="mb-1.5 text-xs font-semibold text-emerald-600">
+                  Inclusions — foods they love / want more of
+                </p>
+                <PreferenceCheckboxes
+                  name="inclusions"
+                  tone="include"
+                  selected={parsePreferenceList(client.inclusions)}
+                />
+              </div>
+              <div className="md:col-span-2">
+                <p className="mb-1.5 text-xs font-semibold text-red-600">
+                  Exclusions — foods to always avoid
+                </p>
+                <PreferenceCheckboxes
+                  name="exclusions"
+                  tone="exclude"
+                  selected={parsePreferenceList(client.exclusions)}
+                />
+              </div>
               <textarea
                 className="field md:col-span-2 min-h-20"
                 name="profileNotes"

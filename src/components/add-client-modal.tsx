@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/app/actions";
+import { PreferenceCheckboxes } from "@/components/preference-checkboxes";
 
 export function AddClientModal() {
   const [open, setOpen] = useState(false);
@@ -65,16 +66,18 @@ export function AddClientModal() {
                 name="dietaryNotes"
                 placeholder="Dietary preferences, dislikes, allergen notes"
               />
-              <textarea
-                className="field min-h-20"
-                name="inclusions"
-                placeholder="Inclusions — foods they love / want more of"
-              />
-              <textarea
-                className="field min-h-20"
-                name="exclusions"
-                placeholder="Exclusions — foods to always avoid"
-              />
+              <div className="md:col-span-2">
+                <p className="mb-1.5 text-xs font-semibold text-emerald-600">
+                  Inclusions — foods they love / want more of
+                </p>
+                <PreferenceCheckboxes name="inclusions" tone="include" selected={[]} />
+              </div>
+              <div className="md:col-span-2">
+                <p className="mb-1.5 text-xs font-semibold text-red-600">
+                  Exclusions — foods to always avoid
+                </p>
+                <PreferenceCheckboxes name="exclusions" tone="exclude" selected={[]} />
+              </div>
               <textarea
                 className="field md:col-span-2 min-h-20"
                 name="profileNotes"

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createCookDate } from "@/app/actions";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDateShort, formatDateLong, formatEnum } from "@/lib/format";
+import { parsePreferenceList } from "@/lib/preference-options";
 import { getKitchen } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
 
@@ -115,17 +116,31 @@ export default async function ClientDetailPage({
             {client.inclusions && (
               <div>
                 <p className="text-xs font-semibold text-emerald-600">Inclusions</p>
-                <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
-                  {client.inclusions}
-                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {parsePreferenceList(client.inclusions).map((item) => (
+                    <span
+                      key={item}
+                      className="inline-block rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
             {client.exclusions && (
               <div>
                 <p className="text-xs font-semibold text-red-600">Exclusions</p>
-                <p className="mt-1 whitespace-pre-line text-sm text-slate-700">
-                  {client.exclusions}
-                </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {parsePreferenceList(client.exclusions).map((item) => (
+                    <span
+                      key={item}
+                      className="inline-block rounded-full border border-red-200 bg-red-50 px-2.5 py-0.5 text-xs font-medium text-red-700"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>
