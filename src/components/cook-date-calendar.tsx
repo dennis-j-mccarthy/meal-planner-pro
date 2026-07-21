@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 type CalendarCookDate = {
@@ -67,6 +68,10 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [creatingClientId, setCreatingClientId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Portals need the DOM; only render the popup after mount
+  useEffect(() => setMounted(true), []);
 
   function closeModal() {
     setSelectedDate(null);
@@ -287,7 +292,7 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
       </div>
 
       {/* Selected date popup */}
-      {selectedDate && (
+      {selectedDate && mounted && createPortal(
         <div
           role="dialog"
           aria-modal="true"
@@ -394,7 +399,8 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
               )
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* Legend */}
