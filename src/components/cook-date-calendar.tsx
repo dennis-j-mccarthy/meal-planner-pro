@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type CalendarCookDate = {
@@ -65,8 +65,49 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
   const [month, setMonth] = useState(initialMonth);
   const [year, setYear] = useState(initialYear);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [quickClientId, setQuickClientId] = useState("");
-  const [quickSubmitting, setQuickSubmitting] = useState(false);
+  const [creatingClientId, setCreatingClientId] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
+
+  function closeModal() {
+    setSelectedDate(null);
+    setCreatingClientId(null);
+    setCreateError(null);
+  }
+
+  // Close the day popup on Escape
+  useEffect(() => {
+    if (!selectedDate) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") closeModal();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedDate]);
+
+  async function createCookDate(clientId: string) {
+    if (!selectedDate || creatingClientId) return;
+    const parts = selectedDate.split("-");
+    const isoDate = `${parts[0]}-${String(Number(parts[1]) + 1).padStart(2, "0")}-${String(parts[2]).padStart(2, "0")}`;
+    setCreateError(null);
+    setCreatingClientId(clientId);
+    try {
+      const res = await fetch("/api/cook-dates/quick-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId, date: isoDate }),
+      });
+      const data = await res.json();
+      if (data.proposalUrl) {
+        window.location.href = data.proposalUrl;
+      } else {
+        setCreatingClientId(null);
+        setCreateError(data.error || "Failed to create cook date");
+      }
+    } catch {
+      setCreatingClientId(null);
+      setCreateError("Failed to create cook date");
+    }
+  }
 
   const firstDay = new Date(year, month, 1);
   const startDow = firstDay.getDay();
@@ -195,7 +236,8 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
                 key={cell.key}
                 onClick={() => {
                   setSelectedDate(isSelected ? null : dateKey);
-                  setQuickClientId("");
+                  setCreatingClientId(null);
+                  setCreateError(null);
                   if (!isSelected && onDateSelect) {
                     // Format as YYYY-MM-DD for date input
                     const isoDate = `${year}-${String(month + 1).padStart(2, "0")}-${String(cell.day).padStart(2, "0")}`;
@@ -244,106 +286,114 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
         </div>
       </div>
 
-      {/* Selected date detail panel */}
+      {/* Selected date popup */}
       {selectedDate && (
-        <div className="rounded-xl border border-slate-200 p-5">
-          <h3 className="text-sm font-bold text-slate-900">
-            {(() => {
-              const parts = selectedDate.split("-");
-              const d = new Date(Number(parts[0]), Number(parts[1]), Number(parts[2]));
-              return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
-            })()}
-          </h3>
-
-          {/* Instant add cook date — only when clients provided */}
-          {clients && clients.length > 0 && (
-            <div className="mt-3 flex items-center gap-2">
-              <select
-                className="field flex-1 text-sm"
-                value={quickClientId}
-                onChange={(e) => setQuickClientId(e.target.value)}
-                disabled={quickSubmitting}
-              >
-                <option value="">+ Add cook date — pick a client…</option>
-                {clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.firstName} {c.lastName}
-                  </option>
-                ))}
-              </select>
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={closeModal}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md max-h-[85vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-base font-bold text-slate-900">
+                {(() => {
+                  const parts = selectedDate.split("-");
+                  const d = new Date(Number(parts[0]), Number(parts[1]), Number(parts[2]));
+                  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+                })()}
+              </h3>
               <button
                 type="button"
-                disabled={!quickClientId || quickSubmitting}
-                onClick={async () => {
-                  const parts = selectedDate.split("-");
-                  const isoDate = `${parts[0]}-${String(Number(parts[1]) + 1).padStart(2, "0")}-${String(parts[2]).padStart(2, "0")}`;
-                  setQuickSubmitting(true);
-                  try {
-                    const res = await fetch("/api/cook-dates/quick-create", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ clientId: quickClientId, date: isoDate }),
-                    });
-                    const data = await res.json();
-                    if (data.proposalUrl) {
-                      window.location.href = data.proposalUrl;
-                    } else {
-                      setQuickSubmitting(false);
-                      alert(data.error || "Failed to create cook date");
-                    }
-                  } catch {
-                    setQuickSubmitting(false);
-                    alert("Failed to create cook date");
-                  }
-                }}
-                className="button-primary text-sm px-4 py-2 disabled:opacity-50"
+                onClick={closeModal}
+                aria-label="Close"
+                className="-mr-1 -mt-1 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
               >
-                {quickSubmitting ? "Creating…" : "Add"}
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
-          )}
 
-          {selectedCookDates.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500">No cook dates scheduled.</p>
-          ) : (
-            <div className="mt-3 space-y-3">
-              {selectedCookDates.map((cd) => (
-                <div
-                  key={cd.id}
-                  onClick={() => router.push(`/cook-dates/${cd.id}`)}
-                  className="cursor-pointer rounded-lg border border-slate-200 p-4 transition hover:border-slate-300 hover:shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="text-sm font-semibold text-slate-900">{cd.clientName}</h4>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {cd.startTimeLabel || "No time set"}
-                        {cd.guestCount ? ` · ${cd.guestCount} guests` : ""}
-                      </p>
-                      {cd.serviceNotes && (
-                        <p className="mt-2 text-sm text-slate-600">{cd.serviceNotes}</p>
-                      )}
-                      <p className="mt-2 text-xs text-slate-400">
-                        {cd.proposalTitle || "No approved proposal yet"}
-                      </p>
-                      <p className="mt-2 text-xs font-medium text-[var(--accent-strong)]">
-                        View meal plan &rarr;
-                      </p>
+            {/* Existing cook dates for this day */}
+            {selectedCookDates.length > 0 && (
+              <div className="mt-4 space-y-3">
+                {selectedCookDates.map((cd) => (
+                  <div
+                    key={cd.id}
+                    onClick={() => router.push(`/cook-dates/${cd.id}`)}
+                    className="cursor-pointer rounded-lg border border-slate-200 p-4 transition hover:border-slate-300 hover:shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-900">{cd.clientName}</h4>
+                        <p className="mt-1 text-xs text-slate-500">
+                          {cd.startTimeLabel || "No time set"}
+                          {cd.guestCount ? ` · ${cd.guestCount} guests` : ""}
+                        </p>
+                        {cd.serviceNotes && (
+                          <p className="mt-2 text-sm text-slate-600">{cd.serviceNotes}</p>
+                        )}
+                        <p className="mt-2 text-xs text-slate-400">
+                          {cd.proposalTitle || "No approved proposal yet"}
+                        </p>
+                        <p className="mt-2 text-xs font-medium text-[var(--accent-strong)]">
+                          View meal plan &rarr;
+                        </p>
+                      </div>
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
+                        cd.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
+                        cd.status === "APPROVED" || cd.status === "SCHEDULED" ? "bg-teal-50 text-teal-700 ring-teal-200" :
+                        cd.status === "PROPOSED" ? "bg-amber-50 text-amber-700 ring-amber-200" :
+                        cd.status === "CANCELLED" ? "bg-slate-50 text-slate-500 ring-slate-200" :
+                        "bg-slate-50 text-slate-600 ring-slate-200"
+                      }`}>
+                        {formatStatus(cd.status)}
+                      </span>
                     </div>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                      cd.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
-                      cd.status === "APPROVED" || cd.status === "SCHEDULED" ? "bg-teal-50 text-teal-700 ring-teal-200" :
-                      cd.status === "PROPOSED" ? "bg-amber-50 text-amber-700 ring-amber-200" :
-                      cd.status === "CANCELLED" ? "bg-slate-50 text-slate-500 ring-slate-200" :
-                      "bg-slate-50 text-slate-600 ring-slate-200"
-                    }`}>
-                      {formatStatus(cd.status)}
-                    </span>
                   </div>
+                ))}
+              </div>
+            )}
+
+            {/* Choose a client to add a cook date */}
+            {clients && clients.length > 0 ? (
+              <div className="mt-5">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  {selectedCookDates.length > 0 ? "Add another cook date" : "Add a cook date"} — choose a client
+                </p>
+                <div className="mt-2 space-y-1">
+                  {clients.map((c) => {
+                    const isCreating = creatingClientId === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        disabled={creatingClientId !== null}
+                        onClick={() => createCookDate(c.id)}
+                        className="flex w-full items-center justify-between rounded-lg border border-slate-200 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition hover:border-[var(--accent)] hover:bg-[var(--accent-light)] disabled:opacity-50"
+                      >
+                        <span>{c.firstName} {c.lastName}</span>
+                        <span className="text-xs text-slate-400">
+                          {isCreating ? "Creating…" : "+ Cook date"}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
-          )}
+                {createError && (
+                  <p className="mt-2 text-xs font-medium text-red-600">{createError}</p>
+                )}
+              </div>
+            ) : (
+              selectedCookDates.length === 0 && (
+                <p className="mt-4 text-sm text-slate-500">No cook dates scheduled.</p>
+              )
+            )}
+          </div>
         </div>
       )}
 
