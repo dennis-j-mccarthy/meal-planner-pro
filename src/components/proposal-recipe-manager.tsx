@@ -264,9 +264,9 @@ export function ProposalRecipeManager({
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-4 xl:h-[calc(100vh-320px)]">
-      {/* ===== LEFT: Current menu ===== */}
+      {/* ===== Current menu (right after flip) ===== */}
       <div
-        className={`rounded-xl border-2 border-dashed p-6 transition-all min-h-64 xl:overflow-y-auto ${
+        className={`order-2 rounded-xl border-2 border-dashed p-6 transition-all min-h-64 xl:overflow-y-auto ${
           dropOver
             ? "border-[var(--accent)] bg-[var(--accent-light)]"
             : "border-slate-200 bg-slate-50/50"
@@ -416,8 +416,8 @@ export function ProposalRecipeManager({
         )}
       </div>
 
-      {/* ===== RIGHT: Recipe search ===== */}
-      <div className="rounded-xl border border-slate-200 bg-white p-4 xl:overflow-y-auto">
+      {/* ===== Recipe search (left after flip) ===== */}
+      <div className="order-1 rounded-xl border border-slate-200 bg-white p-4 xl:overflow-y-auto">
         {/* Paste menu — purple-bordered section */}
         <div className="rounded-lg border-2 border-dashed border-purple-200 bg-purple-50/40 p-3 mb-4">
           <div className="flex items-center justify-between mb-2">
@@ -441,7 +441,7 @@ export function ProposalRecipeManager({
           </div>
           <textarea
             className="w-full rounded-md border border-purple-200 bg-white px-3 py-2 text-sm font-mono placeholder:text-slate-400 placeholder:font-sans focus:outline-none focus:ring-2 focus:ring-purple-300"
-            rows={pasteExpanded ? 10 : 3}
+            rows={pasteExpanded ? 24 : 6}
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
             onFocus={() => setPasteExpanded(true)}
