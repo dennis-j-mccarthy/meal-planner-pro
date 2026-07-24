@@ -15,18 +15,6 @@ export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) 
   const router = useRouter();
   const [sendStatus, setSendStatus] = useState<SendStatus>("idle");
 
-  async function handleDownload() {
-    const res = await fetch(`/api/menu-cards/${menuCardId}/pdf`);
-    if (!res.ok) return;
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "bon-appetit.pdf";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   async function handleSend() {
     if (sendStatus === "sending") return;
     setSendStatus("sending");
@@ -78,12 +66,6 @@ export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) 
         </svg>
         Preview PDF
       </a>
-      <button onClick={handleDownload} className="button-secondary text-sm">
-        <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-        </svg>
-        Download PDF
-      </button>
       <button onClick={handleSend} disabled={sendStatus === "sending"} className={`${sendClass} disabled:opacity-60`}>
         <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
