@@ -1499,6 +1499,7 @@ export async function sendBonAppetitEmail(formData: FormData) {
 
   await sendEmail({
     to: "yogabeth@mac.com",
+    replyTo: process.env.REPLY_TO_EMAIL || "dennisjmccarthy@gmail.com",
     subject: `Bon Appetit - ${menuCard.client.firstName} - ${dateFormatted}`,
     text: [
       `Hi Beth,`,

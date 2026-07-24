@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteMenuCard, sendBonAppetitEmail, acceptMenuCard } from "@/app/actions";
 
@@ -8,8 +9,11 @@ interface MenuCardActionsProps {
   accepted: boolean;
 }
 
+type SendStatus = "idle" | "sending" | "sent" | "error";
+
 export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) {
   const router = useRouter();
+  const [sendStatus, setSendStatus] = useState<SendStatus>("idle");
 
   async function handleDownload() {
     const res = await fetch(`/api/menu-cards/${menuCardId}/pdf`);
@@ -23,6 +27,19 @@ export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) 
     URL.revokeObjectURL(url);
   }
 
+  async function handleSend() {
+    if (sendStatus === "sending") return;
+    setSendStatus("sending");
+    try {
+      const fd = new FormData();
+      fd.set("menuCardId", menuCardId);
+      await sendBonAppetitEmail(fd);
+      setSendStatus("sent");
+    } catch {
+      setSendStatus("error");
+    }
+  }
+
   async function handleDelete() {
     if (!confirm("Delete this Bon Appetit? This cannot be undone.")) return;
     const fd = new FormData();
@@ -30,6 +47,22 @@ export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) 
     await deleteMenuCard(fd);
     router.push("/menu-cards");
   }
+
+  const sendLabel =
+    sendStatus === "sending"
+      ? "Sending…"
+      : sendStatus === "sent"
+        ? "Sent to Beth ✓"
+        : sendStatus === "error"
+          ? "Failed — retry"
+          : "Send to Beth";
+
+  const sendClass =
+    sendStatus === "sent"
+      ? "button-secondary text-sm border-green-200 text-green-700 bg-green-50"
+      : sendStatus === "error"
+        ? "button-secondary text-sm border-red-200 text-red-600 hover:bg-red-50"
+        : "button-secondary text-sm border-blue-200 text-blue-700 hover:bg-blue-50";
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -51,24 +84,12 @@ export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) 
         </svg>
         Download PDF
       </button>
-      <a
-        href={`/api/menu-cards/${menuCardId}/eml`}
-        className="button-secondary text-sm"
-      >
+      <button onClick={handleSend} disabled={sendStatus === "sending"} className={`${sendClass} disabled:opacity-60`}>
         <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
         </svg>
-        Download Email
-      </a>
-      <form action={sendBonAppetitEmail}>
-        <input type="hidden" name="menuCardId" value={menuCardId} />
-        <button className="button-secondary text-sm border-blue-200 text-blue-700 hover:bg-blue-50">
-          <svg className="mr-1.5 h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5" />
-          </svg>
-          Send to Beth
-        </button>
-      </form>
+        {sendLabel}
+      </button>
       {!accepted ? (
         <form action={acceptMenuCard}>
           <input type="hidden" name="menuCardId" value={menuCardId} />
