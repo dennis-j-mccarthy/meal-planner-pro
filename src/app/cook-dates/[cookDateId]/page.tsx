@@ -146,9 +146,17 @@ export default async function CookDateDetailPage({
 
         {approvedMealPlan ? (
           <>
-            <div className="flex items-center gap-2 mb-3">
-              <p className="text-sm text-slate-500">{approvedMealPlan.title}</p>
-              <StatusBadge label={formatEnum(approvedMealPlan.status)} />
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-slate-500">{approvedMealPlan.title}</p>
+                <StatusBadge label={formatEnum(approvedMealPlan.status)} />
+              </div>
+              <Link
+                href={`/proposals/${approvedMealPlan.id}`}
+                className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
+              >
+                Edit meal plan &rarr;
+              </Link>
             </div>
             <div className="space-y-2">
               {approvedMealPlan.recipes.map((item, index) => (
