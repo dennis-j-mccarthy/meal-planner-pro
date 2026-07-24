@@ -843,6 +843,7 @@ export async function emailProposalLinkToClient(formData: FormData) {
 export async function addRecipeToProposal(formData: FormData) {
   const proposalId = requiredText(formData, "proposalId");
   const recipeId = requiredText(formData, "recipeId");
+  const courseLabel = optionalText(formData, "courseLabel");
 
   const proposal = await prisma.proposal.findUnique({
     where: { id: proposalId },
@@ -868,6 +869,7 @@ export async function addRecipeToProposal(formData: FormData) {
         proposalId,
         recipeId,
         position: (maxPos._max.position ?? 0) + 1,
+        ...(courseLabel ? { courseLabel } : {}),
       },
     });
   } catch (error: unknown) {

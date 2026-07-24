@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { addRecipeToProposal, removeRecipeFromProposal, updateProposalRecipeCategory } from "@/app/actions";
 import { categoriesMatch, totalDishes, type DishQuotaRow } from "@/lib/dish-quota";
@@ -162,6 +163,9 @@ export function ProposalRecipeManager({
   const [justAdded, setJustAdded] = useState<Set<string>>(new Set());
   const [justRemoved, setJustRemoved] = useState<Set<string>>(new Set());
   const [dropOver, setDropOver] = useState(false);
+  const [pendingDropRecipeId, setPendingDropRecipeId] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const [openLeft, setOpenLeft] = useState<Set<string>>(new Set());
   const [openRight, setOpenRight] = useState<Set<string>>(new Set());
 
@@ -212,10 +216,11 @@ export function ProposalRecipeManager({
     (r) => !currentRecipeIds.has(r.id) && !justAdded.has(r.id),
   );
 
-  function handleAdd(recipeId: string) {
+  function handleAdd(recipeId: string, courseLabel?: string) {
     const formData = new FormData();
     formData.set("proposalId", proposalId);
     formData.set("recipeId", recipeId);
+    if (courseLabel) formData.set("courseLabel", courseLabel);
     startTransition(async () => {
       await addRecipeToProposal(formData);
       setJustAdded((prev) => new Set(prev).add(recipeId));
@@ -258,9 +263,20 @@ export function ProposalRecipeManager({
     setDropOver(false);
     const recipeId = e.dataTransfer.getData("text/recipe-id");
     if (recipeId && !currentRecipeIds.has(recipeId) && !justAdded.has(recipeId)) {
-      handleAdd(recipeId);
+      // Tag the dropped recipe with a course, which determines its placement.
+      setPendingDropRecipeId(recipeId);
     }
   }
+
+  // Sort the menu by course so a recipe's tag determines where it lands.
+  // Stable sort preserves within-course position order.
+  const courseRank = (c: string | null) => {
+    const i = COURSE_CATEGORIES.indexOf(c ?? "");
+    return i === -1 ? COURSE_CATEGORIES.length : i;
+  };
+  const sortedCurrentRecipes = [...visibleCurrentRecipes].sort(
+    (a, b) => courseRank(a.courseLabel) - courseRank(b.courseLabel),
+  );
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-4 xl:h-[calc(100vh-320px)]">
@@ -306,10 +322,10 @@ export function ProposalRecipeManager({
 
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Menu ({visibleCurrentRecipes.length})
+            Proposed Meal Plan ({visibleCurrentRecipes.length})
           </p>
           {dropOver && (
-            <p className="text-xs font-medium text-[var(--accent)]">Drop to add</p>
+            <p className="text-xs font-medium text-[var(--accent)]">Drop to tag &amp; add</p>
           )}
         </div>
 
@@ -317,7 +333,7 @@ export function ProposalRecipeManager({
           <div className="space-y-3">
             {(() => {
               let lastCategory: string | null = null;
-              return visibleCurrentRecipes.map((item, index) => {
+              return sortedCurrentRecipes.map((item, index) => {
                 const showHeader = item.courseLabel !== lastCategory && item.courseLabel;
                 lastCategory = item.courseLabel;
                 return (
@@ -418,6 +434,9 @@ export function ProposalRecipeManager({
 
       {/* ===== Recipe search (left after flip) ===== */}
       <div className="order-1 rounded-xl border border-slate-200 bg-white p-4 xl:overflow-y-auto">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          Build Menu
+        </p>
         {/* Paste menu — purple-bordered section */}
         <div className="rounded-lg border-2 border-dashed border-purple-200 bg-purple-50/40 p-3 mb-4">
           <div className="flex items-center justify-between mb-2">
@@ -610,6 +629,66 @@ export function ProposalRecipeManager({
           )}
         </div>
       </div>
+
+      {/* Course picker shown after dropping a found recipe — the tag sets placement */}
+      {pendingDropRecipeId && mounted && createPortal(
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPendingDropRecipeId(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <h3 className="text-sm font-bold text-slate-900">Tag this dish</h3>
+              <button
+                type="button"
+                onClick={() => setPendingDropRecipeId(null)}
+                aria-label="Cancel"
+                className="-mr-1 -mt-1 rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              The course sets where it lands in the meal plan.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {COURSE_CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => {
+                    const id = pendingDropRecipeId;
+                    setPendingDropRecipeId(null);
+                    if (id) handleAdd(id, cat);
+                  }}
+                  className="rounded-full border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:border-[var(--accent)] hover:bg-[var(--accent-light)]"
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const id = pendingDropRecipeId;
+                setPendingDropRecipeId(null);
+                if (id) handleAdd(id);
+              }}
+              className="mt-4 text-xs font-medium text-slate-400 hover:text-slate-600"
+            >
+              Add without a tag
+            </button>
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 }
