@@ -58,11 +58,15 @@ export default async function MenuCardDetailPage({
 
       {/* Header */}
       <div className="panel p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold text-slate-900">
-                {menuCard.title}
+                {menuCard.title}{" "}
+                <span className="text-lg font-semibold text-slate-400">
+                  ({menuCard.recipes.length} recipe
+                  {menuCard.recipes.length !== 1 ? "s" : ""})
+                </span>
               </h1>
               {menuCard.isCoaching && (
                 <span className="inline-flex items-center rounded-full bg-purple-50 px-2.5 py-1 text-xs font-medium text-purple-700">
@@ -82,16 +86,9 @@ export default async function MenuCardDetailPage({
               {formatDateShort(menuCard.menuDate)}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-lg font-semibold text-slate-900">
-              {menuCard.recipes.length} recipe
-              {menuCard.recipes.length !== 1 ? "s" : ""}
-            </p>
+          <div className="shrink-0">
+            <MenuCardActions menuCardId={menuCard.id} accepted={menuCard.accepted} />
           </div>
-        </div>
-
-        <div className="mt-5 border-t border-slate-100 pt-5">
-          <MenuCardActions menuCardId={menuCard.id} accepted={menuCard.accepted} />
         </div>
       </div>
 
