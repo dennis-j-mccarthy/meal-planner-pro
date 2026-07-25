@@ -17,10 +17,14 @@ type ProposalDetailPageProps = {
   params: Promise<{
     proposalId: string;
   }>;
+  searchParams: Promise<{
+    edit?: string;
+  }>;
 };
 
-export default async function ProposalDetailPage({ params }: ProposalDetailPageProps) {
+export default async function ProposalDetailPage({ params, searchParams }: ProposalDetailPageProps) {
   const { proposalId } = await params;
+  const { edit } = await searchParams;
   const kitchen = await getKitchen();
 
   const [proposal, allRecipes] = await Promise.all([
@@ -55,6 +59,9 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
 
   const isApproved = proposal.status === "APPROVED";
   const isEditable = !isApproved;
+  // An approved plan is locked; ?edit=1 reopens the builder for a late change.
+  const isEditing = edit === "1";
+  const showBuilder = isEditable || isEditing;
   const canShare = proposal.status === "DRAFT" || proposal.status === "REVISIONS_REQUESTED";
   const canRequestChanges = proposal.status === "SENT" || proposal.status === "REVISIONS_REQUESTED";
   const canApprove = proposal.status === "SENT" || proposal.status === "DRAFT" || proposal.status === "REVISIONS_REQUESTED";
@@ -235,10 +242,27 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
 
       {/* Recipe management or recipe list */}
       <section className="panel p-6 sm:p-8">
-        <h2 className="text-lg font-bold text-slate-900">
-          Menu ({proposal.recipes.length} {proposal.recipes.length === 1 ? "recipe" : "recipes"})
-        </h2>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-lg font-bold text-slate-900">
+            Menu ({proposal.recipes.length} {proposal.recipes.length === 1 ? "recipe" : "recipes"})
+          </h2>
+          {!showBuilder && (
+            <Link href={`/proposals/${proposal.id}?edit=1`} className="button-secondary text-sm">
+              Edit meal plan
+            </Link>
+          )}
+        </div>
 
+        {isEditing && isApproved && (
+          <p className="mt-2 text-xs text-amber-600">
+            You&apos;re editing an approved meal plan.{" "}
+            <Link href={`/proposals/${proposal.id}`} className="font-semibold underline">
+              Done
+            </Link>
+          </p>
+        )}
+
+        {showBuilder ? (
         <div className="mt-4">
           <ProposalRecipeManager
             proposalId={proposal.id}
@@ -262,6 +286,38 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
             dishPlan={parseDishQuota(client.dishQuota)}
           />
         </div>
+        ) : (
+          <div className="mt-4">
+            {proposal.recipes.length === 0 ? (
+              <p className="text-sm text-slate-500">No dishes on this menu yet.</p>
+            ) : (
+              (() => {
+                let lastCategory: string | null = null;
+                return proposal.recipes.map((item, index) => {
+                  const showHeader = item.courseLabel !== lastCategory && item.courseLabel;
+                  lastCategory = item.courseLabel;
+                  return (
+                    <div key={item.id}>
+                      {showHeader && (
+                        <div className="mt-6 mb-2 text-xs font-bold uppercase tracking-widest text-[var(--accent-strong)] first:mt-0">
+                          {item.courseLabel}
+                        </div>
+                      )}
+                      <div className="mt-3 flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
+                        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-white">
+                          {index + 1}
+                        </span>
+                        <p className="text-sm font-semibold leading-snug text-slate-900">
+                          {item.recipe.title}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                });
+              })()
+            )}
+          </div>
+        )}
       </section>
     </div>
   );
