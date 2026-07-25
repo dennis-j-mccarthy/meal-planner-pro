@@ -435,7 +435,7 @@ export function ProposalRecipeManager({
       {/* ===== Recipe search (left after flip) ===== */}
       <div className="order-1 rounded-xl border border-slate-200 bg-white p-4 xl:overflow-y-auto">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          Build Menu
+          Menu Builder
         </p>
         {/* Paste menu — purple-bordered section */}
         <div className="rounded-lg border-2 border-dashed border-purple-200 bg-purple-50/40 p-3 mb-4">
