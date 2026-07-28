@@ -13,7 +13,7 @@ interface SendEmailOptions {
 
 export async function sendEmail(options: SendEmailOptions) {
   const { data, error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL || "Joyful Wellness with Beth <onboarding@resend.dev>",
+    from: process.env.RESEND_FROM_EMAIL || "Joyful Wellness with Beth <bonappetit@built-with-ai.site>",
     to: [options.to],
     subject: options.subject,
     text: options.text,
@@ -43,7 +43,7 @@ interface SendPlainEmailOptions {
 /** Send a plain-text email with no attachment (notifications, share links). */
 export async function sendPlainEmail(options: SendPlainEmailOptions) {
   const { data, error } = await resend.emails.send({
-    from: process.env.RESEND_FROM_EMAIL || "Joyful Wellness with Beth <onboarding@resend.dev>",
+    from: process.env.RESEND_FROM_EMAIL || "Joyful Wellness with Beth <bonappetit@built-with-ai.site>",
     to: [options.to],
     subject: options.subject,
     text: options.text,
