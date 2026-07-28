@@ -1458,9 +1458,12 @@ export async function sendInvoiceEmail(formData: FormData) {
   revalidateApp();
 }
 
-export async function sendBonAppetitEmail(formData: FormData) {
-  const menuCardId = requiredText(formData, "menuCardId");
-
+// Builds the Bon Appetit PDF and emails it to Beth. Throws a stage-prefixed
+// error so callers can surface exactly what failed (PDF vs email). Returns the
+// recipient + Resend message id on success.
+async function buildAndSendBonAppetit(
+  menuCardId: string,
+): Promise<{ to: string; id: string | null }> {
   const menuCard = await prisma.menuCard.findUnique({
     where: { id: menuCardId },
     include: {
@@ -1493,31 +1496,68 @@ export async function sendBonAppetitEmail(formData: FormData) {
     })),
   });
 
-  const pdfBuffer = await generatePdfFromHtml(html);
+  let pdfBuffer: Buffer;
+  try {
+    pdfBuffer = await generatePdfFromHtml(html);
+  } catch (e) {
+    throw new Error(
+      `PDF generation failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
 
   const recipeList = menuCard.recipes
     .map((mr) => `  * ${mr.recipe.title}`)
     .join("\n");
 
-  await sendEmail({
-    to: "yogabeth@mac.com",
-    replyTo: process.env.REPLY_TO_EMAIL || "dennisjmccarthy@gmail.com",
-    subject: `Bon Appetit - ${menuCard.client.firstName} - ${dateFormatted}`,
-    text: [
-      `Hi Beth,`,
-      ``,
-      `Here's the Bon Appetit for ${clientName}.`,
-      ``,
-      `This week's menu:`,
-      recipeList,
-      ``,
-      `Dennis`,
-    ].join("\n"),
-    attachmentFilename: pdfFilename,
-    attachmentPdf: pdfBuffer,
-  });
+  let data: { id: string } | null;
+  try {
+    data = await sendEmail({
+      to: "yogabeth@mac.com",
+      replyTo: process.env.REPLY_TO_EMAIL || "dennisjmccarthy@gmail.com",
+      subject: `Bon Appetit - ${menuCard.client.firstName} - ${dateFormatted}`,
+      text: [
+        `Hi Beth,`,
+        ``,
+        `Here's the Bon Appetit for ${clientName}.`,
+        ``,
+        `This week's menu:`,
+        recipeList,
+        ``,
+        `Dennis`,
+      ].join("\n"),
+      attachmentFilename: pdfFilename,
+      attachmentPdf: pdfBuffer,
+    });
+  } catch (e) {
+    throw new Error(
+      `Email send failed: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
 
+  return { to: "yogabeth@mac.com", id: data?.id ?? null };
+}
+
+export async function sendBonAppetitEmail(formData: FormData) {
+  const menuCardId = requiredText(formData, "menuCardId");
+  await buildAndSendBonAppetit(menuCardId);
   revalidateApp();
+}
+
+// Same send, but returns a structured result instead of throwing — so the UI
+// can show detailed progress and the real error.
+export async function sendBonAppetitStatus(
+  formData: FormData,
+): Promise<
+  { ok: true; to: string; id: string | null } | { ok: false; error: string }
+> {
+  const menuCardId = requiredText(formData, "menuCardId");
+  try {
+    const result = await buildAndSendBonAppetit(menuCardId);
+    revalidateApp();
+    return { ok: true, to: result.to, id: result.id };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "Unknown error" };
+  }
 }
 
 const KEEP_SENTINEL = "__KEEP__";
