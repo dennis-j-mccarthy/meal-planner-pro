@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { formatDateShort } from "@/lib/format";
 import { MenuCardActions } from "@/components/menu-card-actions";
 
+// PDF rendering (headless Chromium) for the "Send to Beth" action can exceed the
+// default serverless timeout on a cold start — give it room.
+export const maxDuration = 60;
+
 export default async function MenuCardDetailPage({
   params,
 }: {
