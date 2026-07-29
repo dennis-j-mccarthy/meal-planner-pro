@@ -1509,6 +1509,20 @@ async function buildAndSendBonAppetit(
     .map((mr) => `  * ${mr.recipe.title}`)
     .join("\n");
 
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const recipeListHtml = menuCard.recipes
+    .map((mr) => `<li style="margin:2px 0;">${esc(mr.recipe.title)}</li>`)
+    .join("");
+  const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;">
+  <p>Hi Beth,</p>
+  <p>Here's the Bon Appetit for <strong>${esc(clientName)}</strong>.</p>
+  <p style="margin-bottom:4px;"><strong>This week's menu</strong></p>
+  <ul style="margin-top:0;padding-left:20px;">${recipeListHtml}</ul>
+  <p>The full menu is attached as a PDF.</p>
+  <p style="margin-top:16px;">Dennis</p>
+</div>`;
+
   let data: { id: string } | null;
   try {
     data = await sendEmail({
@@ -1525,6 +1539,7 @@ async function buildAndSendBonAppetit(
         ``,
         `Dennis`,
       ].join("\n"),
+      html,
       attachmentFilename: pdfFilename,
       attachmentPdf: pdfBuffer,
     });

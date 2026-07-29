@@ -6,6 +6,7 @@ interface SendEmailOptions {
   to: string;
   subject: string;
   text: string;
+  html?: string;
   attachmentFilename: string;
   attachmentPdf: Buffer;
   replyTo?: string;
@@ -17,6 +18,7 @@ export async function sendEmail(options: SendEmailOptions) {
     to: [options.to],
     subject: options.subject,
     text: options.text,
+    ...(options.html ? { html: options.html } : {}),
     ...(options.replyTo ? { replyTo: options.replyTo } : {}),
     attachments: [
       {
