@@ -1514,7 +1514,7 @@ async function buildAndSendBonAppetit(
   const recipeListHtml = menuCard.recipes
     .map((mr) => `<li style="margin:2px 0;">${esc(mr.recipe.title)}</li>`)
     .join("");
-  const html = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;">
+  const emailHtml = `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;">
   <p>Hi Beth,</p>
   <p>Here's the Bon Appetit for <strong>${esc(clientName)}</strong>.</p>
   <p style="margin-bottom:4px;"><strong>This week's menu</strong></p>
@@ -1539,7 +1539,7 @@ async function buildAndSendBonAppetit(
         ``,
         `Dennis`,
       ].join("\n"),
-      html,
+      html: emailHtml,
       attachmentFilename: pdfFilename,
       attachmentPdf: pdfBuffer,
     });
