@@ -1,10 +1,11 @@
 // Supports both local dev (full puppeteer) and serverless (Vercel) via puppeteer-core + @sparticuz/chromium-min
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Must match the installed @sparticuz/chromium-min version (a mismatch makes
-// Chromium fail to launch on Vercel, which silently kills the Bon Appetit send).
+// v131 pack — known-good, has worked in production for months. Do NOT bump
+// this to match the installed @sparticuz/chromium-min version without verifying
+// the release/pack URL actually resolves; a bad URL breaks all PDF generation.
 const CHROMIUM_URL =
-  "https://github.com/Sparticuz/chromium/releases/download/v147.0.2/chromium-v147.0.2-pack.tar";
+  "https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar";
 
 async function getBrowser(): Promise<any> {
   const isServerless =
