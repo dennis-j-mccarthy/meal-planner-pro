@@ -5,7 +5,73 @@ import { RecipeSourceType, RecipeDetailStatus } from "@/generated/prisma/client"
 
 const anthropic = new Anthropic();
 
-async function parseWithClaude(text: string) {
+type Dish = { title: string; description: string; category: string | null };
+
+const KNOWN_CATEGORIES = [
+  "Healthy Juice",
+  "Smoothie",
+  "Breakfast",
+  "Morning Nourishment",
+  "Snack",
+  "Salad",
+  "Soup",
+  "Entrees",
+  "Side",
+  "Dessert",
+  "A Gift from Beth",
+];
+
+function matchCategory(line: string): string | null {
+  const norm = line.trim().replace(/[:.]+$/, "").toLowerCase();
+  return KNOWN_CATEGORIES.find((c) => c.toLowerCase() === norm) ?? null;
+}
+
+// Deterministic parse for structured pastes: blocks separated by blank lines,
+// where a single-line block naming a course is a category header, and every
+// other block is ONE recipe — first line = title (verbatim, never split on "&"
+// or moved into the description), remaining lines = the full description.
+function parseStructured(text: string): Dish[] {
+  const blocks = text
+    .split(/\n\s*\n/)
+    .map((b) => b.trim())
+    .filter(Boolean);
+
+  const dishes: Dish[] = [];
+  let currentCategory: string | null = null;
+
+  for (const block of blocks) {
+    const lines = block
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    if (lines.length === 0) continue;
+
+    // A block that is only a category header.
+    if (lines.length === 1 && matchCategory(lines[0])) {
+      currentCategory = matchCategory(lines[0]);
+      continue;
+    }
+
+    // A block may lead with a header line, then the recipe.
+    let idx = 0;
+    const leadCategory = matchCategory(lines[0]);
+    if (leadCategory) {
+      currentCategory = leadCategory;
+      idx = 1;
+    }
+    if (idx >= lines.length) continue;
+
+    dishes.push({
+      title: lines[idx],
+      description: lines.slice(idx + 1).join(" "),
+      category: currentCategory,
+    });
+  }
+
+  return dishes;
+}
+
+async function parseWithClaude(text: string): Promise<Dish[]> {
   const response = await anthropic.messages.create({
     model: "claude-haiku-4-5-20251001",
     max_tokens: 4096,
@@ -54,9 +120,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
   }
 
-  let dishes;
+  let dishes: Dish[];
   try {
-    dishes = await parseWithClaude(text);
+    // Structured pastes (category headers + title/description blocks) parse
+    // deterministically so titles are kept verbatim and never split. Fall back
+    // to AI only for unstructured/freeform text.
+    dishes = parseStructured(text);
+    if (dishes.length === 0) {
+      dishes = await parseWithClaude(text);
+    }
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Parse failed";
     return NextResponse.json({ error: msg }, { status: 500 });
