@@ -13,8 +13,15 @@ export const maxDuration = 60;
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Who is allowed to trigger a Bon Appetit by email.
-const ALLOWED_SENDER = "yogabeth@mac.com";
-const BETH_EMAIL = "yogabeth@mac.com";
+// Who may trigger a Bon Appetit by email. The finished PDF is sent back to
+// whichever of these addresses sent the request.
+const ALLOWED_SENDERS = ["yogabeth@mac.com", "dennisjmccarthy@gmail.com"];
+
+// Pull the bare email address out of a "Name <email>" From header.
+function extractEmail(from: string): string {
+  const m = from.match(/<([^>]+)>/);
+  return (m ? m[1] : from).trim();
+}
 
 type ReceivedEvent = {
   type?: string;
@@ -64,8 +71,9 @@ export async function POST(req: NextRequest) {
   if (evt.type !== "email.received") {
     return NextResponse.json({ ok: true, ignored: "event" });
   }
-  const from = String(evt.data?.from ?? "").toLowerCase();
-  if (!from.includes(ALLOWED_SENDER)) {
+  const senderEmail = extractEmail(String(evt.data?.from ?? ""));
+  const senderLc = senderEmail.toLowerCase();
+  if (!ALLOWED_SENDERS.some((a) => senderLc === a)) {
     return NextResponse.json({ ok: true, ignored: "sender" });
   }
   const emailId = evt.data?.email_id;
@@ -109,7 +117,7 @@ export async function POST(req: NextRequest) {
 
     // 5. Email the finished Bon Appetit back to Beth.
     await sendEmail({
-      to: BETH_EMAIL,
+      to: senderEmail,
       replyTo: process.env.REPLY_TO_EMAIL || "dennisjmccarthy@gmail.com",
       subject: `Bon Appetit - ${client} - ${format(date, "M/d/yyyy")}`,
       text: [
@@ -130,7 +138,7 @@ export async function POST(req: NextRequest) {
     // Don't fail silently — tell Beth why it didn't work.
     try {
       await sendPlainEmail({
-        to: BETH_EMAIL,
+        to: senderEmail,
         subject: "Couldn't build your Bon Appetit",
         text: [
           `Hi Beth,`,
