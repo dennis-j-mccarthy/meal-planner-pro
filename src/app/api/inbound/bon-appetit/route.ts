@@ -34,9 +34,14 @@ function parseSubject(subject: string): { client: string; date: Date } {
     .replace(/^(re:|fwd:)\s*/i, "")
     .replace(/^bon\s*app[eé]tit\s*[-–:]?\s*/i, "")
     .trim();
-  const m = raw.match(/^(.*?)[\s\-–]+(\d{1,2}\/\d{1,2}\/\d{2,4})\s*$/);
+  const m = raw.match(/^(.*?)[\s\-–]+(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*$/);
   if (m) {
-    const d = new Date(`${m[2]}T12:00:00`);
+    const mo = Number(m[2]);
+    const da = Number(m[3]);
+    let yr = Number(m[4]);
+    if (yr < 100) yr += 2000;
+    // Noon local time avoids any date-shift from timezone.
+    const d = new Date(yr, mo - 1, da, 12, 0, 0);
     return {
       client: m[1].trim() || "Guest",
       date: isNaN(d.getTime()) ? new Date() : d,
