@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     const body = (received.data?.text ?? "").trim();
 
     const { client, date } = parseSubject(subject);
-    const dishes = parseStructured(body);
+    const { dishes, notes } = parseStructured(body);
     if (dishes.length === 0) {
       throw new Error(
         "No recipes found. Put the menu in the email body (a category header on its own line, then a title line and a description line per dish).",
@@ -108,6 +108,7 @@ export async function POST(req: NextRequest) {
       clientFirstNames: client,
       menuDate: format(date, "MMMM d, yyyy"),
       isCoaching: false,
+      notes,
       recipes: dishes.map((d) => ({
         title: d.title,
         description: d.description || null,

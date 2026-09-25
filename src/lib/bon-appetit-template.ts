@@ -14,6 +14,7 @@ interface BonAppetitData {
   menuDate: string;
   recipes: MenuRecipe[];
   isCoaching: boolean;
+  notes?: string[];
 }
 
 function loadAssetBase64(relativePath: string, mime: string): string {
@@ -93,6 +94,14 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
   const coachingSubtitle = data.isCoaching
     ? `<div class="coaching-subtitle">Culinary Coaching Session</div>`
     : "";
+
+  // Plain-text notes (e.g. "Chef's Note: …") — not dishes, rendered in body text.
+  const notesHtml =
+    data.notes && data.notes.length > 0
+      ? `<div class="notes">${data.notes
+          .map((n) => `<div class="note-line">${escapeHtml(n)}</div>`)
+          .join("")}</div>`
+      : "";
 
   return `<!DOCTYPE html>
 <html>
@@ -231,6 +240,18 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
     margin-bottom: 2px;
   }
 
+  .notes {
+    margin-top: 10px;
+    break-inside: avoid;
+  }
+
+  .note-line {
+    font-size: 10px;
+    color: #444;
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+
   .signoff {
     margin-top: 25px;
     text-align: left;
@@ -265,6 +286,8 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
 
     <div class="columns">
       ${allRecipeContent}
+
+      ${notesHtml}
 
       <div class="signoff">
         <div class="signoff-message">To your health and happiness...</div>

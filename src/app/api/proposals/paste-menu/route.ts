@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     // Structured pastes (category headers + title/description blocks) parse
     // deterministically so titles are kept verbatim and never split. Fall back
     // to AI only for unstructured/freeform text.
-    dishes = parseStructured(text);
+    dishes = parseStructured(text).dishes;
     if (dishes.length === 0) {
       dishes = await parseWithClaude(text);
     }
