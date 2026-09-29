@@ -47,8 +47,12 @@ export function parseStructured(text: string): ParsedMenu {
   let currentCategory: string | null = null;
   let current: Dish | null = null;
 
-  for (const line of lines) {
-    // Category header.
+  const isSentence = (l: string) => /[.!?]["'’)\]]?$/.test(l);
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+
+    // Known category header.
     const cat = matchCategory(line);
     if (cat) {
       currentCategory = cat;
@@ -65,10 +69,26 @@ export function parseStructured(text: string): ParsedMenu {
 
     // A sentence (ends in . ! ?) is the current dish's description; append so
     // multi-line descriptions are preserved.
-    if (current && /[.!?]["'’)\]]?$/.test(line)) {
+    if (current && isSentence(line)) {
       current.description = current.description
         ? `${current.description} ${line}`
         : line;
+      continue;
+    }
+
+    // Any other heading Beth writes (e.g. "Sweet Treats and Savory Snacks"):
+    // an unpunctuated line followed directly by another dish title is a
+    // section header, not a dish.
+    const next = lines[i + 1];
+    if (
+      !isSentence(line) &&
+      next &&
+      !isSentence(next) &&
+      !NOTE_RE.test(next) &&
+      !matchCategory(next)
+    ) {
+      currentCategory = line.replace(/:+$/, "").trim();
+      current = null;
       continue;
     }
 

@@ -15,6 +15,8 @@ interface BonAppetitData {
   recipes: MenuRecipe[];
   isCoaching: boolean;
   notes?: string[];
+  // Keep sections in the order they were written instead of meal-flow order.
+  preserveOrder?: boolean;
 }
 
 function loadAssetBase64(relativePath: string, mime: string): string {
@@ -46,10 +48,12 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
 
   // Reorder categories so the menu reads in a natural meal flow:
   // breakfast → salads/soups → entrees/sides → other → desserts → "Gift from Beth"
+  // (skipped when the caller wants the sections in the order they were written).
+  const entries = [...grouped.entries()];
   const sortedGrouped = new Map<string, MenuRecipe[]>(
-    [...grouped.entries()].sort(
-      ([a], [b]) => categoryRank(a) - categoryRank(b),
-    ),
+    data.preserveOrder
+      ? entries
+      : entries.sort(([a], [b]) => categoryRank(a) - categoryRank(b)),
   );
 
   // Build recipe HTML blocks.

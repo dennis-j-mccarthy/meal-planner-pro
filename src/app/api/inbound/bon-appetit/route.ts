@@ -109,6 +109,7 @@ export async function POST(req: NextRequest) {
       menuDate: format(date, "MMMM d, yyyy"),
       isCoaching: false,
       notes,
+      preserveOrder: true,
       recipes: dishes.map((d) => ({
         title: d.title,
         description: d.description || null,
