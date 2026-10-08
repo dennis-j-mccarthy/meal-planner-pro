@@ -57,7 +57,8 @@ export function parseStructured(text: string): ParsedMenu {
     // A header with nothing under it at the very top of the menu, followed by
     // another header, is the menu's subtitle (e.g. "A Special Weekend Retreat").
     if (lastHeader && !lastHeaderHasDish && dishes.length === 0 && !subtitle) {
-      subtitle = lastHeader;
+      // Drop a stray footnote digit stuck to the last word ("Together1").
+      subtitle = lastHeader.replace(/(?<=[a-z])\d$/, "");
     }
     lastHeader = header;
     lastHeaderHasDish = false;

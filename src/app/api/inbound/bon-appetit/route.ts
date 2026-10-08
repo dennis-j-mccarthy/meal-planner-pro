@@ -3,6 +3,7 @@ import { Webhook } from "svix";
 import { Resend } from "resend";
 import { format } from "date-fns";
 import { parseStructured } from "@/lib/menu-parser";
+import { parseSubject } from "@/lib/bon-appetit-subject";
 import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { sendEmail, sendPlainEmail } from "@/lib/email";
@@ -29,26 +30,6 @@ type ReceivedEvent = {
 };
 
 // Subject convention: "Client Name - M/D/YYYY" (date optional → defaults today).
-function parseSubject(subject: string): { client: string; date: Date } {
-  const raw = subject
-    .replace(/^(re:|fwd:)\s*/i, "")
-    .replace(/^bon\s*app[eé]tit\s*[-–:]?\s*/i, "")
-    .trim();
-  const m = raw.match(/^(.*?)[\s\-–]+(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s*$/);
-  if (m) {
-    const mo = Number(m[2]);
-    const da = Number(m[3]);
-    let yr = Number(m[4]);
-    if (yr < 100) yr += 2000;
-    // Noon local time avoids any date-shift from timezone.
-    const d = new Date(yr, mo - 1, da, 12, 0, 0);
-    return {
-      client: m[1].trim() || "Guest",
-      date: isNaN(d.getTime()) ? new Date() : d,
-    };
-  }
-  return { client: raw || "Guest", date: new Date() };
-}
 
 export async function POST(req: NextRequest) {
   const secret = process.env.RESEND_WEBHOOK_SECRET;
@@ -95,7 +76,7 @@ export async function POST(req: NextRequest) {
     const subject = received.data?.subject ?? "";
     const body = (received.data?.text ?? "").trim();
 
-    const { client, date } = parseSubject(subject);
+    const { client, date, monthOnly } = parseSubject(subject);
     const { dishes, notes, subtitle } = parseStructured(body);
     if (dishes.length === 0) {
       throw new Error(
@@ -106,7 +87,7 @@ export async function POST(req: NextRequest) {
     // 4. Render the Bon Appetit PDF.
     const html = buildBonAppetitHtml({
       clientFirstNames: client,
-      menuDate: format(date, "MMMM d, yyyy"),
+      menuDate: format(date, monthOnly ? "MMMM, yyyy" : "MMMM d, yyyy"),
       isCoaching: false,
       notes,
       subtitle,
@@ -121,13 +102,13 @@ export async function POST(req: NextRequest) {
     });
     const pdf = await generatePdfFromHtml(html);
     const safeClient = client.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "");
-    const dateFile = format(date, "MM-dd-yyyy");
+    const dateFile = format(date, monthOnly ? "MM-yyyy" : "MM-dd-yyyy");
 
     // 5. Email the finished Bon Appetit back to Beth.
     await sendEmail({
       to: senderEmail,
       replyTo: process.env.REPLY_TO_EMAIL || "dennisjmccarthy@gmail.com",
-      subject: `Bon Appetit - ${client} - ${format(date, "M/d/yyyy")}`,
+      subject: `Bon Appetit - ${client} - ${format(date, monthOnly ? "MMMM yyyy" : "M/d/yyyy")}`,
       text: [
         `Hi Beth,`,
         ``,
