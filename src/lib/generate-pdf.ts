@@ -36,6 +36,15 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "networkidle0" });
 
+    // Long menus flow onto more pages. The column-alignment pass below only
+    // makes sense on a single page (on multi-page layouts it picks the wrong
+    // block and opens a gap mid-column), so render once and keep that PDF if
+    // it already runs past one page.
+    const firstPass = Buffer.from(
+      await page.pdf({ format: "Letter", printBackground: true }),
+    );
+    if (countPdfPages(firstPass) > 1) return firstPass;
+
     // Align column 2's first blue recipe title with column 1's first blue
     // recipe title. When col 1 has a category header but col 2 doesn't, we
     // insert an invisible clone of col 1's category header at the top of
@@ -87,4 +96,9 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
   } finally {
     await browser.close();
   }
+}
+
+// Page objects in a Chrome-generated PDF ("/Type /Page", not "/Pages").
+function countPdfPages(pdf: Buffer): number {
+  return (pdf.toString("latin1").match(/\/Type\s*\/Page(?!s)/g) ?? []).length;
 }

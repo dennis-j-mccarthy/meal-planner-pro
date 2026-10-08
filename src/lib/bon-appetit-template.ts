@@ -17,6 +17,8 @@ interface BonAppetitData {
   notes?: string[];
   // Keep sections in the order they were written instead of meal-flow order.
   preserveOrder?: boolean;
+  // Optional line under the title, e.g. "A Special Mom-Daughter Weekend Retreat".
+  subtitle?: string | null;
 }
 
 function loadAssetBase64(relativePath: string, mime: string): string {
@@ -137,9 +139,15 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
     src: url('${luckyFont}') format('truetype');
   }
 
+  /* Pages after the first get real top/bottom margins so a long menu that
+     flows onto page 2 doesn't start at the paper's edge. */
   @page {
     size: letter;
-    margin: 15px;
+    margin: 48px 15px 36px;
+  }
+
+  @page :first {
+    margin-top: 15px;
   }
 
   * {
@@ -194,6 +202,15 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
     font-weight: 600;
     color: #666;
     margin-top: 4px;
+  }
+
+  .menu-subtitle {
+    font-family: 'Outfit', sans-serif;
+    font-size: 13px;
+    font-style: italic;
+    color: #666;
+    margin-top: 4px;
+    margin-bottom: 4px;
   }
 
   .date {
@@ -285,6 +302,7 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
       </div>
       <div class="title">Bon Appetit, ${escapeHtml(data.clientFirstNames)}!</div>
       ${coachingSubtitle}
+      ${data.subtitle ? `<div class="menu-subtitle">${escapeHtml(data.subtitle)}</div>` : ""}
       <div class="date">${escapeHtml(data.menuDate)}</div>
     </div>
 

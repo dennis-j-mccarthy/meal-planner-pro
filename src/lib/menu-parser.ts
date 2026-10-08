@@ -12,7 +12,7 @@
 // Titles are kept verbatim (never split on "&").
 
 export type Dish = { title: string; description: string; category: string | null };
-export type ParsedMenu = { dishes: Dish[]; notes: string[] };
+export type ParsedMenu = { dishes: Dish[]; notes: string[]; subtitle: string | null };
 
 export const KNOWN_CATEGORIES = [
   "Healthy Juice",
@@ -44,19 +44,37 @@ export function parseStructured(text: string): ParsedMenu {
 
   const dishes: Dish[] = [];
   const notes: string[] = [];
+  let subtitle: string | null = null;
   let currentCategory: string | null = null;
   let current: Dish | null = null;
+  // The most recent header, and whether any dish has been placed under it.
+  let lastHeader: string | null = null;
+  let lastHeaderHasDish = false;
 
-  const isSentence = (l: string) => /[.!?]["'’)\]]?$/.test(l);
+  const isSentence = (l: string) => /[.!?]["'\u2019)\]]?$/.test(l);
+
+  const setHeader = (header: string) => {
+    // A header with nothing under it at the very top of the menu, followed by
+    // another header, is the menu's subtitle (e.g. "A Special Weekend Retreat").
+    if (lastHeader && !lastHeaderHasDish && dishes.length === 0 && !subtitle) {
+      subtitle = lastHeader;
+    }
+    lastHeader = header;
+    lastHeaderHasDish = false;
+    currentCategory = header;
+    current = null;
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
 
+    // The greeting ("Bon Appetit Kristin & Hallie!") is already the PDF's title.
+    if (/^bon\s*app[e\u00e9]tit\b/i.test(line)) continue;
+
     // Known category header.
     const cat = matchCategory(line);
     if (cat) {
-      currentCategory = cat;
-      current = null;
+      setHeader(cat);
       continue;
     }
 
@@ -67,35 +85,33 @@ export function parseStructured(text: string): ParsedMenu {
       continue;
     }
 
-    // A sentence (ends in . ! ?) is the current dish's description; append so
-    // multi-line descriptions are preserved.
-    if (current && isSentence(line)) {
-      current.description = current.description
-        ? `${current.description} ${line}`
-        : line;
+    if (isSentence(line)) {
+      // A sentence is the current dish's description; append so multi-line
+      // descriptions are preserved.
+      if (current) {
+        current.description = current.description
+          ? `${current.description} ${line}`
+          : line;
+      } else {
+        // A sentence with no dish above it — keep it, as plain text.
+        notes.push(line);
+      }
       continue;
     }
 
-    // Any other heading Beth writes (e.g. "Sweet Treats and Savory Snacks"):
-    // an unpunctuated line followed directly by another dish title is a
-    // section header, not a dish.
+    // Any other heading Beth writes (e.g. "Saturday Lunch"): an unpunctuated
+    // line followed directly by another dish title is a section header.
     const next = lines[i + 1];
-    if (
-      !isSentence(line) &&
-      next &&
-      !isSentence(next) &&
-      !NOTE_RE.test(next) &&
-      !matchCategory(next)
-    ) {
-      currentCategory = line.replace(/:+$/, "").trim();
-      current = null;
+    if (next && !isSentence(next) && !NOTE_RE.test(next) && !matchCategory(next)) {
+      setHeader(line.replace(/:+$/, "").trim());
       continue;
     }
 
     // Otherwise it's a new dish title.
     current = { title: line, description: "", category: currentCategory };
     dishes.push(current);
+    lastHeaderHasDish = true;
   }
 
-  return { dishes, notes };
+  return { dishes, notes, subtitle };
 }
