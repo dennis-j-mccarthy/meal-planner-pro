@@ -56,7 +56,7 @@ export async function GET(
       `Here's the invoice for ${clientName}.`,
       ``,
       `Invoice #${invoice.invoiceNumber}`,
-      `Total: $${total.toFixed(2)}`,
+      `Subtotal: $${total.toFixed(2)}`,
       ``,
       `Let me know if you need anything else!`,
       ``,

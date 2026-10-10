@@ -180,15 +180,37 @@ export function buildInvoiceHtml(data: InvoiceData): string {
     width: 100px;
   }
 
-  .total-row td {
+  .subtotal-row td,
+  .fill-row td {
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    font-size: 10px;
+  }
+
+  .subtotal-row td {
     font-weight: 700;
     background: #f8f9fa;
   }
 
-  .total-row .total-amount {
-    color: #60a5fa;
-    font-size: 11px;
+  .subtotal-row .amount {
     text-align: right;
+  }
+
+  /* Blank amount cells the client writes in by hand. */
+  .fill-row td {
+    height: 34px;
+    vertical-align: bottom;
+  }
+
+  .fill-row .fill-in {
+    text-align: left;
+    color: #999;
+  }
+
+  .total-row td {
+    font-weight: 700;
+    font-size: 11px;
+    background: #f8f9fa;
   }
 
   .remarks {
@@ -253,9 +275,17 @@ export function buildInvoiceHtml(data: InvoiceData): string {
       </thead>
       <tbody>
         ${lineItemRows}
-        <tr class="total-row">
-          <td style="padding: 10px 12px; border: 1px solid #e0e0e0; font-size: 10px;">Total</td>
-          <td class="total-amount" style="padding: 10px 12px; border: 1px solid #e0e0e0;">${formatMoney(total)}</td>
+        <tr class="subtotal-row">
+          <td>Subtotal</td>
+          <td class="amount">${formatMoney(total)}</td>
+        </tr>
+        <tr class="fill-row">
+          <td>Optional Gratuity</td>
+          <td class="fill-in">$</td>
+        </tr>
+        <tr class="fill-row total-row">
+          <td>Total</td>
+          <td class="fill-in">$</td>
         </tr>
       </tbody>
     </table>
