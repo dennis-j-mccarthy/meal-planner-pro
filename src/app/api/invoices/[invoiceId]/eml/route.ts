@@ -41,6 +41,7 @@ export async function GET(
       amount: li.amount,
     })),
     remarks: invoice.remarks,
+    showGratuity: invoice.showGratuity,
   });
 
   const pdfBuffer = await generatePdfFromHtml(html);
@@ -56,7 +57,7 @@ export async function GET(
       `Here's the invoice for ${clientName}.`,
       ``,
       `Invoice #${invoice.invoiceNumber}`,
-      `Subtotal: $${total.toFixed(2)}`,
+      `${invoice.showGratuity ? "Subtotal" : "Total"}: $${total.toFixed(2)}`,
       ``,
       `Let me know if you need anything else!`,
       ``,

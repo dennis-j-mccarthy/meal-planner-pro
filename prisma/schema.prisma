@@ -225,6 +225,7 @@ model Invoice {
   invoiceDate     DateTime
   status          InvoiceStatus @default(DRAFT)
   remarks         String?
+  showGratuity    Boolean       @default(false)
   sentAt          DateTime?
   paidAt          DateTime?
   createdAt       DateTime      @default(now())

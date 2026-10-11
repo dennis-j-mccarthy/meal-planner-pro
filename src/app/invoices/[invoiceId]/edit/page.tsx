@@ -52,6 +52,7 @@ export default async function InvoiceEditPage({
           invoiceNumber: invoice.invoiceNumber,
           invoiceDate: invoice.invoiceDate.toISOString().slice(0, 10),
           remarks: invoice.remarks,
+          showGratuity: invoice.showGratuity,
           lineItems: invoice.lineItems.map((li) => ({
             description: li.description,
             amount: li.amount,

@@ -20,6 +20,7 @@ interface InitialInvoice {
   invoiceNumber: string;
   invoiceDate: string;
   remarks: string | null;
+  showGratuity: boolean;
   lineItems: { description: string; amount: number }[];
 }
 
@@ -203,6 +204,20 @@ export function InvoiceEditForm({
               onChange={(e) => setRemarksText(e.target.value)}
             />
           </div>
+          <label className="flex items-start gap-2.5 rounded-lg border border-slate-200 px-4 py-3 text-sm text-slate-700 cursor-pointer hover:bg-slate-50">
+            <input
+              type="checkbox"
+              name="showGratuity"
+              defaultChecked={invoice.showGratuity}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300"
+            />
+            <span>
+              <span className="font-semibold">Include optional gratuity line</span>
+              <span className="block text-slate-500">
+                The PDF shows Subtotal, then blank &ldquo;Optional Gratuity&rdquo; and &ldquo;Total&rdquo; lines for the client to fill in.
+              </span>
+            </span>
+          </label>
         </div>
 
         <div className="mt-5 flex gap-2 justify-end">

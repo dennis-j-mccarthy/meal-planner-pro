@@ -13,6 +13,8 @@ interface InvoiceData {
   clientAddress: string | null;
   lineItems: InvoiceLineItem[];
   remarks: string | null;
+  // Subtotal + blank "Optional Gratuity" + blank "Total" instead of one Total.
+  showGratuity?: boolean;
 }
 
 function loadAssetBase64(relativePath: string, mime: string): string {
@@ -213,6 +215,10 @@ export function buildInvoiceHtml(data: InvoiceData): string {
     background: #f8f9fa;
   }
 
+  .total-amount {
+    color: #60a5fa;
+  }
+
   .remarks {
     margin-top: 20px;
   }
@@ -275,7 +281,8 @@ export function buildInvoiceHtml(data: InvoiceData): string {
       </thead>
       <tbody>
         ${lineItemRows}
-        <tr class="subtotal-row">
+        ${data.showGratuity
+          ? `<tr class="subtotal-row">
           <td>Subtotal</td>
           <td class="amount">${formatMoney(total)}</td>
         </tr>
@@ -286,7 +293,11 @@ export function buildInvoiceHtml(data: InvoiceData): string {
         <tr class="fill-row total-row">
           <td>Total</td>
           <td class="fill-in">$</td>
-        </tr>
+        </tr>`
+          : `<tr class="subtotal-row total-row">
+          <td>Total</td>
+          <td class="amount total-amount">${formatMoney(total)}</td>
+        </tr>`}
       </tbody>
     </table>
 

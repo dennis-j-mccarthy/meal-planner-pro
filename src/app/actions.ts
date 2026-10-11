@@ -1129,6 +1129,7 @@ export async function createInvoice(formData: FormData) {
   const clientId = requiredText(formData, "clientId");
   const invoiceDate = parseDateInput(requiredText(formData, "invoiceDate"));
   const remarks = optionalText(formData, "remarks");
+  const showGratuity = formData.get("showGratuity") === "on";
 
   const descriptions = formData.getAll("lineDescription");
   const amounts = formData.getAll("lineAmount");
@@ -1155,6 +1156,7 @@ export async function createInvoice(formData: FormData) {
       invoiceNumber,
       invoiceDate,
       remarks,
+      showGratuity,
       lineItems: {
         create: lineItems,
       },
@@ -1170,6 +1172,7 @@ export async function updateInvoice(formData: FormData) {
   const clientId = requiredText(formData, "clientId");
   const invoiceDate = parseDateInput(requiredText(formData, "invoiceDate"));
   const remarks = optionalText(formData, "remarks");
+  const showGratuity = formData.get("showGratuity") === "on";
 
   const descriptions = formData.getAll("lineDescription");
   const amounts = formData.getAll("lineAmount");
@@ -1193,6 +1196,7 @@ export async function updateInvoice(formData: FormData) {
       clientId,
       invoiceDate,
       remarks,
+      showGratuity,
       lineItems: {
         deleteMany: {},
         create: lineItems,
@@ -1426,6 +1430,7 @@ export async function sendInvoiceEmail(formData: FormData) {
       amount: li.amount,
     })),
     remarks: invoice.remarks,
+    showGratuity: invoice.showGratuity,
   });
 
   const pdfBuffer = await generatePdfFromHtml(html);
@@ -1439,7 +1444,7 @@ export async function sendInvoiceEmail(formData: FormData) {
       `Here's the invoice for ${clientName}.`,
       ``,
       `Invoice #${invoice.invoiceNumber}`,
-      `Subtotal: $${total.toFixed(2)}`,
+      `${invoice.showGratuity ? "Subtotal" : "Total"}: $${total.toFixed(2)}`,
       ``,
       `Let me know if you need anything else!`,
       ``,

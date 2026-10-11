@@ -38,6 +38,7 @@ export async function GET(
       amount: li.amount,
     })),
     remarks: invoice.remarks,
+    showGratuity: invoice.showGratuity,
   });
 
   const pdfBuffer = await generatePdfFromHtml(html);
