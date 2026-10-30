@@ -52,7 +52,8 @@ export function parseInvoiceBody(text: string): ParsedInvoiceBody {
   let showGratuity = false;
 
   for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
+    // Strip quote markers ("> PC: $425") from forwarded or quoted mail.
+    const line = raw.replace(/^\s*(>\s?)+/, "").trim();
     if (!line) continue;
 
     // "Tip" (or "Gratuity", "Tip: yes") turns on the optional gratuity lines.
