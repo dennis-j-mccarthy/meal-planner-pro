@@ -19,9 +19,9 @@ import { sendEmail, sendPlainEmail } from "@/lib/email";
 // Webhooks have no signed-in user, so the kitchen is explicit.
 const KITCHEN_ID = "kitchen_jwb";
 
-// Every emailed invoice PDF goes to Beth, whoever sent the request.
-// Set to null to send it back to the sender instead.
-const SEND_INVOICES_TO: string | null = "yogabeth@mac.com";
+// FOR TESTING: every emailed invoice PDF goes to Dennis, whoever sent it.
+// Set to "yogabeth@mac.com" for Beth, or null to reply to the sender.
+const SEND_INVOICES_TO: string | null = "dennisjmccarthy@gmail.com";
 
 const APP_URL = process.env.APP_URL || "https://meal-planner-pro-puce.vercel.app";
 
