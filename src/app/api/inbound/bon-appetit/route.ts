@@ -7,14 +7,14 @@ import { parseSubject } from "@/lib/bon-appetit-subject";
 import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { sendEmail, sendPlainEmail } from "@/lib/email";
+import { handleInboundInvoice } from "@/lib/inbound-invoice";
 
 // PDF rendering (headless Chrome) needs a generous window on serverless.
 export const maxDuration = 60;
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Who is allowed to trigger a Bon Appetit by email.
-// Who may trigger a Bon Appetit by email. The finished PDF is sent back to
+// Who may trigger a Bon Appetit (or an invoice) by email. The finished PDF is sent back to
 // whichever of these addresses sent the request.
 const ALLOWED_SENDERS = ["yogabeth@mac.com", "dennisjmccarthy@gmail.com"];
 
@@ -26,7 +26,13 @@ function extractEmail(from: string): string {
 
 type ReceivedEvent = {
   type?: string;
-  data?: { email_id?: string; from?: string; subject?: string };
+  data?: {
+    email_id?: string;
+    from?: string;
+    subject?: string;
+    to?: string[];
+    received_for?: string[];
+  };
 };
 
 // Subject convention: "Client Name - M/D/YYYY" (date optional → defaults today).
@@ -75,6 +81,14 @@ export async function POST(req: NextRequest) {
     }
     const subject = received.data?.subject ?? "";
     const body = (received.data?.text ?? "").trim();
+
+    // Mail to invoice@ (or invoices@) is an invoice request. Everything else on
+    // the domain stays on the Bon Appetit path below.
+    const recipients = [...(evt.data?.to ?? []), ...(evt.data?.received_for ?? [])]
+      .map((a) => extractEmail(String(a)).toLowerCase());
+    if (recipients.some((a) => /^invoices?@/.test(a))) {
+      return NextResponse.json(await handleInboundInvoice({ subject, body, senderEmail }));
+    }
 
     const { client, date, monthOnly } = parseSubject(subject);
     const { dishes, notes, subtitle } = parseStructured(body);
