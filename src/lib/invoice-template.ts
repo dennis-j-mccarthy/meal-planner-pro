@@ -32,7 +32,9 @@ export function buildInvoiceHtml(data: InvoiceData): string {
   const total = data.lineItems.reduce((sum, item) => sum + item.amount, 0);
 
   function formatMoney(n: number): string {
-    return n < 0 ? `-$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`;
+    // $1,756.00
+    const s = Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return n < 0 ? `-$${s}` : `$${s}`;
   }
 
   const lineItemRows = data.lineItems

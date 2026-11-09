@@ -270,7 +270,10 @@ export function matchClient(
   return { client: scored[0].c };
 }
 
-const money = (n: number) => (n < 0 ? `-$${Math.abs(n).toFixed(2)}` : `$${n.toFixed(2)}`);
+const money = (n: number) => {
+  const s = Math.abs(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n < 0 ? `-$${s}` : `$${s}`;
+};
 
 export async function handleInboundInvoice(opts: {
   subject: string;
