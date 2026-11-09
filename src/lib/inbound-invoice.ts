@@ -7,6 +7,12 @@
 //             Gro: $186.40
 //             Tip                            (optional: adds the gratuity lines)
 //             Note: anything for the Remarks box (optional)
+//
+// Prepaid cook dates: put the dates on their own line and one amount. Each
+// date becomes a line item and the amount is split evenly across them.
+//   Subject:  Invoice Schwartz              (no date = today)
+//   Body:     1756
+//             November 3, 10, 17
 
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
@@ -38,8 +44,57 @@ const LABELS: Record<string, string> = {
   delivery: "Delivery",
 };
 
+const MONTHS = [
+  "january", "february", "march", "april", "may", "june",
+  "july", "august", "september", "october", "november", "december",
+];
+
+const monthIndex = (word: string) => {
+  const w = word.toLowerCase().replace(/\.$/, "");
+  if (w.length < 3) return -1;
+  return MONTHS.findIndex((m) => m.startsWith(w) || (w === "sept" && m === "september"));
+};
+
+// "November 3, 10, 17" / "Nov 11 and 16" / "Nov 28, Dec 2" / "11/3, 11/10"
+// / "Dates: November 12". Returns null unless the whole line is dates.
+export function parseCookDateLine(line: string): { month: number; day: number }[] | null {
+  const rest = line.replace(/^(cook\s*)?dates?\s*[:\-–]?\s*/i, "");
+  const tokens = rest
+    .split(/\s*(?:,|&|\band\b|\s)\s*/i)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (tokens.length === 0) return null;
+
+  const out: { month: number; day: number }[] = [];
+  let month = -1;
+  for (const t of tokens) {
+    const md = t.match(/^(\d{1,2})\/(\d{1,2})$/);
+    if (md) {
+      month = Number(md[1]) - 1;
+      out.push({ month, day: Number(md[2]) });
+      continue;
+    }
+    const day = t.match(/^(\d{1,2})(st|nd|rd|th)?$/i);
+    if (day) {
+      if (month < 0) return null;
+      out.push({ month, day: Number(day[1]) });
+      continue;
+    }
+    const idx = monthIndex(t);
+    if (idx < 0) return null;
+    month = idx;
+  }
+  if (out.length === 0) return null;
+  if (out.some((d) => d.month < 0 || d.month > 11 || d.day < 1 || d.day > 31)) return null;
+  return out;
+}
+
 export type ParsedInvoiceBody = {
   lines: { description: string; amount: number }[];
+  // Cook dates for a prepaid invoice; empty for a normal one.
+  cookDates: { month: number; day: number }[];
+  // Amount lines with no label ("1756"); only used for prepaid invoices.
+  bareAmounts: number[];
   showGratuity: boolean;
   remarks: string | null;
   ignored: string[];
@@ -49,6 +104,8 @@ export function parseInvoiceBody(text: string): ParsedInvoiceBody {
   const lines: ParsedInvoiceBody["lines"] = [];
   const notes: string[] = [];
   const ignored: string[] = [];
+  const cookDates: ParsedInvoiceBody["cookDates"] = [];
+  const bareAmounts: number[] = [];
   let showGratuity = false;
 
   for (const raw of text.split(/\r?\n/)) {
@@ -66,6 +123,22 @@ export function parseInvoiceBody(text: string): ParsedInvoiceBody {
     if (note) {
       notes.push(note[2].trim());
       continue;
+    }
+
+    // Checked before line items, or "November 12" would read as November: $12.
+    const dates = parseCookDateLine(line);
+    if (dates) {
+      cookDates.push(...dates);
+      continue;
+    }
+
+    const bare = line.match(/^\$?\s*([\d,]+(?:\.\d{1,2})?)$/);
+    if (bare) {
+      const amount = Number(bare[1].replace(/,/g, ""));
+      if (amount > 0) {
+        bareAmounts.push(amount);
+        continue;
+      }
     }
 
     // "PC: $425", "Gro $186.40", "Delivery - 25", "Credit: -$50", "Credit ($50)".
@@ -89,7 +162,64 @@ export function parseInvoiceBody(text: string): ParsedInvoiceBody {
     ignored.push(line);
   }
 
-  return { lines, showGratuity, remarks: notes.length ? notes.join(" ") : null, ignored };
+  return {
+    lines,
+    cookDates,
+    bareAmounts,
+    showGratuity,
+    remarks: notes.length ? notes.join(" ") : null,
+    ignored,
+  };
+}
+
+// The invoice's line items. Normal invoice: the parsed lines. Prepaid: one line
+// per cook date, the amount split evenly (leftover cents on the first dates).
+// A date more than 60 days before the invoice date is taken as next year.
+export function buildInvoiceLines(
+  parsed: ParsedInvoiceBody,
+  invoiceDate: Date,
+): { description: string; amount: number }[] {
+  if (parsed.cookDates.length === 0) {
+    if (parsed.lines.length === 0) {
+      throw new Error(
+        `No line items found. Put one per line, like:\nPC: $425\nGro: $186.40\nTip`,
+      );
+    }
+    return parsed.lines;
+  }
+
+  const total =
+    parsed.lines.reduce((s, l) => s + l.amount, 0) +
+    parsed.bareAmounts.reduce((s, a) => s + a, 0);
+  if (!(total > 0)) {
+    throw new Error(
+      `Found cook dates but no amount. Put the total on its own line, like:\n1756\nNovember 3, 10, 17`,
+    );
+  }
+
+  const cutoff = invoiceDate.getTime() - 60 * 24 * 60 * 60 * 1000;
+  const seen = new Set<number>();
+  const dates: Date[] = [];
+  for (const { month, day } of parsed.cookDates) {
+    let d = new Date(invoiceDate.getFullYear(), month, day, 12);
+    if (d.getTime() < cutoff) d = new Date(invoiceDate.getFullYear() + 1, month, day, 12);
+    if (d.getMonth() !== month) {
+      throw new Error(`${MONTHS[month][0].toUpperCase()}${MONTHS[month].slice(1)} ${day} is not a real date.`);
+    }
+    if (!seen.has(d.getTime())) {
+      seen.add(d.getTime());
+      dates.push(d);
+    }
+  }
+  dates.sort((a, b) => a.getTime() - b.getTime());
+
+  const cents = Math.round(total * 100);
+  const base = Math.floor(cents / dates.length);
+  const extra = cents - base * dates.length;
+  return dates.map((d, i) => ({
+    description: `Personal Chef – ${format(d, "EEEE, MMMM d")}`,
+    amount: (base + (i < extra ? 1 : 0)) / 100,
+  }));
 }
 
 type ClientRow = {
@@ -103,7 +233,8 @@ const nameTokens = (s: string) =>
   s
     .toLowerCase()
     .split(/[\s,&/-]+/)
-    .map((t) => t.replace(/[^a-z']/g, ""))
+    // "Raphael's" matches Raphael.
+    .map((t) => t.replace(/['’]s$/, "").replace(/[^a-z]/g, ""))
     .filter((t) => t && t !== "and");
 
 // Exact shared names, order-insensitive. Returns the single best match, or an
@@ -152,11 +283,11 @@ export async function handleInboundInvoice(opts: {
   try {
     const { client: subjectClient, date } = parseSubject(opts.subject);
     const parsed = parseInvoiceBody(opts.body);
-    if (parsed.lines.length === 0) {
-      throw new Error(
-        `No line items found. Put one per line, like:\nPC: $425\nGro: $186.40\nTip`,
-      );
-    }
+    const lines = buildInvoiceLines(parsed, date);
+    // An unlabeled amount only means something on a prepaid invoice.
+    const ignored = parsed.cookDates.length
+      ? parsed.ignored
+      : [...parsed.ignored, ...parsed.bareAmounts.map((a) => String(a))];
 
     const clients = await prisma.client.findMany({
       where: { kitchenId: KITCHEN_ID, active: true },
@@ -166,7 +297,7 @@ export async function handleInboundInvoice(opts: {
     if ("error" in match) throw new Error(match.error);
     const client = match.client;
 
-    const total = parsed.lines.reduce((s, l) => s + l.amount, 0);
+    const total = lines.reduce((s, l) => s + l.amount, 0);
 
     // Guard against webhook re-deliveries: same client + date + total created
     // in the last 15 minutes means this email was already turned into an invoice.
@@ -194,7 +325,7 @@ export async function handleInboundInvoice(opts: {
           remarks: parsed.remarks,
           showGratuity: parsed.showGratuity,
           lineItems: {
-            create: parsed.lines.map((l, i) => ({ ...l, position: i + 1 })),
+            create: lines.map((l, i) => ({ ...l, position: i + 1 })),
           },
         },
         include: { lineItems: true },
@@ -224,8 +355,8 @@ export async function handleInboundInvoice(opts: {
         ? `Subtotal: ${money(total)} (with blank Optional Gratuity and Total lines)`
         : `Total: ${money(total)}`,
       ...(invoice.remarks ? [``, `Remarks: ${invoice.remarks}`] : []),
-      ...(parsed.ignored.length
-        ? [``, `Ignored these lines (not line items):`, ...parsed.ignored.map((l) => `  ${l}`)]
+      ...(ignored.length
+        ? [``, `Ignored these lines (not line items):`, ...ignored.map((l) => `  ${l}`)]
         : []),
       ``,
       reused
@@ -265,6 +396,10 @@ export async function handleInboundInvoice(opts: {
           `PC: $425`,
           `Gro: $186.40`,
           `Tip   (only if you want the gratuity lines)`,
+          ``,
+          `Prepaid cook dates: subject "Invoice Client Name", and in the body:`,
+          `1756`,
+          `November 3, 10, 17`,
         ].join("\n"),
       });
     } catch {
