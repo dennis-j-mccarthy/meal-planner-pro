@@ -13,6 +13,8 @@
 //   Subject:  Invoice Schwartz              (no date = today)
 //   Body:     1756
 //             November 3, 10, 17
+//             Travel: 30                     (optional: other labeled lines stay
+//                                             their own line items)
 
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
@@ -173,7 +175,8 @@ export function parseInvoiceBody(text: string): ParsedInvoiceBody {
 }
 
 // The invoice's line items. Normal invoice: the parsed lines. Prepaid: one line
-// per cook date, the amount split evenly (leftover cents on the first dates).
+// per cook date, the amount split evenly (leftover cents on the first dates),
+// then any other labeled lines (Travel, Groceries...) as their own items.
 // A date more than 60 days before the invoice date is taken as next year.
 export function buildInvoiceLines(
   parsed: ParsedInvoiceBody,
@@ -188,8 +191,12 @@ export function buildInvoiceLines(
     return parsed.lines;
   }
 
+  // The amount to split: unlabeled ("1756") or labeled PC / Prepay / Total.
+  const isSplit = (l: { description: string }) =>
+    l.description === "Personal Chef Fee" || /^(prepa(y|id)|total|amount)$/i.test(l.description);
+  const extras = parsed.lines.filter((l) => !isSplit(l));
   const total =
-    parsed.lines.reduce((s, l) => s + l.amount, 0) +
+    parsed.lines.filter(isSplit).reduce((s, l) => s + l.amount, 0) +
     parsed.bareAmounts.reduce((s, a) => s + a, 0);
   if (!(total > 0)) {
     throw new Error(
@@ -216,10 +223,13 @@ export function buildInvoiceLines(
   const cents = Math.round(total * 100);
   const base = Math.floor(cents / dates.length);
   const extra = cents - base * dates.length;
-  return dates.map((d, i) => ({
-    description: `Personal Chef – ${format(d, "EEEE, MMMM d")}`,
-    amount: (base + (i < extra ? 1 : 0)) / 100,
-  }));
+  return [
+    ...dates.map((d, i) => ({
+      description: `Personal Chef – ${format(d, "EEEE, MMMM d")}`,
+      amount: (base + (i < extra ? 1 : 0)) / 100,
+    })),
+    ...extras,
+  ];
 }
 
 type ClientRow = {
@@ -403,6 +413,7 @@ export async function handleInboundInvoice(opts: {
           `Prepaid cook dates: subject "Invoice Client Name", and in the body:`,
           `1756`,
           `November 3, 10, 17`,
+          `Travel: 30   (optional)`,
         ].join("\n"),
       });
     } catch {
