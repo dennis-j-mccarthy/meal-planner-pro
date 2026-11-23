@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { updateInvoiceStatus, deleteInvoice, sendInvoiceEmail, recordInvoicePayment } from "@/app/actions";
+import { updateInvoiceStatus, deleteInvoice, sendInvoiceEmail } from "@/app/actions";
 import { SendToClientButton } from "@/components/send-to-client-button";
-import { PAYMENT_METHODS } from "@/lib/payment-methods";
+import { RecordPaymentForm } from "@/components/record-payment-form";
 
 interface InvoiceActionsProps {
   invoiceId: string;
@@ -126,34 +126,7 @@ export function InvoiceActions({ invoiceId, status, clientEmail }: InvoiceAction
       </div>
 
       {/* Record payment: how it was paid, plus an optional note (check #) */}
-      {(status === "DRAFT" || status === "SENT") && (
-        <form action={recordInvoicePayment} className="flex flex-wrap items-center gap-2">
-          <input type="hidden" name="invoiceId" value={invoiceId} />
-          <label className="text-sm text-slate-600" htmlFor={`method-${invoiceId}`}>
-            Paid by
-          </label>
-          <select
-            id={`method-${invoiceId}`}
-            name="method"
-            defaultValue="Zelle"
-            className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900"
-          >
-            {PAYMENT_METHODS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-          <input
-            name="note"
-            placeholder="Note, e.g. check # (optional)"
-            className="w-56 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900"
-          />
-          <button className="button-secondary text-sm border-green-200 text-green-700 hover:bg-green-50">
-            Record payment
-          </button>
-        </form>
-      )}
+      {(status === "DRAFT" || status === "SENT") && <RecordPaymentForm invoiceId={invoiceId} />}
     </div>
   );
 }

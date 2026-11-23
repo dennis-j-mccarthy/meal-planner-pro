@@ -5,6 +5,7 @@ import { requireKitchen } from "@/lib/guard";
 import { formatDateShort, formatMoney } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { InvoiceActions } from "@/components/invoice-actions";
+import { formatMonthKey, formatWeekdayLong } from "@/lib/dates";
 
 export default async function InvoiceDetailPage({
   params,
@@ -23,6 +24,15 @@ export default async function InvoiceDetailPage({
   });
 
   if (!invoice) notFound();
+
+  // Invoice.cookDateId has no relation: look the cook date up in this kitchen.
+  // It may have been deleted since.
+  const cookDate = invoice.cookDateId
+    ? await prisma.cookDate.findFirst({
+        where: { id: invoice.cookDateId, kitchenId: kitchen.id },
+        select: { id: true, scheduledFor: true },
+      })
+    : null;
 
   const total = invoice.lineItems.reduce((sum, li) => sum + li.amount, 0);
 
@@ -55,6 +65,21 @@ export default async function InvoiceDetailPage({
                 </span>
               )}
             </p>
+            {cookDate ? (
+              <p className="mt-0.5 text-sm text-slate-500">
+                Cook date:{" "}
+                <Link
+                  href={`/cook-dates/${cookDate.id}`}
+                  className="font-medium text-[var(--accent-strong)] hover:underline"
+                >
+                  {formatWeekdayLong(cookDate.scheduledFor)}
+                </Link>
+              </p>
+            ) : invoice.billingPeriod ? (
+              <p className="mt-0.5 text-sm text-slate-500">
+                Monthly · {formatMonthKey(invoice.billingPeriod)}
+              </p>
+            ) : null}
             <p className="mt-0.5 text-sm text-slate-500">
               {formatDateShort(invoice.invoiceDate)}
               {invoice.sentAt && (

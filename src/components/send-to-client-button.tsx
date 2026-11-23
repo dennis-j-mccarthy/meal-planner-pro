@@ -8,22 +8,25 @@ interface SendToClientButtonProps {
   kind: "invoice" | "menuCard";
   id: string;
   clientEmail: string | null;
+  /** "secondary" when another button on the page is the main action. */
+  variant?: "primary" | "secondary";
 }
 
 type Stage = "idle" | "confirm" | "sending" | "sent" | "error";
 
 // "Send to client" → inline "Send to <email>? [Send] [Cancel]" → "Sending…"
 // → "Sent to <email> ✓". Disabled when the client has no email.
-export function SendToClientButton({ kind, id, clientEmail }: SendToClientButtonProps) {
+export function SendToClientButton({ kind, id, clientEmail, variant = "primary" }: SendToClientButtonProps) {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("idle");
   const [sentTo, setSentTo] = useState("");
   const [error, setError] = useState("");
   const email = clientEmail?.trim() || null;
+  const buttonClass = variant === "secondary" ? "button-secondary" : "button-primary";
 
   if (!email) {
     return (
-      <button type="button" disabled className="button-primary text-sm opacity-50 cursor-not-allowed">
+      <button type="button" disabled className={`${buttonClass} text-sm opacity-50 cursor-not-allowed`}>
         Add the client&apos;s email to send
       </button>
     );
@@ -84,7 +87,7 @@ export function SendToClientButton({ kind, id, clientEmail }: SendToClientButton
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button type="button" onClick={() => setStage("confirm")} className="button-primary text-sm">
+      <button type="button" onClick={() => setStage("confirm")} className={`${buttonClass} text-sm`}>
         Send to client
       </button>
       {stage === "error" && <span className="text-xs text-red-600">Failed — {error}</span>}

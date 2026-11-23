@@ -6,6 +6,7 @@ import { PreferenceCheckboxes } from "@/components/preference-checkboxes";
 import { parsePreferenceList } from "@/lib/preference-options";
 import { DishQuotaEditor } from "@/components/dish-quota-editor";
 import { parseDishQuota } from "@/lib/dish-quota";
+import { ClientBillingFields } from "@/components/client-billing-fields";
 
 interface ClientInitial {
   id: string;
@@ -24,6 +25,9 @@ interface ClientInitial {
   city: string | null;
   state: string | null;
   zip: string | null;
+  billingMode?: string | null;
+  defaultRate?: number | null;
+  travelFee?: number | null;
 }
 
 export function EditClientModal({ client }: { client: ClientInitial }) {
@@ -184,6 +188,12 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
                 name="zip"
                 placeholder="ZIP"
                 defaultValue={client.zip ?? ""}
+              />
+              <ClientBillingFields
+                idPrefix={`edit-client-${client.id}`}
+                billingMode={client.billingMode}
+                defaultRate={client.defaultRate}
+                travelFee={client.travelFee}
               />
             </div>
             <div className="mt-5 flex items-center justify-between gap-2">

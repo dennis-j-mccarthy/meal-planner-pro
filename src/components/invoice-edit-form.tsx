@@ -47,6 +47,22 @@ export function InvoiceEditForm({
     setLines([...lines, { description: "", amount: "" }]);
   }
 
+  const hasGroceries = lines.some((l) => /grocer/i.test(l.description));
+  function addGroceries() {
+    // Fill an empty last line rather than leaving a blank one behind it.
+    const last = lines[lines.length - 1];
+    if (last && !last.description.trim() && !last.amount.trim()) {
+      setLines([...lines.slice(0, -1), { description: "Groceries", amount: "" }]);
+    } else {
+      setLines([...lines, { description: "Groceries", amount: "" }]);
+    }
+  }
+
+  const hasZeroLine = lines.some((l) => {
+    const amt = parseFloat(l.amount);
+    return l.description.trim() && (!Number.isFinite(amt) || amt === 0);
+  });
+
   function removeLine(index: number) {
     if (lines.length <= 1) return;
     setLines(lines.filter((_, i) => i !== index));
@@ -114,14 +130,30 @@ export function InvoiceEditForm({
               <label className="text-sm font-semibold text-slate-700">
                 Line items
               </label>
-              <button
-                type="button"
-                onClick={addLine}
-                className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
-              >
-                + Add line
-              </button>
+              <div className="flex items-center gap-1">
+                {!hasGroceries && (
+                  <button
+                    type="button"
+                    onClick={addGroceries}
+                    className="min-h-11 rounded-lg px-2 text-sm font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
+                  >
+                    + Add groceries
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={addLine}
+                  className="min-h-11 rounded-lg px-2 text-sm font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
+                >
+                  + Add line
+                </button>
+              </div>
             </div>
+            {hasZeroLine && (
+              <p className="mb-3 text-sm text-amber-700">
+                Lines at $0.00 are left off when you save. Fill in the amount to keep them.
+              </p>
+            )}
             <div className="space-y-2">
               {lines.map((item, index) => (
                 <div key={index} className="flex gap-2 items-start">

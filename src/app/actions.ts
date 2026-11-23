@@ -24,6 +24,7 @@ import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { sendBonAppetitToClient, sendInvoiceToClient, type ClientSendResult } from "@/lib/client-email";
 import { recordPayment } from "@/lib/invoice-payment";
 import { PAYMENT_METHODS, normalizePaymentMethod } from "@/lib/payment-methods";
+import { BILLING_MODES } from "@/lib/cook-date-progress";
 import { format } from "date-fns";
 
 function requiredText(formData: FormData, key: string) {
@@ -227,6 +228,20 @@ function clientAddressFields(formData: FormData) {
   return { street, city, state, zip, address };
 }
 
+// Billing settings from the client form. Only fields the form sent are
+// returned, so a form without them never wipes the rate or the mode.
+function clientBillingFields(formData: FormData) {
+  const out: { billingMode?: string; defaultRate?: number | null; travelFee?: number | null } = {};
+  const mode = optionalText(formData, "billingMode");
+  if (mode && (BILLING_MODES as readonly string[]).includes(mode)) out.billingMode = mode;
+  for (const key of ["defaultRate", "travelFee"] as const) {
+    if (!formData.has(key)) continue;
+    const n = optionalNumber(formData, key);
+    out[key] = n !== null && n >= 0 ? Math.round(n * 100) / 100 : null;
+  }
+  return out;
+}
+
 export async function createClient(formData: FormData) {
   const kitchen = await requireKitchen();
   const addr = clientAddressFields(formData);
@@ -250,6 +265,7 @@ export async function createClient(formData: FormData) {
       state: addr.state,
       zip: addr.zip,
       address: addr.address,
+      ...clientBillingFields(formData),
     },
   });
 
@@ -284,6 +300,7 @@ export async function updateClient(formData: FormData) {
       // Only recompose address when structured parts were supplied, so we don't
       // wipe a legacy free-text address on clients that predate these fields.
       ...(addr.address ? { address: addr.address } : {}),
+      ...clientBillingFields(formData),
     },
   });
 

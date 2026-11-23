@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { createClient } from "@/app/actions";
 import { PreferenceCheckboxes } from "@/components/preference-checkboxes";
 import { DishQuotaEditor } from "@/components/dish-quota-editor";
+import { ClientBillingFields } from "@/components/client-billing-fields";
 
 export function AddClientModal() {
   const [open, setOpen] = useState(false);
@@ -95,6 +96,7 @@ export function AddClientModal() {
               <input className="field md:col-span-2" name="city" placeholder="City" />
               <input className="field" name="state" placeholder="State" />
               <input className="field" name="zip" placeholder="ZIP" />
+              <ClientBillingFields idPrefix="add-client" />
             </div>
             <div className="mt-5 flex justify-end gap-2">
               <button

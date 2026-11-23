@@ -1,20 +1,39 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createCookDate } from "@/app/actions";
+import { createInvoiceForCookDate, createMonthlyInvoice } from "@/app/billing-actions";
 import { EditClientModal } from "@/components/edit-client-modal";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDateShort, formatDateLong, formatMoney } from "@/lib/format";
 import { parsePreferenceList } from "@/lib/preference-options";
 import { parseDishQuota, totalDishes } from "@/lib/dish-quota";
 import { requireKitchen } from "@/lib/guard";
+import { cookDatesForMonth, findMonthlyInvoice } from "@/lib/billing";
+import {
+  BILLING_MODE_LABEL,
+  isMonthlyBilling,
+  normalizeBillingMode,
+} from "@/lib/cook-date-progress";
+import {
+  addDays,
+  formatMonthKey,
+  formatWeekdayLong,
+  formatWeekdayShort,
+  monthRange,
+  shiftMonthKey,
+  thisMonthKey,
+  todayStart,
+} from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 
 export default async function ClientDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ clientId: string }>;
+  searchParams: Promise<{ billMonth?: string }>;
 }) {
   const { clientId } = await params;
+  const { billMonth } = await searchParams;
   const kitchen = await requireKitchen();
 
   const client = await prisma.client.findFirst({
@@ -60,6 +79,54 @@ export default async function ClientDetailPage({
   // Invoices not linked to cook dates
   const standaloneInvoices = client.invoices;
 
+  // ── Billing ──
+  const billingMode = normalizeBillingMode(client.billingMode);
+  const monthly = isMonthlyBilling(billingMode);
+  const billingSummary = [
+    BILLING_MODE_LABEL[billingMode],
+    client.defaultRate != null ? `${formatMoney(client.defaultRate)} per cook date` : "No rate set",
+    client.travelFee ? `Travel ${formatMoney(client.travelFee)}` : null,
+  ].filter(Boolean);
+
+  const cookDateById = new Map(client.cookDates.map((cd) => [cd.id, cd]));
+  const invoicedCookDateIds = new Set(
+    client.invoices.filter((inv) => inv.status !== "VOID" && inv.cookDateId).map((inv) => inv.cookDateId),
+  );
+
+  // "+ New invoice": recent and upcoming cook dates that have no invoice yet.
+  const todayWindow = todayStart(now);
+  const invoiceableCookDates = client.cookDates
+    .filter(
+      (cd) =>
+        cd.status !== "CANCELLED" &&
+        !invoicedCookDateIds.has(cd.id) &&
+        cd.scheduledFor >= addDays(todayWindow, -120) &&
+        cd.scheduledFor < addDays(todayWindow, 60),
+    )
+    .slice(0, 8);
+
+  // "Bill the month": monthly-ahead bills this month (next month once this
+  // month has its invoice); monthly-after bills the month that just ended.
+  const currentMonth = thisMonthKey(now);
+  let defaultBillMonth = currentMonth;
+  if (billingMode === "MONTHLY_AFTER") {
+    defaultBillMonth = shiftMonthKey(currentMonth, -1);
+  } else if (billingMode === "MONTHLY_AHEAD") {
+    const thisMonthInvoice = await findMonthlyInvoice(kitchen.id, client.id, currentMonth);
+    if (thisMonthInvoice) defaultBillMonth = shiftMonthKey(currentMonth, 1);
+  }
+  const selectedBillMonth = billMonth && monthRange(billMonth) ? billMonth : defaultBillMonth;
+  const monthOptions = Array.from({ length: 10 }, (_, i) => shiftMonthKey(currentMonth, 3 - i));
+  if (!monthOptions.includes(selectedBillMonth)) monthOptions.push(selectedBillMonth);
+  const [billPreview, existingMonthInvoice] = await Promise.all([
+    cookDatesForMonth(kitchen.id, client.id, selectedBillMonth),
+    findMonthlyInvoice(kitchen.id, client.id, selectedBillMonth),
+  ]);
+  const billCount = billPreview?.included.length ?? 0;
+  const billTotal =
+    billCount * (client.defaultRate ?? 0) + (client.travelFee ? client.travelFee * billCount : 0);
+  const selectedMonthLabel = formatMonthKey(selectedBillMonth);
+
   return (
     <div className="space-y-8">
       {/* Breadcrumb */}
@@ -93,6 +160,10 @@ export default async function ClientDetailPage({
                 <p className="whitespace-pre-line">{client.address}</p>
               )}
             </div>
+            <p className="mt-3 text-sm text-slate-600">
+              <span className="font-semibold text-slate-700">Billing:</span>{" "}
+              {billingSummary.join(" · ")}
+            </p>
             {client.dietaryNotes && (
               <p className="mt-3 text-sm text-slate-600">
                 {client.dietaryNotes}
@@ -120,6 +191,9 @@ export default async function ClientDetailPage({
                   city: client.city,
                   state: client.state,
                   zip: client.zip,
+                  billingMode: client.billingMode,
+                  defaultRate: client.defaultRate,
+                  travelFee: client.travelFee,
                 }}
               />
             </div>
@@ -217,12 +291,42 @@ export default async function ClientDetailPage({
         >
           + New cook date
         </Link>
-        <Link
-          href={`/invoices?clientId=${client.id}`}
-          className="button-secondary text-sm"
-        >
-          + New invoice
-        </Link>
+        <details className="relative">
+          <summary className="button-secondary text-sm list-none [&::-webkit-details-marker]:hidden">
+            + New invoice
+          </summary>
+          <div className="absolute left-0 z-20 mt-2 w-80 max-w-[calc(100vw_-_2rem)] panel p-3 shadow-lg">
+            {invoiceableCookDates.length > 0 ? (
+              <>
+                <p className="px-2 pb-2 text-xs font-semibold text-slate-500">
+                  Invoice a cook date
+                </p>
+                <ul className="space-y-1">
+                  {invoiceableCookDates.map((cd) => (
+                    <li key={cd.id}>
+                      <form action={createInvoiceForCookDate.bind(null, cd.id)}>
+                        <button className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg px-2 text-left text-sm text-slate-800 hover:bg-[var(--surface-raised)]">
+                          <span>{formatWeekdayLong(cd.scheduledFor)}</span>
+                          <StatusBadge status={cd.status} />
+                        </button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p className="px-2 pb-2 text-sm text-slate-500">
+                No recent cook dates without an invoice.
+              </p>
+            )}
+            <Link
+              href={`/invoices?clientId=${client.id}`}
+              className="mt-2 flex min-h-11 items-center rounded-lg border-t border-[var(--line)] px-2 pt-2 text-sm font-medium text-[var(--accent-strong)] hover:underline"
+            >
+              Invoice without a cook date
+            </Link>
+          </div>
+        </details>
         <Link
           href={`/menu-cards?clientId=${client.id}`}
           className="button-secondary text-sm"
@@ -230,6 +334,96 @@ export default async function ClientDetailPage({
           + New Bon Appetit
         </Link>
       </div>
+
+      {/* Bill the month */}
+      <section aria-labelledby="bill-month" className="panel p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 id="bill-month" className="section-title">
+              Bill the month
+            </h2>
+            <p className="mt-1 text-sm text-slate-500">
+              {monthly
+                ? `${client.firstName} is billed ${billingMode === "MONTHLY_AHEAD" ? "monthly, paid ahead" : "monthly, paid after"}: one invoice for all cook dates in the month.`
+                : "One invoice for all cook dates in a month."}
+            </p>
+          </div>
+          <form method="get" className="flex flex-wrap items-center gap-2">
+            <label htmlFor="billMonth" className="sr-only">
+              Month
+            </label>
+            <select
+              id="billMonth"
+              name="billMonth"
+              defaultValue={selectedBillMonth}
+              className="field w-auto!"
+            >
+              {monthOptions.map((key) => (
+                <option key={key} value={key}>
+                  {formatMonthKey(key)}
+                </option>
+              ))}
+            </select>
+            <button className="button-secondary">Show</button>
+          </form>
+        </div>
+
+        <div className="mt-5 border-t border-[var(--line)] pt-4">
+          {billCount > 0 ? (
+            <ul className="space-y-1.5 text-sm text-slate-700">
+              {billPreview!.included.map((cd) => (
+                <li key={cd.id} className="flex justify-between gap-4">
+                  <span>{formatWeekdayShort(cd.scheduledFor)}{cd.startTimeLabel ? ` · ${cd.startTimeLabel}` : ""}</span>
+                  <span className="text-slate-500">{client.defaultRate != null ? formatMoney(client.defaultRate) : "Rate not set"}</span>
+                </li>
+              ))}
+              {client.travelFee ? (
+                <li className="flex justify-between gap-4">
+                  <span>Travel × {billCount}</span>
+                  <span className="text-slate-500">{formatMoney(client.travelFee * billCount)}</span>
+                </li>
+              ) : null}
+            </ul>
+          ) : (
+            <p className="text-sm text-slate-500">
+              No cook dates to bill in {selectedMonthLabel}.
+            </p>
+          )}
+          {billPreview && billPreview.alreadyInvoiced.length > 0 && (
+            <ul className="mt-3 space-y-1 text-xs text-slate-500">
+              {billPreview.alreadyInvoiced.map(({ cookDate: cd, invoice: inv }) => (
+                <li key={cd.id}>
+                  {formatWeekdayShort(cd.scheduledFor)} is left off: it has invoice{" "}
+                  <Link href={`/invoices/${inv.id}`} className="underline">
+                    #{inv.invoiceNumber}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            {billCount > 0 && !existingMonthInvoice ? (
+              <p className="text-sm font-semibold text-slate-900">Total {formatMoney(billTotal)}</p>
+            ) : (
+              <span />
+            )}
+            {existingMonthInvoice ? (
+              <Link href={`/invoices/${existingMonthInvoice.id}`} className="button-secondary">
+                Open {selectedMonthLabel} invoice #{existingMonthInvoice.invoiceNumber}
+              </Link>
+            ) : (
+              <form action={createMonthlyInvoice.bind(null, client.id, selectedBillMonth)}>
+                <button
+                  className={monthly ? "button-primary" : "button-secondary"}
+                  disabled={billCount === 0}
+                >
+                  Create {selectedMonthLabel} invoice
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </section>
 
       {/* Upcoming cook dates */}
       {upcomingCookDates.length > 0 && (
@@ -334,6 +528,11 @@ export default async function ClientDetailPage({
                     <StatusBadge status={inv.status} />
                     <p className="text-xs text-slate-500">
                       {formatDateShort(inv.invoiceDate)}
+                      {inv.billingPeriod
+                        ? ` · Monthly · ${formatMonthKey(inv.billingPeriod)}`
+                        : inv.cookDateId && cookDateById.get(inv.cookDateId)
+                          ? ` · Cook date ${formatWeekdayShort(cookDateById.get(inv.cookDateId)!.scheduledFor)}`
+                          : ""}
                     </p>
                   </div>
                   <p className="text-sm font-bold text-slate-900">
