@@ -1,5 +1,5 @@
 import { CookDatesView } from "@/components/cook-dates-view";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 export default async function CookDatesPage({
@@ -7,7 +7,7 @@ export default async function CookDatesPage({
 }: {
   searchParams: Promise<{ clientId?: string }>;
 }) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const params = await searchParams;
   const preselectedClientId = params.clientId || "";
   const [clients, cookDates] = await Promise.all([

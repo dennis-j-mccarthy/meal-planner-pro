@@ -1,5 +1,4 @@
-import { SignInButton, SignUpButton } from "@clerk/nextjs";
-import { enterDemo } from "@/app/actions";
+import { SignInButton } from "@clerk/nextjs";
 
 export function MarketingPage() {
   return (
@@ -18,19 +17,6 @@ export function MarketingPage() {
           Meal Planner Pro handles the business side so you can focus on the food.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-          <SignUpButton mode="modal">
-            <button className="button-primary text-base px-6 py-3">
-              Get started free
-            </button>
-          </SignUpButton>
-          <form action={enterDemo}>
-            <button
-              type="submit"
-              className="button-secondary text-base px-6 py-3"
-            >
-              Try the demo →
-            </button>
-          </form>
           <SignInButton mode="modal">
             <button className="button-secondary text-base px-6 py-3">
               Sign in
@@ -69,7 +55,7 @@ export function MarketingPage() {
           {
             color: "from-rose-500 to-pink-600",
             title: "Smart Recipe Library",
-            desc: "Import from URL (auto-extracts title, image, ingredients, instructions), AI-generate with Gemini, search Edamam with health filters, or paste freeform text — we&apos;ll split it into clean recipes.",
+            desc: "Import from URL (auto-extracts title, image, ingredients, instructions), AI-generate with Gemini, search Edamam with health filters, or paste freeform text — we'll split it into clean recipes.",
             icon: "M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25",
           },
           {
@@ -105,7 +91,7 @@ export function MarketingPage() {
           {[
             { n: 1, t: "Pick a date", d: "Click a day on the calendar from any client's profile. Cook date created, ready to build." },
             { n: 2, t: "Build the menu", d: "Search your library, drag recipes onto the meal plan, organize by category. Send to the client for approval." },
-            { n: 3, t: "Deliver", d: "Client approves → Bon Appetit PDF auto-generated. Download, email, or send directly to Beth." },
+            { n: 3, t: "Deliver", d: "Client approves → Bon Appetit PDF auto-generated. Download, email, or send to your client." },
           ].map((s) => (
             <div key={s.n} className="text-center relative">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-teal-600 text-2xl font-bold text-white shadow-lg mb-4">
@@ -143,19 +129,11 @@ export function MarketingPage() {
           Stop juggling spreadsheets, Word docs, and email drafts. Run your entire personal chef business from one place.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3">
-          <SignUpButton mode="modal">
+          <SignInButton mode="modal">
             <button className="button-primary text-base px-8 py-3">
-              Get started free
+              Sign in
             </button>
-          </SignUpButton>
-          <form action={enterDemo}>
-            <button
-              type="submit"
-              className="rounded-lg border border-slate-600 bg-slate-800 px-8 py-3 text-base font-semibold text-white hover:bg-slate-700 transition-colors"
-            >
-              Try the demo
-            </button>
-          </form>
+          </SignInButton>
         </div>
       </section>
     </div>

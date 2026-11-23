@@ -1,5 +1,5 @@
 import { BaWizard } from "@/components/ba-wizard";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 export const metadata = {
@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 export default async function BaPage() {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const clients = await prisma.client.findMany({
     where: { kitchenId: kitchen.id },
     select: { id: true, firstName: true, lastName: true },

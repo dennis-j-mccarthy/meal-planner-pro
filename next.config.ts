@@ -10,6 +10,9 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    // TODO(security): hostname "**" lets next/image proxy and optimise images
+    // from ANY https host. Narrow to the hosts recipe images actually come
+    // from (Vercel Blob, Edamam, scraped recipe sites) in a follow-up.
     remotePatterns: [
       {
         protocol: "https",

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { InvoiceEditForm } from "@/components/invoice-edit-form";
 
 export default async function InvoiceEditPage({
@@ -10,7 +10,7 @@ export default async function InvoiceEditPage({
   params: Promise<{ invoiceId: string }>;
 }) {
   const { invoiceId } = await params;
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   const [invoice, clients] = await Promise.all([
     prisma.invoice.findFirst({

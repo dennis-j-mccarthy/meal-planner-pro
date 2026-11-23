@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { formatDateShort, formatDateLong, formatEnum } from "@/lib/format";
 import { parsePreferenceList } from "@/lib/preference-options";
 import { parseDishQuota, totalDishes } from "@/lib/dish-quota";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 export default async function ClientDetailPage({
@@ -14,7 +14,7 @@ export default async function ClientDetailPage({
   params: Promise<{ clientId: string }>;
 }) {
   const { clientId } = await params;
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   const client = await prisma.client.findFirst({
     where: { id: clientId, kitchenId: kitchen.id },

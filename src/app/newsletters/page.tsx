@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { formatDateShort } from "@/lib/format";
 import { deleteNewsletter } from "@/app/actions";
 
 export default async function NewslettersPage() {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const newsletters = await prisma.newsletter.findMany({
     where: { kitchenId: kitchen.id },
     include: { articles: { select: { id: true } } },

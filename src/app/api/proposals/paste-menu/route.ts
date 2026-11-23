@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { requireKitchenApi } from "@/lib/guard";
 import { RecipeSourceType, RecipeDetailStatus } from "@/generated/prisma/client";
 import { parseStructured, type Dish } from "@/lib/menu-parser";
 
@@ -42,14 +43,17 @@ Return ONLY a JSON array:
 }
 
 export async function POST(request: NextRequest) {
+  const { kitchen, error } = await requireKitchenApi();
+  if (error) return error;
+
   const { proposalId, text } = await request.json();
 
   if (!proposalId || !text) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const proposal = await prisma.proposal.findUnique({
-    where: { id: proposalId },
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: proposalId, kitchenId: kitchen.id },
   });
   if (!proposal) {
     return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
@@ -83,7 +87,7 @@ export async function POST(request: NextRequest) {
     // Create the recipe in the library
     const recipe = await prisma.recipe.create({
       data: {
-        kitchenId: proposal.kitchenId,
+        kitchenId: kitchen.id,
         title: dish.title.trim(),
         description: dish.description?.trim() || null,
         sourceDescription: dish.description?.trim() || null,

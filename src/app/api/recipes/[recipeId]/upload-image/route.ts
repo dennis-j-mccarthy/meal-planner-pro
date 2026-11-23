@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { put, del } from "@vercel/blob";
 import { unlink } from "fs/promises";
 import { join } from "path";
-import { getKitchen } from "@/lib/data";
+import { requireKitchenApi } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 // Vercel serverless functions cap body size at ~4.5MB and have a read-only
@@ -16,12 +16,10 @@ export async function POST(
 ) {
   const { recipeId } = await params;
 
-  // Kitchen-scoped: only authenticated users (or demo mode) can upload, and
-  // only to recipes in their own kitchen.
-  const kitchen = await getKitchen();
-  if (!kitchen) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // Kitchen-scoped: only signed-in users can upload, and only to recipes in
+  // their own kitchen.
+  const { kitchen, error } = await requireKitchenApi();
+  if (error) return error;
 
   const recipe = await prisma.recipe.findFirst({
     where: { id: recipeId, kitchenId: kitchen.id },
@@ -66,10 +64,8 @@ export async function DELETE(
 ) {
   const { recipeId } = await params;
 
-  const kitchen = await getKitchen();
-  if (!kitchen) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { kitchen, error } = await requireKitchenApi();
+  if (error) return error;
 
   const recipe = await prisma.recipe.findFirst({
     where: { id: recipeId, kitchenId: kitchen.id },

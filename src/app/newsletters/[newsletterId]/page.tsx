@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { formatDateShort } from "@/lib/format";
 import { buildNewsletterHtml } from "@/lib/newsletter-template";
 import { NewsletterPreview } from "@/components/newsletter-preview";
@@ -12,7 +12,7 @@ export default async function NewsletterDetailPage({
   params: Promise<{ newsletterId: string }>;
 }) {
   const { newsletterId } = await params;
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   const newsletter = await prisma.newsletter.findFirst({
     where: { id: newsletterId, kitchenId: kitchen.id },

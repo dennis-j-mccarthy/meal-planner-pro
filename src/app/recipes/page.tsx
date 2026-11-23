@@ -2,7 +2,7 @@ import Link from "next/link";
 import { RecipeCard } from "@/components/recipe-card";
 import { AddRecipeModal } from "@/components/add-recipe-modal";
 import { formatMinutes } from "@/lib/format";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 type RecipesPageProps = {
@@ -35,7 +35,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const activeTag = resolvedSearchParams?.tag?.trim() ?? "";
   const showStarred = resolvedSearchParams?.starred === "1";
   const showUsed = resolvedSearchParams?.used === "1";
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   let usedRecipeIds: Set<string> | null = null;
   if (showUsed) {

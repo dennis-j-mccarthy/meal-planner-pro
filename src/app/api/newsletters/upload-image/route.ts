@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
-import { getKitchen } from "@/lib/data";
+import { requireKitchenApi } from "@/lib/guard";
 
 // Vercel serverless functions cap body size at ~4.5MB. The client already
 // resizes images down to ~150-300KB before upload, so this is plenty of
@@ -8,11 +8,9 @@ import { getKitchen } from "@/lib/data";
 export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
-  // Kitchen-scoped: only authenticated users (or demo mode) can upload.
-  const kitchen = await getKitchen();
-  if (!kitchen) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  // Kitchen-scoped: only signed-in users can upload.
+  const { kitchen, error } = await requireKitchenApi();
+  if (error) return error;
 
   const form = await request.formData();
   const file = form.get("file");

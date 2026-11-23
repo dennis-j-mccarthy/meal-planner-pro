@@ -27,12 +27,15 @@ async function resolveUserAndKitchen() {
 
   // First login — look up Clerk profile for email
   const clerkUser = await currentUser();
-  const email = clerkUser?.emailAddresses?.[0]?.emailAddress?.toLowerCase() || null;
+  const primary = clerkUser?.primaryEmailAddress ?? null;
+  const email = primary?.emailAddress?.toLowerCase() || null;
+  // Admin (and the JWB kitchen) only for a VERIFIED primary address.
+  const primaryVerified = primary?.verification?.status === "verified";
 
   let kitchenId: string;
   let isAdmin = false;
 
-  if (email && JWB_EMAILS.has(email)) {
+  if (email && primaryVerified && JWB_EMAILS.has(email)) {
     // Claim the JWB kitchen
     const jwb = await prisma.kitchen.findUnique({
       where: { id: "kitchen_jwb" },
@@ -81,40 +84,23 @@ async function resolveUserAndKitchen() {
 }
 
 /**
- * Returns the active kitchen for the authenticated user.
- * Demo-mode visitors are routed to the Demo Kitchen.
+ * Returns the active kitchen for the authenticated user, or null for
+ * anonymous visitors. Never falls back to another kitchen.
  */
 export async function getKitchen() {
   const user = await resolveUserAndKitchen();
+  if (!user) return null;
 
-  if (user) {
-    // Admins can override via cookie to switch between kitchens
-    if (user.isAdmin) {
-      const cookieStore = await cookies();
-      const override = cookieStore.get("kitchen_id")?.value;
-      if (override) {
-        const k = await prisma.kitchen.findUnique({ where: { id: override } });
-        if (k) return k;
-      }
+  // Admins can override via cookie to switch between kitchens
+  if (user.isAdmin) {
+    const cookieStore = await cookies();
+    const override = cookieStore.get("kitchen_id")?.value;
+    if (override) {
+      const k = await prisma.kitchen.findUnique({ where: { id: override } });
+      if (k) return k;
     }
-    return user.kitchen;
   }
-
-  // Demo mode — always return the Demo Kitchen
-  const demo = await prisma.kitchen.findFirst({
-    where: { id: "kitchen_demo" },
-  });
-  if (demo) return demo;
-
-  // Last resort
-  const fallback = await prisma.kitchen.findFirst({
-    orderBy: { createdAt: "asc" },
-  });
-  if (fallback) return fallback;
-
-  return prisma.kitchen.create({
-    data: { name: "Demo Kitchen" },
-  });
+  return user.kitchen;
 }
 
 /**

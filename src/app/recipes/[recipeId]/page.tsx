@@ -15,7 +15,7 @@ import {
   formatEnum,
   formatMinutes,
 } from "@/lib/format";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 type RecipeDetailPageProps = {
@@ -47,7 +47,7 @@ function toList(value?: string | null) {
 
 export default async function RecipeDetailPage({ params }: RecipeDetailPageProps) {
   const { recipeId } = await params;
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   const recipe = await prisma.recipe.findFirst({
     where: {

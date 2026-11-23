@@ -10,12 +10,13 @@ import {
   RecipeDetailStatus,
   RecipeSourceType,
 } from "@/generated/prisma/client";
-import { getKitchen } from "@/lib/data";
+import { isAdmin } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 import { deriveAttributeTagsFromTitle, mergeTagValues } from "@/lib/recipe-tags";
 import { parseDishQuota, serializeDishQuota } from "@/lib/dish-quota";
 import { generateRecipeImage, generateRecipeText, extractRecipeFromImage, generateRecipeNutrition } from "@/lib/gemini";
-import { getNextInvoiceNumber } from "@/lib/invoice-number";
+import { createWithInvoiceNumber } from "@/lib/invoice-number";
 import { sendEmail, sendPlainEmail } from "@/lib/email";
 import { buildInvoiceHtml } from "@/lib/invoice-template";
 import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
@@ -80,6 +81,34 @@ function revalidateApp() {
   );
 }
 
+// Ownership checks for ids that arrive from the form. Every referenced record
+// must belong to the caller's kitchen before anything is written.
+async function assertClientInKitchen(kitchenId: string, clientId: string) {
+  const client = await prisma.client.findFirst({
+    where: { id: clientId, kitchenId },
+    select: { id: true, firstName: true },
+  });
+  if (!client) throw new Error("Client not found");
+  return client;
+}
+
+async function assertCookDateInKitchen(kitchenId: string, cookDateId: string) {
+  const cookDate = await prisma.cookDate.findFirst({
+    where: { id: cookDateId, kitchenId },
+    select: { id: true },
+  });
+  if (!cookDate) throw new Error("Cook date not found");
+}
+
+async function assertRecipesInKitchen(kitchenId: string, recipeIds: string[]) {
+  const unique = [...new Set(recipeIds)];
+  if (unique.length === 0) return;
+  const count = await prisma.recipe.count({
+    where: { id: { in: unique }, kitchenId },
+  });
+  if (count !== unique.length) throw new Error("Recipe not found");
+}
+
 export async function setTheme(formData: FormData) {
   const themeId = requiredText(formData, "themeId");
   const cookieStore = await cookies();
@@ -93,24 +122,12 @@ export async function setTheme(formData: FormData) {
   revalidateApp();
 }
 
-export async function enterDemo() {
-  const cookieStore = await cookies();
-  cookieStore.set("demo_mode", "1", {
-    path: "/",
-    httpOnly: true,
-    sameSite: "lax",
-    maxAge: 60 * 60 * 24,
-  });
-  redirect("/");
-}
-
-export async function exitDemo() {
-  const cookieStore = await cookies();
-  cookieStore.delete("demo_mode");
-  redirect("/");
-}
-
 export async function switchKitchen(formData: FormData) {
+  await requireKitchen();
+  // Only admins may switch kitchens (getKitchen ignores the cookie otherwise).
+  if (!(await isAdmin())) {
+    throw new Error("Not allowed");
+  }
   const kitchenId = requiredText(formData, "kitchenId");
   const cookieStore = await cookies();
   cookieStore.set("kitchen_id", kitchenId, {
@@ -124,10 +141,11 @@ export async function switchKitchen(formData: FormData) {
 }
 
 export async function toggleRecipeStar(formData: FormData) {
+  const kitchen = await requireKitchen();
   const recipeId = requiredText(formData, "recipeId");
 
-  const recipe = await prisma.recipe.findUnique({
-    where: { id: recipeId },
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: recipeId, kitchenId: kitchen.id },
     select: { starred: true },
   });
 
@@ -144,7 +162,7 @@ export async function toggleRecipeStar(formData: FormData) {
 }
 
 export async function updateRecipe(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const recipeId = requiredText(formData, "recipeId");
 
   // Ensure the recipe belongs to the active kitchen before editing.
@@ -177,11 +195,15 @@ export async function updateRecipe(formData: FormData) {
 }
 
 export async function deleteRecipe(formData: FormData) {
+  const kitchen = await requireKitchen();
   const recipeId = requiredText(formData, "recipeId");
 
-  await prisma.recipe.delete({
-    where: { id: recipeId },
+  const { count } = await prisma.recipe.deleteMany({
+    where: { id: recipeId, kitchenId: kitchen.id },
   });
+  if (count === 0) {
+    throw new Error("Recipe not found");
+  }
 
   revalidateApp();
   redirect("/recipes");
@@ -203,7 +225,7 @@ function clientAddressFields(formData: FormData) {
 }
 
 export async function createClient(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const addr = clientAddressFields(formData);
 
   await prisma.client.create({
@@ -232,8 +254,11 @@ export async function createClient(formData: FormData) {
 }
 
 export async function updateClient(formData: FormData) {
+  const kitchen = await requireKitchen();
   const clientId = requiredText(formData, "clientId");
   const addr = clientAddressFields(formData);
+
+  await assertClientInKitchen(kitchen.id, clientId);
 
   await prisma.client.update({
     where: { id: clientId },
@@ -263,15 +288,23 @@ export async function updateClient(formData: FormData) {
 }
 
 export async function deleteClient(formData: FormData) {
+  const kitchen = await requireKitchen();
   const clientId = requiredText(formData, "clientId");
-  await prisma.client.delete({ where: { id: clientId } });
+  const { count } = await prisma.client.deleteMany({
+    where: { id: clientId, kitchenId: kitchen.id },
+  });
+  if (count === 0) {
+    throw new Error("Client not found");
+  }
   revalidateApp();
 }
 
 export async function createCookDate(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const clientId = requiredText(formData, "clientId");
   const scheduledFor = parseDateInput(requiredText(formData, "scheduledFor"));
+
+  await assertClientInKitchen(kitchen.id, clientId);
 
   const cookDate = await prisma.cookDate.create({
     data: {
@@ -289,17 +322,21 @@ export async function createCookDate(formData: FormData) {
 }
 
 export async function deleteCookDate(formData: FormData) {
+  const kitchen = await requireKitchen();
   const cookDateId = requiredText(formData, "cookDateId");
 
-  await prisma.cookDate.delete({
-    where: { id: cookDateId },
+  const { count } = await prisma.cookDate.deleteMany({
+    where: { id: cookDateId, kitchenId: kitchen.id },
   });
+  if (count === 0) {
+    throw new Error("Cook date not found");
+  }
 
   revalidateApp();
 }
 
 export async function createManualRecipe(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const title = requiredText(formData, "title");
   const description = optionalText(formData, "description");
   const manualTags = optionalText(formData, "tags");
@@ -327,7 +364,7 @@ export async function createManualRecipe(formData: FormData) {
 }
 
 export async function createRecipeFromPhoto(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   const file = formData.get("photo");
   if (!(file instanceof File) || file.size === 0) {
@@ -366,7 +403,7 @@ export async function createRecipeFromPhoto(formData: FormData) {
 }
 
 export async function queueAiRecipe(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const label = requiredText(formData, "label");
   const prompt = requiredText(formData, "prompt");
 
@@ -392,7 +429,7 @@ export async function queueAiRecipe(formData: FormData) {
 }
 
 export async function queueUrlRecipe(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const sourceUrl = requiredText(formData, "sourceUrl");
   const manualLabel = optionalText(formData, "label");
   const notes = optionalText(formData, "notes");
@@ -489,7 +526,7 @@ export async function queueUrlRecipe(formData: FormData) {
 }
 
 export async function queueApiRecipeSync(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   await prisma.recipeIntake.create({
     data: {
@@ -505,7 +542,7 @@ export async function queueApiRecipeSync(formData: FormData) {
 }
 
 export async function importEdamamRecipe(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const title = requiredText(formData, "title");
   const sourceUrl = requiredText(formData, "sourceUrl");
   const imageUrl = optionalText(formData, "imageUrl");
@@ -543,24 +580,19 @@ export async function importEdamamRecipe(formData: FormData) {
 }
 
 export async function createProposal(formData: FormData) {
+  const kitchen = await requireKitchen();
   const cookDateId = requiredText(formData, "cookDateId");
   const recipeIds = formData
     .getAll("recipeIds")
     .map((value) => (typeof value === "string" ? value : ""))
     .filter(Boolean);
 
-  const cookDate = await prisma.cookDate.findUnique({
-    where: { id: cookDateId },
-    select: { kitchenId: true },
-  });
-
-  if (!cookDate) {
-    throw new Error("Cook date not found");
-  }
+  await assertCookDateInKitchen(kitchen.id, cookDateId);
+  await assertRecipesInKitchen(kitchen.id, recipeIds);
 
   const proposal = await prisma.proposal.create({
     data: {
-      kitchenId: cookDate.kitchenId,
+      kitchenId: kitchen.id,
       cookDateId,
       title: requiredText(formData, "title"),
       introMessage: optionalText(formData, "introMessage"),
@@ -578,10 +610,11 @@ export async function createProposal(formData: FormData) {
 }
 
 export async function quickCreateProposal(formData: FormData) {
+  const kitchen = await requireKitchen();
   const cookDateId = requiredText(formData, "cookDateId");
 
-  const cookDate = await prisma.cookDate.findUnique({
-    where: { id: cookDateId },
+  const cookDate = await prisma.cookDate.findFirst({
+    where: { id: cookDateId, kitchenId: kitchen.id },
     include: { client: true },
   });
 
@@ -590,7 +623,7 @@ export async function quickCreateProposal(formData: FormData) {
   const clientName = `${cookDate.client.firstName} ${cookDate.client.lastName}`;
   const proposal = await prisma.proposal.create({
     data: {
-      kitchenId: cookDate.kitchenId,
+      kitchenId: kitchen.id,
       cookDateId,
       title: `Menu for ${clientName}`,
     },
@@ -601,9 +634,10 @@ export async function quickCreateProposal(formData: FormData) {
 }
 
 export async function sendProposal(formData: FormData) {
+  const kitchen = await requireKitchen();
   const proposalId = requiredText(formData, "proposalId");
-  const proposal = await prisma.proposal.findUnique({
-    where: { id: proposalId },
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: proposalId, kitchenId: kitchen.id },
     select: { cookDateId: true, shareToken: true },
   });
 
@@ -622,8 +656,8 @@ export async function sendProposal(formData: FormData) {
         shareToken: proposal.shareToken ?? crypto.randomUUID(),
       },
     }),
-    prisma.cookDate.update({
-      where: { id: proposal.cookDateId },
+    prisma.cookDate.updateMany({
+      where: { id: proposal.cookDateId, kitchenId: kitchen.id },
       data: {
         status: "PROPOSED",
       },
@@ -634,23 +668,28 @@ export async function sendProposal(formData: FormData) {
 }
 
 export async function requestProposalRevision(formData: FormData) {
+  const kitchen = await requireKitchen();
   const proposalId = requiredText(formData, "proposalId");
 
-  await prisma.proposal.update({
-    where: { id: proposalId },
+  const { count } = await prisma.proposal.updateMany({
+    where: { id: proposalId, kitchenId: kitchen.id },
     data: {
       status: ProposalStatus.REVISIONS_REQUESTED,
       revisionNotes: "Client requested changes before approval.",
     },
   });
+  if (count === 0) {
+    throw new Error("Proposal not found");
+  }
 
   revalidateApp();
 }
 
 export async function approveProposal(formData: FormData) {
+  const kitchen = await requireKitchen();
   const proposalId = requiredText(formData, "proposalId");
-  const proposal = await prisma.proposal.findUnique({
-    where: { id: proposalId },
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: proposalId, kitchenId: kitchen.id },
     include: {
       cookDate: { include: { client: true } },
       recipes: { orderBy: { position: "asc" } },
@@ -665,6 +704,7 @@ export async function approveProposal(formData: FormData) {
   await prisma.$transaction([
     prisma.proposal.updateMany({
       where: {
+        kitchenId: kitchen.id,
         cookDateId: proposal.cookDateId,
         id: { not: proposalId },
         status: { in: [ProposalStatus.DRAFT, ProposalStatus.SENT, ProposalStatus.REVISIONS_REQUESTED] },
@@ -682,8 +722,8 @@ export async function approveProposal(formData: FormData) {
         revisionNotes: null,
       },
     }),
-    prisma.cookDate.update({
-      where: { id: proposal.cookDateId },
+    prisma.cookDate.updateMany({
+      where: { id: proposal.cookDateId, kitchenId: kitchen.id },
       data: {
         status: "APPROVED",
         finalizedProposalId: proposalId,
@@ -695,7 +735,7 @@ export async function approveProposal(formData: FormData) {
   const clientName = proposal.cookDate.client.firstName;
   const bonAppetit = await prisma.menuCard.create({
     data: {
-      kitchenId: proposal.kitchenId,
+      kitchenId: kitchen.id,
       clientId: proposal.cookDate.clientId,
       cookDateId: proposal.cookDateId,
       title: `Bon Appetit, ${clientName}!`,
@@ -792,7 +832,7 @@ export async function submitProposalReview(formData: FormData) {
 
 /** Email the client their no-login review link. Kitchen-scoped. */
 export async function emailProposalLinkToClient(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const proposalId = requiredText(formData, "proposalId");
 
   const proposal = await prisma.proposal.findFirst({
@@ -841,18 +881,21 @@ export async function emailProposalLinkToClient(formData: FormData) {
 }
 
 export async function addRecipeToProposal(formData: FormData) {
+  const kitchen = await requireKitchen();
   const proposalId = requiredText(formData, "proposalId");
   const recipeId = requiredText(formData, "recipeId");
   const courseLabel = optionalText(formData, "courseLabel");
 
-  const proposal = await prisma.proposal.findUnique({
-    where: { id: proposalId },
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: proposalId, kitchenId: kitchen.id },
     select: { status: true },
   });
 
   if (!proposal) {
     throw new Error("Proposal not found");
   }
+
+  await assertRecipesInKitchen(kitchen.id, [recipeId]);
 
   if (proposal.status !== "DRAFT" && proposal.status !== "REVISIONS_REQUESTED") {
     throw new Error("Can only add recipes to draft or revision-requested proposals");
@@ -888,10 +931,11 @@ export async function addRecipeToProposal(formData: FormData) {
 }
 
 export async function removeRecipeFromProposal(formData: FormData) {
+  const kitchen = await requireKitchen();
   const proposalRecipeId = requiredText(formData, "proposalRecipeId");
 
-  const proposalRecipe = await prisma.proposalRecipe.findUnique({
-    where: { id: proposalRecipeId },
+  const proposalRecipe = await prisma.proposalRecipe.findFirst({
+    where: { id: proposalRecipeId, proposal: { kitchenId: kitchen.id } },
     include: { proposal: { select: { status: true } } },
   });
 
@@ -914,22 +958,27 @@ export async function removeRecipeFromProposal(formData: FormData) {
 }
 
 export async function updateProposalRecipeCategory(formData: FormData) {
+  const kitchen = await requireKitchen();
   const proposalRecipeId = requiredText(formData, "proposalRecipeId");
   const courseLabel = optionalText(formData, "courseLabel");
 
-  await prisma.proposalRecipe.update({
-    where: { id: proposalRecipeId },
+  const { count } = await prisma.proposalRecipe.updateMany({
+    where: { id: proposalRecipeId, proposal: { kitchenId: kitchen.id } },
     data: { courseLabel },
   });
+  if (count === 0) {
+    throw new Error("Proposal recipe not found");
+  }
 
   revalidateApp();
 }
 
 export async function generateRecipeImageAction(formData: FormData) {
+  const kitchen = await requireKitchen();
   const recipeId = requiredText(formData, "recipeId");
 
-  const recipe = await prisma.recipe.findUnique({
-    where: { id: recipeId },
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: recipeId, kitchenId: kitchen.id },
     select: { title: true, description: true, cuisine: true },
   });
 
@@ -952,10 +1001,11 @@ export async function generateRecipeImageAction(formData: FormData) {
 }
 
 export async function regenerateRecipeTextAction(formData: FormData) {
+  const kitchen = await requireKitchen();
   const recipeId = requiredText(formData, "recipeId");
 
-  const recipe = await prisma.recipe.findUnique({
-    where: { id: recipeId },
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: recipeId, kitchenId: kitchen.id },
     select: {
       title: true,
       description: true,
@@ -998,10 +1048,11 @@ export async function regenerateRecipeTextAction(formData: FormData) {
  * description if there wasn't one).
  */
 export async function generateRecipeDetailsAction(formData: FormData) {
+  const kitchen = await requireKitchen();
   const recipeId = requiredText(formData, "recipeId");
 
-  const recipe = await prisma.recipe.findUnique({
-    where: { id: recipeId },
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: recipeId, kitchenId: kitchen.id },
     select: {
       title: true,
       description: true,
@@ -1042,10 +1093,11 @@ export async function generateRecipeDetailsAction(formData: FormData) {
 }
 
 export async function generateNutritionAction(formData: FormData) {
+  const kitchen = await requireKitchen();
   const recipeId = requiredText(formData, "recipeId");
 
-  const recipe = await prisma.recipe.findUnique({
-    where: { id: recipeId },
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: recipeId, kitchenId: kitchen.id },
     select: { title: true, ingredientsText: true, servings: true },
   });
 
@@ -1069,7 +1121,7 @@ export async function generateNutritionAction(formData: FormData) {
 }
 
 export async function regenerateAllRecipeTextAction() {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   const recipes = await prisma.recipe.findMany({
     where: {
@@ -1125,7 +1177,7 @@ export async function regenerateAllRecipeTextAction() {
 // ---------------------------------------------------------------------------
 
 export async function createInvoice(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const clientId = requiredText(formData, "clientId");
   const invoiceDate = parseDateInput(requiredText(formData, "invoiceDate"));
   const remarks = optionalText(formData, "remarks");
@@ -1147,27 +1199,30 @@ export async function createInvoice(formData: FormData) {
     throw new Error("At least one line item is required");
   }
 
-  const invoiceNumber = await getNextInvoiceNumber();
+  await assertClientInKitchen(kitchen.id, clientId);
 
-  const invoice = await prisma.invoice.create({
-    data: {
-      kitchenId: kitchen.id,
-      clientId,
-      invoiceNumber,
-      invoiceDate,
-      remarks,
-      showGratuity,
-      lineItems: {
-        create: lineItems,
+  const invoice = await createWithInvoiceNumber((invoiceNumber) =>
+    prisma.invoice.create({
+      data: {
+        kitchenId: kitchen.id,
+        clientId,
+        invoiceNumber,
+        invoiceDate,
+        remarks,
+        showGratuity,
+        lineItems: {
+          create: lineItems,
+        },
       },
-    },
-  });
+    }),
+  );
 
   revalidateApp();
   redirect(`/invoices/${invoice.id}`);
 }
 
 export async function updateInvoice(formData: FormData) {
+  const kitchen = await requireKitchen();
   const invoiceId = requiredText(formData, "invoiceId");
   const clientId = requiredText(formData, "clientId");
   const invoiceDate = parseDateInput(requiredText(formData, "invoiceDate"));
@@ -1189,6 +1244,15 @@ export async function updateInvoice(formData: FormData) {
   if (lineItems.length === 0) {
     throw new Error("At least one line item is required");
   }
+
+  const existing = await prisma.invoice.findFirst({
+    where: { id: invoiceId, kitchenId: kitchen.id },
+    select: { id: true },
+  });
+  if (!existing) {
+    throw new Error("Invoice not found");
+  }
+  await assertClientInKitchen(kitchen.id, clientId);
 
   await prisma.invoice.update({
     where: { id: invoiceId },
@@ -1209,6 +1273,7 @@ export async function updateInvoice(formData: FormData) {
 }
 
 export async function updateInvoiceStatus(formData: FormData) {
+  const kitchen = await requireKitchen();
   const invoiceId = requiredText(formData, "invoiceId");
   const status = requiredText(formData, "status") as InvoiceStatus;
 
@@ -1220,21 +1285,28 @@ export async function updateInvoiceStatus(formData: FormData) {
     updateData.paidAt = new Date();
   }
 
-  await prisma.invoice.update({
-    where: { id: invoiceId },
+  const { count } = await prisma.invoice.updateMany({
+    where: { id: invoiceId, kitchenId: kitchen.id },
     data: updateData,
   });
+  if (count === 0) {
+    throw new Error("Invoice not found");
+  }
 
   revalidateApp();
 }
 
 export async function deleteInvoice(formData: FormData) {
+  const kitchen = await requireKitchen();
   const invoiceId = requiredText(formData, "invoiceId");
   const noRedirect = formData.get("noRedirect") === "1";
 
-  await prisma.invoice.delete({
-    where: { id: invoiceId },
+  const { count } = await prisma.invoice.deleteMany({
+    where: { id: invoiceId, kitchenId: kitchen.id },
   });
+  if (count === 0) {
+    throw new Error("Invoice not found");
+  }
 
   revalidateApp();
   if (!noRedirect) redirect("/invoices");
@@ -1245,7 +1317,7 @@ export async function deleteInvoice(formData: FormData) {
 // ---------------------------------------------------------------------------
 
 export async function createMenuCard(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const clientId = requiredText(formData, "clientId");
   const menuDate = parseDateInput(requiredText(formData, "menuDate"));
   const cookDateId = optionalText(formData, "cookDateId");
@@ -1256,6 +1328,14 @@ export async function createMenuCard(formData: FormData) {
   const customTitles = formData.getAll("customTitle") as string[];
   const customDescriptions = formData.getAll("customDescription") as string[];
   const categories = formData.getAll("recipeCategory") as string[];
+
+  // Verify every referenced record before writing anything (custom recipes
+  // below are created as we go, so a bad id must fail first).
+  const clientRecord = await assertClientInKitchen(kitchen.id, clientId);
+  if (cookDateId) {
+    await assertCookDateInKitchen(kitchen.id, cookDateId);
+  }
+  await assertRecipesInKitchen(kitchen.id, rawRecipeIds.filter(Boolean));
 
   // Resolve recipe IDs: existing ones are passed directly, custom ones get created first
   const resolvedRecipes: { recipeId: string; category: string }[] = [];
@@ -1294,12 +1374,7 @@ export async function createMenuCard(formData: FormData) {
     throw new Error("At least one recipe is required");
   }
 
-  const clientRecord = await prisma.client.findUnique({
-    where: { id: clientId },
-    select: { firstName: true },
-  });
-
-  const title = `Bon Appetit, ${clientRecord?.firstName || "Client"}!`;
+  const title = `Bon Appetit, ${clientRecord.firstName || "Client"}!`;
 
   const menuCard = await prisma.menuCard.create({
     data: {
@@ -1325,22 +1400,27 @@ export async function createMenuCard(formData: FormData) {
 }
 
 export async function deleteMenuCard(formData: FormData) {
+  const kitchen = await requireKitchen();
   const menuCardId = requiredText(formData, "menuCardId");
   const noRedirect = formData.get("noRedirect") === "1";
 
-  await prisma.menuCard.delete({
-    where: { id: menuCardId },
+  const { count } = await prisma.menuCard.deleteMany({
+    where: { id: menuCardId, kitchenId: kitchen.id },
   });
+  if (count === 0) {
+    throw new Error("Menu card not found");
+  }
 
   revalidateApp();
   if (!noRedirect) redirect("/menu-cards");
 }
 
 export async function acceptMenuCard(formData: FormData) {
+  const kitchen = await requireKitchen();
   const menuCardId = requiredText(formData, "menuCardId");
 
-  const menuCard = await prisma.menuCard.findUnique({
-    where: { id: menuCardId },
+  const menuCard = await prisma.menuCard.findFirst({
+    where: { id: menuCardId, kitchenId: kitchen.id },
     include: {
       recipes: { orderBy: { position: "asc" } },
     },
@@ -1353,7 +1433,7 @@ export async function acceptMenuCard(formData: FormData) {
   if (!cookDateId) {
     const cookDate = await prisma.cookDate.create({
       data: {
-        kitchenId: menuCard.kitchenId,
+        kitchenId: kitchen.id,
         clientId: menuCard.clientId,
         scheduledFor: menuCard.menuDate,
         status: "APPROVED",
@@ -1365,7 +1445,7 @@ export async function acceptMenuCard(formData: FormData) {
   // Create a proposal from the Bon Appetit recipes and approve it
   const proposal = await prisma.proposal.create({
     data: {
-      kitchenId: menuCard.kitchenId,
+      kitchenId: kitchen.id,
       cookDateId,
       title: menuCard.title,
       status: ProposalStatus.APPROVED,
@@ -1387,8 +1467,8 @@ export async function acceptMenuCard(formData: FormData) {
     data: { accepted: true, cookDateId },
   });
 
-  await prisma.cookDate.update({
-    where: { id: cookDateId },
+  await prisma.cookDate.updateMany({
+    where: { id: cookDateId, kitchenId: kitchen.id },
     data: {
       status: "APPROVED",
       finalizedProposalId: proposal.id,
@@ -1403,10 +1483,11 @@ export async function acceptMenuCard(formData: FormData) {
 // ---------------------------------------------------------------------------
 
 export async function sendInvoiceEmail(formData: FormData) {
+  const kitchen = await requireKitchen();
   const invoiceId = requiredText(formData, "invoiceId");
 
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, kitchenId: kitchen.id },
     include: {
       client: true,
       lineItems: { orderBy: { position: "asc" } },
@@ -1468,9 +1549,10 @@ export async function sendInvoiceEmail(formData: FormData) {
 // recipient + Resend message id on success.
 async function buildAndSendBonAppetit(
   menuCardId: string,
+  kitchenId: string,
 ): Promise<{ to: string; id: string | null }> {
-  const menuCard = await prisma.menuCard.findUnique({
-    where: { id: menuCardId },
+  const menuCard = await prisma.menuCard.findFirst({
+    where: { id: menuCardId, kitchenId },
     include: {
       client: true,
       recipes: {
@@ -1558,8 +1640,9 @@ async function buildAndSendBonAppetit(
 }
 
 export async function sendBonAppetitEmail(formData: FormData) {
+  const kitchen = await requireKitchen();
   const menuCardId = requiredText(formData, "menuCardId");
-  await buildAndSendBonAppetit(menuCardId);
+  await buildAndSendBonAppetit(menuCardId, kitchen.id);
   revalidateApp();
 }
 
@@ -1570,9 +1653,11 @@ export async function sendBonAppetitStatus(
 ): Promise<
   { ok: true; to: string; id: string | null } | { ok: false; error: string }
 > {
+  // Outside the try: requireKitchen redirects by throwing.
+  const kitchen = await requireKitchen();
   const menuCardId = requiredText(formData, "menuCardId");
   try {
-    const result = await buildAndSendBonAppetit(menuCardId);
+    const result = await buildAndSendBonAppetit(menuCardId, kitchen.id);
     revalidateApp();
     return { ok: true, to: result.to, id: result.id };
   } catch (e) {
@@ -1624,7 +1709,7 @@ function collectArticles(formData: FormData): CollectedArticle[] {
 }
 
 export async function createNewsletter(formData: FormData) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const title = requiredText(formData, "title");
   const intro = optionalText(formData, "intro");
   const introImageRaw = formData.get("introImage");
@@ -1663,6 +1748,7 @@ export async function createNewsletter(formData: FormData) {
 }
 
 export async function updateNewsletter(formData: FormData) {
+  const kitchen = await requireKitchen();
   const newsletterId = requiredText(formData, "newsletterId");
   const title = requiredText(formData, "title");
   const intro = optionalText(formData, "intro");
@@ -1677,8 +1763,8 @@ export async function updateNewsletter(formData: FormData) {
 
   // Pull existing record so we can merge KEEP-sentinel images without
   // requiring the client to re-upload them.
-  const existing = await prisma.newsletter.findUnique({
-    where: { id: newsletterId },
+  const existing = await prisma.newsletter.findFirst({
+    where: { id: newsletterId, kitchenId: kitchen.id },
     include: { articles: { orderBy: { position: "asc" } } },
   });
   if (!existing) {
@@ -1731,7 +1817,13 @@ export async function updateNewsletter(formData: FormData) {
 }
 
 export async function deleteNewsletter(formData: FormData) {
+  const kitchen = await requireKitchen();
   const newsletterId = requiredText(formData, "newsletterId");
-  await prisma.newsletter.delete({ where: { id: newsletterId } });
+  const { count } = await prisma.newsletter.deleteMany({
+    where: { id: newsletterId, kitchenId: kitchen.id },
+  });
+  if (count === 0) {
+    throw new Error("Newsletter not found");
+  }
   revalidateApp();
 }

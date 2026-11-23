@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createMenuCard } from "@/app/actions";
 import { BonAppetitRecipeEditor } from "@/components/bon-appetit-recipe-editor";
 import { formatDateShort } from "@/lib/format";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 export default async function MenuCardsPage({
@@ -10,7 +10,7 @@ export default async function MenuCardsPage({
 }: {
   searchParams: Promise<{ clientId?: string; cookDateId?: string }>;
 }) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const params = await searchParams;
   const preselectedClientId = params.clientId || "";
   const preselectedCookDateId = params.cookDateId || "";

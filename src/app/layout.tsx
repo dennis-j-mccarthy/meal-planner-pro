@@ -7,16 +7,13 @@ import {
   ClerkProvider,
   Show,
   SignInButton,
-  SignUpButton,
   UserButton,
 } from "@clerk/nextjs";
 import { AppNav } from "@/components/app-nav";
 import { KitchenSwitcher } from "@/components/kitchen-switcher";
 import { ThemePicker } from "@/components/theme-picker";
 import { getKitchen, getAllKitchens } from "@/lib/data";
-import { isLoggedIn, isDemoMode } from "@/lib/auth";
 import { getActiveTheme } from "@/lib/get-theme";
-import { exitDemo } from "@/app/actions";
 import "./globals.css";
 
 const inter = Inter({
@@ -44,9 +41,9 @@ export default async function RootLayout({
     );
   }
 
-  const loggedIn = await isLoggedIn();
-  const demoMode = await isDemoMode();
+  // null for signed-out visitors (marketing page only).
   const kitchen = await getKitchen();
+  const loggedIn = kitchen !== null;
   const allKitchens = await getAllKitchens();
   const theme = await getActiveTheme();
 
@@ -63,36 +60,6 @@ export default async function RootLayout({
       <body className={`${inter.variable} antialiased`}>
         <ClerkProvider>
           <div className="min-h-screen text-slate-900">
-            {demoMode && (
-              <div className="sticky top-0 z-[60] bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 text-white text-sm font-semibold">
-                <div className="mx-auto max-w-7xl px-4 py-2.5 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center rounded-full bg-white/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">
-                      Demo
-                    </span>
-                    <span className="hidden sm:inline">
-                      You&apos;re exploring the Meal Planner Pro demo. Anything you change is shared with other demo visitors.
-                    </span>
-                    <span className="sm:hidden">Demo mode</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <SignUpButton mode="modal">
-                      <button className="rounded-md bg-white/20 hover:bg-white/30 px-3 py-1 text-xs font-bold transition-colors">
-                        Sign up free
-                      </button>
-                    </SignUpButton>
-                    <form action={exitDemo}>
-                      <button
-                        type="submit"
-                        className="text-xs font-semibold underline hover:no-underline"
-                      >
-                        Exit demo
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            )}
             <header
               className="sticky top-0 z-50 border-b backdrop-blur-sm"
               style={{ background: "var(--header-bg)", borderColor: "var(--border-soft)" }}
@@ -117,13 +84,10 @@ export default async function RootLayout({
                     <SignInButton mode="modal">
                       <button className="button-secondary text-sm">Sign in</button>
                     </SignInButton>
-                    <SignUpButton mode="modal">
-                      <button className="button-primary text-sm">Get started</button>
-                    </SignUpButton>
                   </Show>
                   <Show when="signed-in">
                     <ThemePicker currentId={theme.id} />
-                    {allKitchens.length > 1 && (
+                    {kitchen && allKitchens.length > 1 && (
                       <KitchenSwitcher
                         kitchens={allKitchens.map((k) => ({ id: k.id, name: k.name }))}
                         currentId={kitchen.id}

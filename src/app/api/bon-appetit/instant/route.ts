@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getKitchen } from "@/lib/data";
+import { requireKitchenApi } from "@/lib/guard";
 import { RecipeSourceType, RecipeDetailStatus, ProposalStatus } from "@/generated/prisma/client";
 
 // Known category headers
@@ -105,13 +105,14 @@ function parseMenuText(text: string): ParsedRecipe[] {
 }
 
 export async function POST(request: NextRequest) {
+  const { kitchen, error } = await requireKitchenApi();
+  if (error) return error;
+
   const { clientId, date, text } = await request.json();
 
   if (!clientId || !date || !text) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
-
-  const kitchen = await getKitchen();
 
   const client = await prisma.client.findFirst({
     where: { id: clientId, kitchenId: kitchen.id },

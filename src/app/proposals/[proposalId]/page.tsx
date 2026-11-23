@@ -10,7 +10,7 @@ import { ProposalRecipeManager } from "@/components/proposal-recipe-manager";
 import { ShareLinkBox } from "@/components/share-link-box";
 import { parseDishQuota } from "@/lib/dish-quota";
 import { formatDateShort, formatEnum, formatMinutes } from "@/lib/format";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 type ProposalDetailPageProps = {
@@ -25,7 +25,7 @@ type ProposalDetailPageProps = {
 export default async function ProposalDetailPage({ params, searchParams }: ProposalDetailPageProps) {
   const { proposalId } = await params;
   const { edit } = await searchParams;
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   const [proposal, allRecipes] = await Promise.all([
     prisma.proposal.findFirst({

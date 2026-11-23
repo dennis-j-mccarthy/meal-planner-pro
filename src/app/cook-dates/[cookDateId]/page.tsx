@@ -4,7 +4,7 @@ import { quickCreateProposal } from "@/app/actions";
 import { StatusBadge } from "@/components/status-badge";
 import { DeleteCookDateButton } from "@/components/delete-cook-date-button";
 import { formatDateLong, formatDateShort, formatEnum, formatMinutes } from "@/lib/format";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 export default async function CookDateDetailPage({
@@ -13,7 +13,7 @@ export default async function CookDateDetailPage({
   params: Promise<{ cookDateId: string }>;
 }) {
   const { cookDateId } = await params;
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
 
   const cookDate = await prisma.cookDate.findFirst({
     where: { id: cookDateId, kitchenId: kitchen.id },

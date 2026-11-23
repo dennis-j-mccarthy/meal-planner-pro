@@ -2,11 +2,11 @@ import { createProposal } from "@/app/actions";
 import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDateShort, formatEnum } from "@/lib/format";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 export default async function ProposalsPage() {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const [cookDates, proposals] = await Promise.all([
     prisma.cookDate.findMany({
       where: { kitchenId: kitchen.id },

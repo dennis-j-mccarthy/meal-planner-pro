@@ -21,7 +21,7 @@ import { prisma } from "@/lib/prisma";
 import { parseSubject } from "@/lib/bon-appetit-subject";
 import { buildInvoiceHtml } from "@/lib/invoice-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
-import { getNextInvoiceNumber } from "@/lib/invoice-number";
+import { createWithInvoiceNumber } from "@/lib/invoice-number";
 import { sendEmail, sendPlainEmail } from "@/lib/email";
 
 // Webhooks have no signed-in user, so the kitchen is explicit.
@@ -329,11 +329,11 @@ export async function handleInboundInvoice(opts: {
     const reused = Boolean(invoice);
 
     if (!invoice) {
-      invoice = await prisma.invoice.create({
+      invoice = await createWithInvoiceNumber((invoiceNumber) => prisma.invoice.create({
         data: {
           kitchenId: KITCHEN_ID,
           clientId: client.id,
-          invoiceNumber: await getNextInvoiceNumber(),
+          invoiceNumber,
           invoiceDate: date,
           remarks: parsed.remarks,
           showGratuity: parsed.showGratuity,
@@ -342,7 +342,7 @@ export async function handleInboundInvoice(opts: {
           },
         },
         include: { lineItems: true },
-      });
+      }));
     }
 
     const clientName = [client.firstName, client.lastName].filter(Boolean).join(" ");

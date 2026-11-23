@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireKitchenApi } from "@/lib/guard";
 import { buildInvoiceHtml } from "@/lib/invoice-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { format } from "date-fns";
@@ -10,10 +11,12 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ invoiceId: string }> },
 ) {
+  const { kitchen, error } = await requireKitchenApi();
+  if (error) return error;
   const { invoiceId } = await params;
 
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, kitchenId: kitchen.id },
     include: {
       client: true,
       lineItems: { orderBy: { position: "asc" } },

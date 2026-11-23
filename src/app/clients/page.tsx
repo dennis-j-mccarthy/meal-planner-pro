@@ -1,10 +1,10 @@
 import { ClientList } from "@/components/client-list";
 import { AddClientModal } from "@/components/add-client-modal";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 export default async function ClientsPage() {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const clients = await prisma.client.findMany({
     where: { kitchenId: kitchen.id },
     include: {

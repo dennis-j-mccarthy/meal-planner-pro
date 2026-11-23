@@ -2,7 +2,7 @@ import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
 import { InvoiceCreateForm } from "@/components/invoice-create-form";
 import { formatDateShort } from "@/lib/format";
-import { getKitchen } from "@/lib/data";
+import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 import { getNextInvoiceNumber } from "@/lib/invoice-number";
 
@@ -11,7 +11,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<{ clientId?: string }>;
 }) {
-  const kitchen = await getKitchen();
+  const kitchen = await requireKitchen();
   const params = await searchParams;
   const preselectedClientId = params.clientId || "";
   const nextNumber = await getNextInvoiceNumber();

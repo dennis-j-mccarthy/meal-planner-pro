@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireKitchen } from "@/lib/guard";
 import { formatDateShort } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { InvoiceActions } from "@/components/invoice-actions";
@@ -11,9 +12,10 @@ export default async function InvoiceDetailPage({
   params: Promise<{ invoiceId: string }>;
 }) {
   const { invoiceId } = await params;
+  const kitchen = await requireKitchen();
 
-  const invoice = await prisma.invoice.findUnique({
-    where: { id: invoiceId },
+  const invoice = await prisma.invoice.findFirst({
+    where: { id: invoiceId, kitchenId: kitchen.id },
     include: {
       client: true,
       lineItems: { orderBy: { position: "asc" } },

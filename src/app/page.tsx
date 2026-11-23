@@ -3,15 +3,15 @@ import { StatCard } from "@/components/stat-card";
 import { DashboardView } from "@/components/dashboard-view";
 import { MarketingPage } from "@/components/marketing-page";
 import { getKitchen } from "@/lib/data";
-import { isLoggedIn } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export default async function Home() {
-  if (!(await isLoggedIn())) {
+  // Signed out: marketing page. Signed in: dashboard for their kitchen.
+  const kitchen = await getKitchen();
+  if (!kitchen) {
     return <MarketingPage />;
   }
 
-  const kitchen = await getKitchen();
   const today = startOfToday();
   const [clientCount, allCookDates, openProposalCount, invoices, clients] =
     await Promise.all([

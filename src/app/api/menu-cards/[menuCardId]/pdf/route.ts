@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireKitchenApi } from "@/lib/guard";
 import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { format } from "date-fns";
@@ -10,10 +11,12 @@ export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ menuCardId: string }> },
 ) {
+  const { kitchen, error } = await requireKitchenApi();
+  if (error) return error;
   const { menuCardId } = await params;
 
-  const menuCard = await prisma.menuCard.findUnique({
-    where: { id: menuCardId },
+  const menuCard = await prisma.menuCard.findFirst({
+    where: { id: menuCardId, kitchenId: kitchen.id },
     include: {
       client: true,
       recipes: {

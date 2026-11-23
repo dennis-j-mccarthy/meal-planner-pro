@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireKitchenApi } from "@/lib/guard";
 import { scrapeRecipeFromUrl, parseDuration, extractImageUrl } from "@/lib/recipe-scraper";
 
 export const maxDuration = 60;
@@ -8,6 +9,8 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ recipeId: string }> },
 ) {
+  const { kitchen, error } = await requireKitchenApi();
+  if (error) return error;
   const { recipeId } = await params;
   const { sourceUrl } = await request.json();
 
@@ -15,12 +18,18 @@ export async function POST(
     return NextResponse.json({ error: "No source URL" }, { status: 400 });
   }
 
-  const recipe = await prisma.recipe.findUnique({
-    where: { id: recipeId },
+  const recipe = await prisma.recipe.findFirst({
+    where: { id: recipeId, kitchenId: kitchen.id },
   });
 
   if (!recipe) {
     return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+  }
+
+  // Only ever open the recipe's own stored source URL in Chromium — never an
+  // arbitrary URL from the request body — and only over http(s).
+  if (sourceUrl !== recipe.sourceUrl || !/^https?:\/\//i.test(sourceUrl)) {
+    return NextResponse.json({ error: "Invalid source URL" }, { status: 400 });
   }
 
   const r = await scrapeRecipeFromUrl(sourceUrl);

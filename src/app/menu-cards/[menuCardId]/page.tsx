@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireKitchen } from "@/lib/guard";
 import { formatDateShort } from "@/lib/format";
 import { MenuCardActions } from "@/components/menu-card-actions";
 
@@ -14,9 +15,10 @@ export default async function MenuCardDetailPage({
   params: Promise<{ menuCardId: string }>;
 }) {
   const { menuCardId } = await params;
+  const kitchen = await requireKitchen();
 
-  const menuCard = await prisma.menuCard.findUnique({
-    where: { id: menuCardId },
+  const menuCard = await prisma.menuCard.findFirst({
+    where: { id: menuCardId, kitchenId: kitchen.id },
     include: {
       client: true,
       cookDate: true,

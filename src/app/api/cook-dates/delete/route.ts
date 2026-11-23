@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireKitchenApi } from "@/lib/guard";
 
 export async function POST(request: NextRequest) {
+  const { kitchen, error } = await requireKitchenApi();
+  if (error) return error;
+
   const { cookDateId } = await request.json();
 
   if (!cookDateId) {
@@ -10,13 +14,16 @@ export async function POST(request: NextRequest) {
 
   try {
     // Clear finalizedProposalId first to break circular FK
-    await prisma.cookDate.update({
-      where: { id: cookDateId },
+    const { count } = await prisma.cookDate.updateMany({
+      where: { id: cookDateId, kitchenId: kitchen.id },
       data: { finalizedProposalId: null },
     });
+    if (count === 0) {
+      return NextResponse.json({ error: "Cook date not found" }, { status: 404 });
+    }
 
-    await prisma.cookDate.delete({
-      where: { id: cookDateId },
+    await prisma.cookDate.deleteMany({
+      where: { id: cookDateId, kitchenId: kitchen.id },
     });
 
     return NextResponse.json({ ok: true });
