@@ -83,6 +83,7 @@ model Kitchen {
   invoices      Invoice[]
   menuCards     MenuCard[]
   newsletters   Newsletter[]
+  tasteFeedback TasteFeedback[]
   // Beth's own address: copied on everything sent to clients.
   contactEmail    String?
 }
@@ -113,6 +114,7 @@ model Client {
   cookDates      CookDate[]
   invoices       Invoice[]
   menuCards      MenuCard[]
+  tasteFeedback  TasteFeedback[]
 
   // Billing: ONE_OFF (per cook date), MONTHLY_AHEAD or MONTHLY_AFTER.
   billingMode     String        @default("ONE_OFF")
@@ -173,6 +175,9 @@ model CookDate {
 
   // JSON array of grocery-list item keys Beth has checked off.
   groceryChecked  String?
+  // Beth tapped "Groceries bought".
+  groceriesDoneAt DateTime?
+  tasteFeedback   TasteFeedback?
   @@index([kitchenId, scheduledFor])
   @@index([clientId, scheduledFor])
 }
@@ -284,6 +289,8 @@ model MenuCard {
 
   // "EMAIL" when made from an email to menu@.
   source          String?
+  // When it was emailed to the client (null = not sent yet).
+  sentAt          DateTime?
   @@index([kitchenId, menuDate])
   @@index([clientId])
   @@index([cookDateId])
@@ -344,4 +351,28 @@ model RecipeIntake {
   kitchen            Kitchen      @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
 
   @@index([kitchenId, type, status])
+}
+
+// "How did it taste?" — one per cook date. The client answers on the public
+// /taste/<token> page (no login).
+model TasteFeedback {
+  id          String    @id @default(cuid())
+  kitchenId   String
+  clientId    String
+  cookDateId  String    @unique
+  token       String    @unique
+  sentAt      DateTime?
+  submittedAt DateTime?
+  // 1-5
+  overall     Int?
+  comment     String?
+  // JSON array of { recipeId, title, rating: "loved" | "liked" | "not" }
+  dishes      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  kitchen     Kitchen   @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  cookDate    CookDate  @relation(fields: [cookDateId], references: [id], onDelete: Cascade)
+
+  @@index([kitchenId, submittedAt])
 }

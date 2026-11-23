@@ -44,6 +44,7 @@ interface SendPlainEmailOptions {
   text: string;
   html?: string;
   replyTo?: string;
+  cc?: string;
 }
 
 /** Send a plain-text email with no attachment (notifications, share links). */
@@ -55,6 +56,7 @@ export async function sendPlainEmail(options: SendPlainEmailOptions) {
     text: options.text,
     ...(options.html ? { html: options.html } : {}),
     ...(options.replyTo ? { replyTo: options.replyTo } : {}),
+    ...(options.cc ? { cc: [options.cc] } : {}),
   });
 
   if (error) {

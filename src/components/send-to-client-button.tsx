@@ -3,20 +3,29 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendBonAppetitToClientAction, sendInvoiceToClientAction } from "@/app/actions";
+import { sendTasteEmailAction } from "@/app/taste-actions";
 
 interface SendToClientButtonProps {
-  kind: "invoice" | "menuCard";
+  /** taste: the "How did it taste?" email; id is the cook date. */
+  kind: "invoice" | "menuCard" | "taste";
   id: string;
   clientEmail: string | null;
   /** "secondary" when another button on the page is the main action. */
   variant?: "primary" | "secondary";
+  label?: string;
 }
 
 type Stage = "idle" | "confirm" | "sending" | "sent" | "error";
 
 // "Send to client" → inline "Send to <email>? [Send] [Cancel]" → "Sending…"
 // → "Sent to <email> ✓". Disabled when the client has no email.
-export function SendToClientButton({ kind, id, clientEmail, variant = "primary" }: SendToClientButtonProps) {
+export function SendToClientButton({
+  kind,
+  id,
+  clientEmail,
+  variant = "primary",
+  label = "Send to client",
+}: SendToClientButtonProps) {
   const router = useRouter();
   const [stage, setStage] = useState<Stage>("idle");
   const [sentTo, setSentTo] = useState("");
@@ -37,12 +46,14 @@ export function SendToClientButton({ kind, id, clientEmail, variant = "primary" 
     setStage("sending");
     setError("");
     const fd = new FormData();
-    fd.set(kind === "invoice" ? "invoiceId" : "menuCardId", id);
+    fd.set(kind === "invoice" ? "invoiceId" : kind === "taste" ? "cookDateId" : "menuCardId", id);
     try {
       const res =
         kind === "invoice"
           ? await sendInvoiceToClientAction(fd)
-          : await sendBonAppetitToClientAction(fd);
+          : kind === "taste"
+            ? await sendTasteEmailAction(fd)
+            : await sendBonAppetitToClientAction(fd);
       if (res.ok) {
         setSentTo(res.to);
         setStage("sent");
@@ -88,7 +99,7 @@ export function SendToClientButton({ kind, id, clientEmail, variant = "primary" 
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" onClick={() => setStage("confirm")} className={`${buttonClass} text-sm`}>
-        Send to client
+        {label}
       </button>
       {stage === "error" && <span className="text-xs text-red-600">Failed — {error}</span>}
     </div>

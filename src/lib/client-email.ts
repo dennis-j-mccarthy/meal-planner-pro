@@ -8,9 +8,8 @@ import { format } from "date-fns";
 import type { Kitchen } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 import { buildInvoiceHtml, PAYMENT_TEXT } from "@/lib/invoice-template";
-import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
+import { loadBonAppetitHtml } from "@/lib/bon-appetit-html";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
-import { bonAppetitNutrition } from "@/lib/recipe-facts";
 import { sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/format";
 import { chefSignoff, escapeHtml } from "@/lib/inbound-mail";
@@ -115,14 +114,9 @@ export async function sendBonAppetitToClient(
   opts: { pdf?: Buffer; monthOnly?: boolean } = {},
 ): Promise<ClientSendResult> {
   try {
-    const menuCard = await prisma.menuCard.findFirst({
-      where: { id: menuCardId, kitchenId: kitchen.id },
-      include: {
-        client: true,
-        recipes: { orderBy: { position: "asc" }, include: { recipe: true } },
-      },
-    });
-    if (!menuCard) return { ok: false, error: "Bon Appetit not found" };
+    const loaded = await loadBonAppetitHtml(menuCardId, kitchen.id, { monthOnly: opts.monthOnly });
+    if (!loaded) return { ok: false, error: "Bon Appetit not found" };
+    const { menuCard } = loaded;
 
     const to = menuCard.client.email?.trim();
     if (!to) {
@@ -132,32 +126,7 @@ export async function sendBonAppetitToClient(
       };
     }
 
-    let pdf = opts.pdf;
-    if (!pdf) {
-      const fromEmail = menuCard.source === "EMAIL";
-      pdf = await generatePdfFromHtml(
-        buildBonAppetitHtml({
-          ...(await bonAppetitNutrition(menuCard.id, kitchen.id)),
-          clientFirstNames: menuCard.client.firstName,
-          menuDate: format(menuCard.menuDate, opts.monthOnly ? "MMMM, yyyy" : "MMMM d, yyyy"),
-          isCoaching: menuCard.isCoaching,
-          // A menu that came in by email keeps Beth's section order and notes.
-          ...(fromEmail
-            ? {
-                preserveOrder: true,
-                notes: menuCard.notes ? menuCard.notes.split("\n").filter(Boolean) : [],
-              }
-            : {}),
-          recipes: menuCard.recipes.map((mr) => ({
-            title: mr.recipe.title,
-            description: mr.recipe.description,
-            category: mr.category,
-            ingredientsText: mr.recipe.ingredientsText,
-            instructionsText: mr.recipe.instructionsText,
-          })),
-        }),
-      );
-    }
+    const pdf = opts.pdf ?? (await generatePdfFromHtml(loaded.html));
 
     const shortDate = format(menuCard.menuDate, opts.monthOnly ? "MMMM" : "M/d");
     const longDate = format(menuCard.menuDate, opts.monthOnly ? "MMMM yyyy" : "EEEE, MMMM d");
@@ -178,6 +147,8 @@ export async function sendBonAppetitToClient(
       attachmentFilename: `BonAppetit_${menuCard.client.lastName.replace(/[^A-Za-z0-9]+/g, "_")}_${format(menuCard.menuDate, opts.monthOnly ? "MM-yyyy" : "MM-dd-yyyy")}.pdf`,
       attachmentPdf: pdf,
     });
+
+    await prisma.menuCard.update({ where: { id: menuCard.id }, data: { sentAt: new Date() } });
 
     return { ok: true, to };
   } catch (e) {

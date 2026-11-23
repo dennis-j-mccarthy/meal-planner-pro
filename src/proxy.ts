@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 const isPublicRoute = createRouteMatcher([
   "/",
   "/review/(.*)",
+  "/taste/(.*)",
   "/api/inbound/(.*)",
   // Vercel Cron; the route checks CRON_SECRET / the cron user-agent itself.
   "/api/cron/(.*)",
@@ -14,7 +15,7 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 // Expose the request path to server components (the root layout reads it to
-// render a clean, chrome-free shell for the public /review pages).
+// render a clean, chrome-free shell for the public /review and /taste pages).
 export default clerkMiddleware(async (auth, req) => {
   if (!isPublicRoute(req)) {
     await auth.protect();
