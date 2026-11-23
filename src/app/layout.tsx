@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { Fraunces, Inter } from "next/font/google";
+import { Fraunces, Great_Vibes, Inter } from "next/font/google";
 import {
   ClerkProvider,
   Show,
@@ -9,11 +9,19 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import { AppNav, MobileTabBar } from "@/components/app-nav";
+import { Logo } from "@/components/logo";
 import { KitchenSwitcher } from "@/components/kitchen-switcher";
 import { ThemePicker } from "@/components/theme-picker";
 import { getKitchen, getAllKitchens } from "@/lib/data";
 import { getActiveTheme } from "@/lib/get-theme";
 import "./globals.css";
+
+// Script face for the "Yes" in the Yes, Chef! logo.
+const greatVibes = Great_Vibes({
+  variable: "--font-great-vibes",
+  subsets: ["latin"],
+  weight: "400",
+});
 
 const inter = Inter({
   variable: "--font-inter",
@@ -28,7 +36,7 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Meal Planner Pro",
+  title: "Yes, Chef!",
   description: "Operations software for professional chefs managing clients, menus, and cook dates.",
 };
 
@@ -70,7 +78,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en" style={themeStyle} className={theme.dark ? "dark" : ""}>
-      <body className={`${inter.variable} ${fraunces.variable} antialiased`}>
+      <body className={`${inter.variable} ${fraunces.variable} ${greatVibes.variable} antialiased`}>
         <ClerkProvider>
           <div className="min-h-screen text-slate-900">
             <header
@@ -81,9 +89,10 @@ export default async function RootLayout({
                 <div className="flex min-w-0 items-center gap-8">
                   <Link
                     href="/"
-                    className="truncate font-display text-xl font-semibold tracking-tight text-ink"
+                    className="shrink-0"
+                    title={kitchen?.name}
                   >
-                    {kitchen?.name ?? "Meal Planner Pro"}
+                    <Logo />
                   </Link>
                   {loggedIn && <AppNav />}
                 </div>

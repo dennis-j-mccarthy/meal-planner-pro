@@ -60,6 +60,7 @@ html.dark {
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-script: var(--font-great-vibes), "Snell Roundhand", cursive;
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-light: var(--accent-light);
