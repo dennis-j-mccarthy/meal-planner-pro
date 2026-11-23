@@ -64,7 +64,11 @@ export default async function InvoiceDetailPage({
               )}
               {invoice.paidAt && (
                 <span className="ml-2 text-slate-400">
-                  &middot; Paid {formatDateShort(invoice.paidAt)}
+                  &middot;{" "}
+                  {invoice.paidMethod
+                    ? `Paid by ${invoice.paidMethod} on ${formatDateShort(invoice.paidAt)}`
+                    : `Paid ${formatDateShort(invoice.paidAt)}`}
+                  {invoice.paidNote && ` (${invoice.paidNote})`}
                 </span>
               )}
             </p>
@@ -75,7 +79,11 @@ export default async function InvoiceDetailPage({
         </div>
 
         <div className="mt-5 border-t border-slate-100 pt-5">
-          <InvoiceActions invoiceId={invoice.id} status={invoice.status} />
+          <InvoiceActions
+            invoiceId={invoice.id}
+            status={invoice.status}
+            clientEmail={invoice.client.email}
+          />
         </div>
       </div>
 

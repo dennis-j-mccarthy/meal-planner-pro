@@ -7,7 +7,11 @@ import { parseSubject } from "@/lib/bon-appetit-subject";
 import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { sendEmail, sendPlainEmail } from "@/lib/email";
-import { handleInboundInvoice } from "@/lib/inbound-invoice";
+import { prisma } from "@/lib/prisma";
+import { APP_URL, handleInboundInvoice, handleInboundPaymentReply } from "@/lib/inbound-invoice";
+import { saveEmailedMenu } from "@/lib/inbound-menu";
+import { sendBonAppetitToClient } from "@/lib/client-email";
+import { escapeHtml, inboundKitchenId, isInvoiceAddress, stripSendLine } from "@/lib/inbound-mail";
 
 // PDF rendering (headless Chrome) needs a generous window on serverless.
 export const maxDuration = 60;
@@ -80,16 +84,36 @@ export async function POST(req: NextRequest) {
       throw new Error(`Could not load received email: ${received.error.message}`);
     }
     const subject = received.data?.subject ?? "";
-    const body = (received.data?.text ?? "").trim();
+    const rawBody = (received.data?.text ?? "").trim();
 
     // Mail to invoice@ (or invoices@) is an invoice request. Everything else on
-    // the domain stays on the Bon Appetit path below.
+    // the domain stays on the Bon Appetit path below. Mail to a "-test" address
+    // (menu-test@, invoice-test@) goes to the test kitchen.
     const recipients = [...(evt.data?.to ?? []), ...(evt.data?.received_for ?? [])]
       .map((a) => extractEmail(String(a)).toLowerCase());
-    if (recipients.some((a) => /^invoices?@/.test(a))) {
-      return NextResponse.json(await handleInboundInvoice({ subject, body, senderEmail }));
+    const kitchenId = inboundKitchenId(recipients);
+    if (recipients.some(isInvoiceAddress)) {
+      // A reply to an invoice summary ("Re: Invoice #11-1043 ...") records a
+      // payment; it never creates an invoice.
+      const replyTo = subject.match(/#(\d{2}-\d{4})/);
+      if (replyTo) {
+        return NextResponse.json(
+          await handleInboundPaymentReply({
+            invoiceNumber: replyTo[1],
+            subject,
+            body: rawBody,
+            senderEmail,
+            kitchenId,
+          }),
+        );
+      }
+      return NextResponse.json(
+        await handleInboundInvoice({ subject, body: rawBody, senderEmail, kitchenId }),
+      );
     }
 
+    // "Send: yes" → also email the PDF to the client. Never a dish.
+    const { body, send: sendToClient } = stripSendLine(rawBody);
     const { client, date, monthOnly } = parseSubject(subject);
     const { dishes, notes, subtitle } = parseStructured(body);
     if (dishes.length === 0) {
@@ -118,7 +142,54 @@ export async function POST(req: NextRequest) {
     const safeClient = client.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "");
     const dateFile = format(date, monthOnly ? "MM-yyyy" : "MM-dd-yyyy");
 
-    // 5. Email the finished Bon Appetit back to Beth.
+    // 5. Save it in the app (client, cook date, recipes, Bon Appetit). A failure
+    // here still sends Beth her PDF, with a line saying why it wasn't saved.
+    const appLines: string[] = [];
+    let menuCardId: string | null = null;
+    let reusedCard = false;
+    try {
+      const saved = await saveEmailedMenu({
+        kitchenId,
+        subjectClient: client,
+        date,
+        monthOnly,
+        dishes,
+        notes,
+      });
+      if (saved.ok) {
+        menuCardId = saved.menuCardId;
+        reusedCard = saved.reused;
+        appLines.push(`Saved in the app: ${APP_URL}/menu-cards/${saved.menuCardId}`);
+      } else {
+        appLines.push(`Not saved in the app: ${saved.error}.`);
+      }
+    } catch (e) {
+      appLines.push(`Not saved in the app: ${e instanceof Error ? e.message : "unknown error"}.`);
+    }
+
+    // 6. "Send: yes" → email the same PDF to the client (not again on a
+    // re-delivered email).
+    if (sendToClient) {
+      if (!menuCardId) {
+        appLines.push(`Not sent to the client: it isn't saved in the app, so there's no client to send to.`);
+      } else if (reusedCard) {
+        appLines.push(`Not sent to the client again (this email was already handled).`);
+      } else {
+        const kitchen = await prisma.kitchen.findUnique({ where: { id: kitchenId } });
+        const sent = kitchen
+          ? await sendBonAppetitToClient(menuCardId, kitchen, { pdf, monthOnly })
+          : { ok: false as const, error: "kitchen not found" };
+        appLines.push(
+          sent.ok
+            ? `Sent to the client: ${sent.to}${kitchen?.contactEmail ? ` (cc ${kitchen.contactEmail})` : ""}.`
+            : `Not sent to the client: ${sent.error}.`,
+        );
+      }
+    }
+
+    // 7. Email the finished Bon Appetit back to Beth.
+    const linkify = (line: string) =>
+      escapeHtml(line).replace(/(https?:\/\/\S+)/g, '<a href="$1">$1</a>');
     await sendEmail({
       to: senderEmail,
       replyTo: process.env.REPLY_TO_EMAIL || "dennisjmccarthy@gmail.com",
@@ -128,14 +199,18 @@ export async function POST(req: NextRequest) {
         ``,
         `Here's the formatted Bon Appetit for ${client}, attached as a PDF.`,
         ``,
+        ...appLines,
+        ...(appLines.length ? [``] : []),
         `Dennis`,
       ].join("\n"),
-      html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;"><p>Hi Beth,</p><p>Here's the formatted Bon Appetit for <strong>${client}</strong>, attached as a PDF.</p><p style="margin-top:16px;">Dennis</p></div>`,
+      html: `<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937;"><p>Hi Beth,</p><p>Here's the formatted Bon Appetit for <strong>${escapeHtml(client)}</strong>, attached as a PDF.</p>${appLines
+        .map((l) => `<p>${linkify(l)}</p>`)
+        .join("")}<p style="margin-top:16px;">Dennis</p></div>`,
       attachmentFilename: `BonAppetit_${safeClient || "Menu"}_${dateFile}.pdf`,
       attachmentPdf: pdf,
     });
 
-    return NextResponse.json({ ok: true, client, dishes: dishes.length });
+    return NextResponse.json({ ok: true, client, dishes: dishes.length, menuCardId, kitchenId });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Unknown error";
     // Don't fail silently — tell Beth why it didn't work.

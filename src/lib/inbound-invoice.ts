@@ -15,6 +15,10 @@
 //             November 3, 10, 17
 //             Travel: 30                     (optional: other labeled lines stay
 //                                             their own line items)
+//
+// "Send: yes" on its own line also emails the PDF to the client.
+// Replying "Paid Zelle" / "Paid check 1043" to the summary email records the
+// payment (handleInboundPaymentReply).
 
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
@@ -23,15 +27,24 @@ import { buildInvoiceHtml } from "@/lib/invoice-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { createWithInvoiceNumber } from "@/lib/invoice-number";
 import { sendEmail, sendPlainEmail } from "@/lib/email";
-
-// Webhooks have no signed-in user, so the kitchen is explicit.
-const KITCHEN_ID = "kitchen_jwb";
+import { findOrCreateCookDate } from "@/lib/cook-date-match";
+import { sendInvoiceToClient } from "@/lib/client-email";
+import { recordPayment } from "@/lib/invoice-payment";
+import {
+  easternToday,
+  firstNonEmptyLine,
+  invoiceAddressFor,
+  parsePaidLine,
+  replyText,
+  stripSendLine,
+} from "@/lib/inbound-mail";
 
 // Every emailed invoice PDF goes to Dennis, whoever sent the request.
 // Set to "yogabeth@mac.com" for Beth, or null to reply to the sender.
-const SEND_INVOICES_TO: string | null = "dennisjmccarthy@gmail.com";
+// The Monday summary email goes here too.
+export const SEND_INVOICES_TO: string | null = "dennisjmccarthy@gmail.com";
 
-const APP_URL = process.env.APP_URL || "https://meal-planner-pro-puce.vercel.app";
+export const APP_URL = process.env.APP_URL || "https://meal-planner-pro-puce.vercel.app";
 
 const LABELS: Record<string, string> = {
   pc: "Personal Chef Fee",
@@ -174,10 +187,29 @@ export function parseInvoiceBody(text: string): ParsedInvoiceBody {
   };
 }
 
+// The prepaid cook dates as real dates, sorted and de-duplicated. A date more
+// than 60 days before the invoice date is taken as next year.
+export function resolveCookDates(parsed: ParsedInvoiceBody, invoiceDate: Date): Date[] {
+  const cutoff = invoiceDate.getTime() - 60 * 24 * 60 * 60 * 1000;
+  const seen = new Set<number>();
+  const dates: Date[] = [];
+  for (const { month, day } of parsed.cookDates) {
+    let d = new Date(invoiceDate.getFullYear(), month, day, 12);
+    if (d.getTime() < cutoff) d = new Date(invoiceDate.getFullYear() + 1, month, day, 12);
+    if (d.getMonth() !== month) {
+      throw new Error(`${MONTHS[month][0].toUpperCase()}${MONTHS[month].slice(1)} ${day} is not a real date.`);
+    }
+    if (!seen.has(d.getTime())) {
+      seen.add(d.getTime());
+      dates.push(d);
+    }
+  }
+  return dates.sort((a, b) => a.getTime() - b.getTime());
+}
+
 // The invoice's line items. Normal invoice: the parsed lines. Prepaid: one line
 // per cook date, the amount split evenly (leftover cents on the first dates),
 // then any other labeled lines (Travel, Groceries...) as their own items.
-// A date more than 60 days before the invoice date is taken as next year.
 export function buildInvoiceLines(
   parsed: ParsedInvoiceBody,
   invoiceDate: Date,
@@ -204,21 +236,7 @@ export function buildInvoiceLines(
     );
   }
 
-  const cutoff = invoiceDate.getTime() - 60 * 24 * 60 * 60 * 1000;
-  const seen = new Set<number>();
-  const dates: Date[] = [];
-  for (const { month, day } of parsed.cookDates) {
-    let d = new Date(invoiceDate.getFullYear(), month, day, 12);
-    if (d.getTime() < cutoff) d = new Date(invoiceDate.getFullYear() + 1, month, day, 12);
-    if (d.getMonth() !== month) {
-      throw new Error(`${MONTHS[month][0].toUpperCase()}${MONTHS[month].slice(1)} ${day} is not a real date.`);
-    }
-    if (!seen.has(d.getTime())) {
-      seen.add(d.getTime());
-      dates.push(d);
-    }
-  }
-  dates.sort((a, b) => a.getTime() - b.getTime());
+  const dates = resolveCookDates(parsed, invoiceDate);
 
   const cents = Math.round(total * 100);
   const base = Math.floor(cents / dates.length);
@@ -236,7 +254,6 @@ type ClientRow = {
   id: string;
   firstName: string;
   lastName: string;
-  address: string | null;
 };
 
 const nameTokens = (s: string) =>
@@ -249,10 +266,10 @@ const nameTokens = (s: string) =>
 
 // Exact shared names, order-insensitive. Returns the single best match, or an
 // error when nothing matches or two clients tie.
-export function matchClient(
+export function matchClient<T extends ClientRow>(
   subjectClient: string,
-  clients: ClientRow[],
-): { client: ClientRow } | { error: string } {
+  clients: T[],
+): { client: T } | { error: string } {
   const wanted = new Set(nameTokens(subjectClient));
   const scored = clients
     .map((c) => {
@@ -289,21 +306,29 @@ export async function handleInboundInvoice(opts: {
   subject: string;
   body: string;
   senderEmail: string;
+  kitchenId: string;
 }): Promise<Record<string, unknown>> {
-  const replyTo = process.env.REPLY_TO_EMAIL || "dennisjmccarthy@gmail.com";
+  const { kitchenId } = opts;
+  // Replies to the summary come back to invoice@, where "Paid Zelle" is recorded.
+  const replyTo = invoiceAddressFor(kitchenId);
   const to = SEND_INVOICES_TO ?? opts.senderEmail;
 
   try {
-    const { client: subjectClient, date } = parseSubject(opts.subject);
-    const parsed = parseInvoiceBody(opts.body);
+    const kitchen = await prisma.kitchen.findUnique({ where: { id: kitchenId } });
+    if (!kitchen) throw new Error(`Kitchen ${kitchenId} not found`);
+
+    const { client: subjectClient, date, dated, monthOnly } = parseSubject(opts.subject);
+    const { body, send: sendToClient } = stripSendLine(opts.body);
+    const parsed = parseInvoiceBody(body);
     const lines = buildInvoiceLines(parsed, date);
+    const prepaidDates = resolveCookDates(parsed, date);
     // An unlabeled amount only means something on a prepaid invoice.
     const ignored = parsed.cookDates.length
       ? parsed.ignored
       : [...parsed.ignored, ...parsed.bareAmounts.map((a) => String(a))];
 
     const clients = await prisma.client.findMany({
-      where: { kitchenId: KITCHEN_ID, active: true },
+      where: { kitchenId, active: true },
       select: { id: true, firstName: true, lastName: true, address: true },
     });
     const match = matchClient(subjectClient, clients);
@@ -316,7 +341,7 @@ export async function handleInboundInvoice(opts: {
     // in the last 15 minutes means this email was already turned into an invoice.
     const recent = await prisma.invoice.findMany({
       where: {
-        kitchenId: KITCHEN_ID,
+        kitchenId,
         clientId: client.id,
         invoiceDate: date,
         createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) },
@@ -329,12 +354,30 @@ export async function handleInboundInvoice(opts: {
     const reused = Boolean(invoice);
 
     if (!invoice) {
+      // Link to cook dates. One-off invoice with a date in the subject: that
+      // day's cook date (created as completed if missing). Prepaid: make sure
+      // each listed date is on the calendar, and record the billing month.
+      let cookDateId: string | null = null;
+      let billingPeriod: string | null = null;
+      if (prepaidDates.length > 0) {
+        for (const d of prepaidDates) {
+          await findOrCreateCookDate({ kitchenId, clientId: client.id, date: d, status: "APPROVED" });
+        }
+        billingPeriod = format(prepaidDates[0], "yyyy-MM");
+      } else if (dated && !monthOnly) {
+        cookDateId = (
+          await findOrCreateCookDate({ kitchenId, clientId: client.id, date, status: date.getTime() > Date.now() ? "APPROVED" : "COMPLETED" })
+        ).id;
+      }
+
       invoice = await createWithInvoiceNumber((invoiceNumber) => prisma.invoice.create({
         data: {
-          kitchenId: KITCHEN_ID,
+          kitchenId,
           clientId: client.id,
           invoiceNumber,
           invoiceDate: date,
+          cookDateId,
+          billingPeriod,
           remarks: parsed.remarks,
           showGratuity: parsed.showGratuity,
           lineItems: {
@@ -358,6 +401,21 @@ export async function handleInboundInvoice(opts: {
     });
     const pdf = await generatePdfFromHtml(html);
 
+    // "Send: yes" → also email the client (not again on a re-delivered email).
+    let clientNote: string | null = null;
+    let sentToClient = false;
+    if (sendToClient) {
+      if (reused) {
+        clientNote = `Not sent to the client again (this email was already handled).`;
+      } else {
+        const sent = await sendInvoiceToClient(invoice.id, kitchen, { pdf });
+        sentToClient = sent.ok;
+        clientNote = sent.ok
+          ? `Sent to the client: ${sent.to}${kitchen.contactEmail ? ` (cc ${kitchen.contactEmail})` : ""}. Marked as sent.`
+          : `Not sent to the client: ${sent.error}.`;
+      }
+    }
+
     const link = `${APP_URL}/invoices/${invoice.id}`;
     const summary = [
       `Billed to: ${clientName}`,
@@ -371,11 +429,16 @@ export async function handleInboundInvoice(opts: {
       ...(ignored.length
         ? [``, `Ignored these lines (not line items):`, ...ignored.map((l) => `  ${l}`)]
         : []),
+      ...(clientNote ? [``, clientNote] : []),
       ``,
       reused
         ? `This email was already turned into invoice #${invoice.invoiceNumber}, so no new invoice was created.`
-        : `Saved as a draft. Edit, send or delete it here:`,
+        : sentToClient
+          ? `Edit or delete it here:`
+          : `Saved as a draft. Edit, send or delete it here:`,
       link,
+      ``,
+      `When it's paid, reply to this email with just: Paid Zelle — or — Paid check 1043`,
     ];
 
     await sendEmail({
@@ -420,5 +483,63 @@ export async function handleInboundInvoice(opts: {
       // ignore secondary failure
     }
     return { ok: false, kind: "invoice", error: msg };
+  }
+}
+
+// A reply to an invoice summary ("Re: Invoice #11-1043 - ..."). Records a
+// payment from "Paid Zelle" / "Paid check 1043"; anything else gets help text.
+// Never creates an invoice.
+export async function handleInboundPaymentReply(opts: {
+  invoiceNumber: string;
+  subject: string;
+  body: string;
+  senderEmail: string;
+  kitchenId: string;
+}): Promise<Record<string, unknown>> {
+  const { invoiceNumber, kitchenId } = opts;
+  const subject = `Re: ${opts.subject.replace(/^((re|fwd?)\s*:\s*)+/i, "")}`;
+  const help = `To record a payment, reply with just: Paid Zelle — or — Paid check 1043`;
+  const reply = (text: string) =>
+    sendPlainEmail({ to: opts.senderEmail, replyTo: invoiceAddressFor(kitchenId), subject, text });
+
+  try {
+    const line = firstNonEmptyLine(replyText(opts.body));
+    const paid = line ? parsePaidLine(line) : null;
+    if (!paid) {
+      await reply(help);
+      return { ok: true, kind: "payment-reply", invoiceNumber, recorded: false, reason: "not a paid line" };
+    }
+
+    const result = await recordPayment({
+      kitchenId,
+      invoiceNumber,
+      method: paid.method,
+      note: paid.note,
+    });
+    if (result.ok) {
+      await reply(`Recorded: invoice #${invoiceNumber} paid by ${result.method} on ${easternToday()}.`);
+      return { ok: true, kind: "payment-reply", invoiceNumber, recorded: true, method: result.method };
+    }
+
+    const text =
+      result.reason === "already-paid"
+        ? `Invoice #${invoiceNumber} is already marked paid${result.paidMethod ? ` by ${result.paidMethod}` : ""}${
+            result.paidAt
+              ? ` on ${result.paidAt.toLocaleDateString("en-US", { timeZone: "America/New_York" })}`
+              : ""
+          }. Nothing changed.`
+        : result.reason === "void"
+          ? `Invoice #${invoiceNumber} is void, so no payment was recorded.`
+          : `Couldn't find invoice #${invoiceNumber}, so no payment was recorded.`;
+    await reply(text);
+    return { ok: true, kind: "payment-reply", invoiceNumber, recorded: false, reason: result.reason };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    try {
+      await reply(`I couldn't record the payment for invoice #${invoiceNumber}.\n\nReason: ${msg}`);
+    } catch {
+      // ignore secondary failure
+    }
+    return { ok: false, kind: "payment-reply", invoiceNumber, error: msg };
   }
 }

@@ -18,11 +18,13 @@ function todayEastern(): Date {
 
 // Subject: "Client Name - M/D/YYYY", or month-only "Client Name - October 2026"
 // / "October, 2026" / "10/2026". No date → today (US Eastern). monthOnly drops the day from
-// the printed date ("October, 2026").
+// the printed date ("October, 2026"). dated is false when the subject had no
+// usable date and "today" was filled in.
 export function parseSubject(subject: string): {
   client: string;
   date: Date;
   monthOnly: boolean;
+  dated: boolean;
 } {
   const raw = subject
     .replace(/^(re:|fwd:)\s*/i, "")
@@ -37,6 +39,7 @@ export function parseSubject(subject: string): {
       client: client.trim() || "Guest",
       date: isNaN(d.getTime()) ? todayEastern() : d,
       monthOnly: isNaN(d.getTime()) ? false : monthOnly,
+      dated: !isNaN(d.getTime()),
     };
   };
 
@@ -55,5 +58,5 @@ export function parseSubject(subject: string): {
     if (idx >= 0 && m[2].length >= 3) return build(m[1], Number(m[3]), idx + 1, 1, true);
   }
 
-  return { client: raw || "Guest", date: todayEastern(), monthOnly: false };
+  return { client: raw || "Guest", date: todayEastern(), monthOnly: false, dated: false };
 }

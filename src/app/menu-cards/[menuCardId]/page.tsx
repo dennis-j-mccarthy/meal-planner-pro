@@ -93,7 +93,11 @@ export default async function MenuCardDetailPage({
             </p>
           </div>
           <div className="shrink-0">
-            <MenuCardActions menuCardId={menuCard.id} accepted={menuCard.accepted} />
+            <MenuCardActions
+              menuCardId={menuCard.id}
+              accepted={menuCard.accepted}
+              clientEmail={menuCard.client.email}
+            />
           </div>
         </div>
       </div>

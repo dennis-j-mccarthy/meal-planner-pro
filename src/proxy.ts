@@ -7,6 +7,8 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/review/(.*)",
   "/api/inbound/(.*)",
+  // Vercel Cron; the route checks CRON_SECRET / the cron user-agent itself.
+  "/api/cron/(.*)",
   "/sign-in(.*)",
   "/sign-up(.*)",
 ]);

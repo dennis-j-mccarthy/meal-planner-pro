@@ -10,6 +10,7 @@ interface SendEmailOptions {
   attachmentFilename: string;
   attachmentPdf: Buffer;
   replyTo?: string;
+  cc?: string;
 }
 
 export async function sendEmail(options: SendEmailOptions) {
@@ -20,6 +21,7 @@ export async function sendEmail(options: SendEmailOptions) {
     text: options.text,
     ...(options.html ? { html: options.html } : {}),
     ...(options.replyTo ? { replyTo: options.replyTo } : {}),
+    ...(options.cc ? { cc: [options.cc] } : {}),
     attachments: [
       {
         filename: options.attachmentFilename,
@@ -40,6 +42,8 @@ interface SendPlainEmailOptions {
   to: string;
   subject: string;
   text: string;
+  html?: string;
+  replyTo?: string;
 }
 
 /** Send a plain-text email with no attachment (notifications, share links). */
@@ -49,6 +53,8 @@ export async function sendPlainEmail(options: SendPlainEmailOptions) {
     to: [options.to],
     subject: options.subject,
     text: options.text,
+    ...(options.html ? { html: options.html } : {}),
+    ...(options.replyTo ? { replyTo: options.replyTo } : {}),
   });
 
   if (error) {

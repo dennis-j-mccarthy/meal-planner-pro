@@ -17,6 +17,10 @@ interface InvoiceData {
   showGratuity?: boolean;
 }
 
+// Printed under Remarks on every invoice, and reused in the client email.
+export const PAYMENT_TEXT =
+  "Please pay by check, payable to Beth McCarthy, or use Zelle (719-440-2815/yogabeth@mac.com).";
+
 function loadAssetBase64(relativePath: string, mime: string): string {
   const filePath = join(process.cwd(), "public", relativePath);
   const buffer = readFileSync(filePath);
@@ -51,10 +55,8 @@ export function buildInvoiceHtml(data: InvoiceData): string {
     )
     .join("");
 
-  const paymentText =
-    "Please pay by check, payable to Beth McCarthy, or use Zelle (719-440-2815/yogabeth@mac.com).";
   // A custom remark is shown above the payment instructions, never instead of them.
-  const remarksHtml = [data.remarks?.trim(), paymentText]
+  const remarksHtml = [data.remarks?.trim(), PAYMENT_TEXT]
     .filter((t): t is string => !!t)
     .map((t) => `<div style="white-space: pre-line;">${escapeHtml(t)}</div>`)
     .join("");

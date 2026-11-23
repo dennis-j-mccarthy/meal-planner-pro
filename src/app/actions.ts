@@ -21,6 +21,8 @@ import { sendEmail, sendPlainEmail } from "@/lib/email";
 import { buildInvoiceHtml } from "@/lib/invoice-template";
 import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
+import { sendBonAppetitToClient, sendInvoiceToClient, type ClientSendResult } from "@/lib/client-email";
+import { recordPayment } from "@/lib/invoice-payment";
 import { format } from "date-fns";
 
 function requiredText(formData: FormData, key: string) {
@@ -1320,6 +1322,26 @@ export async function updateInvoiceStatus(formData: FormData) {
   revalidateApp();
 }
 
+const PAYMENT_METHODS = ["Zelle", "Check", "Cash", "Card", "Other"];
+
+// Mark an invoice paid and record how: method, optional note (check #), and
+// the amount (the invoice total).
+export async function recordInvoicePayment(formData: FormData) {
+  const kitchen = await requireKitchen();
+  const invoiceId = requiredText(formData, "invoiceId");
+  const rawMethod = optionalText(formData, "method") ?? "Other";
+  const method = PAYMENT_METHODS.includes(rawMethod) ? rawMethod : "Other";
+  const note = optionalText(formData, "note");
+
+  const result = await recordPayment({ kitchenId: kitchen.id, invoiceId, method, note });
+  if (!result.ok && result.reason === "not-found") {
+    throw new Error("Invoice not found");
+  }
+
+  revalidateApp();
+  revalidatePath(`/invoices/${invoiceId}`);
+}
+
 export async function deleteInvoice(formData: FormData) {
   const kitchen = await requireKitchen();
   const invoiceId = requiredText(formData, "invoiceId");
@@ -1683,6 +1705,26 @@ export async function sendBonAppetitStatus(
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "Unknown error" };
   }
+}
+
+// "Send to client": email the PDF to the client, cc the kitchen. Returns a
+// result instead of throwing so the button can show what happened.
+export async function sendInvoiceToClientAction(formData: FormData): Promise<ClientSendResult> {
+  // Outside the try: requireKitchen redirects by throwing.
+  const kitchen = await requireKitchen();
+  const invoiceId = requiredText(formData, "invoiceId");
+  const result = await sendInvoiceToClient(invoiceId, kitchen);
+  if (result.ok) {
+    revalidateApp();
+    revalidatePath(`/invoices/${invoiceId}`);
+  }
+  return result;
+}
+
+export async function sendBonAppetitToClientAction(formData: FormData): Promise<ClientSendResult> {
+  const kitchen = await requireKitchen();
+  const menuCardId = requiredText(formData, "menuCardId");
+  return sendBonAppetitToClient(menuCardId, kitchen);
 }
 
 const KEEP_SENTINEL = "__KEEP__";

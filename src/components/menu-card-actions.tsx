@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteMenuCard, sendBonAppetitStatus, acceptMenuCard } from "@/app/actions";
+import { SendToClientButton } from "@/components/send-to-client-button";
 
 interface MenuCardActionsProps {
   menuCardId: string;
   accepted: boolean;
+  clientEmail: string | null;
 }
 
 type SendStatus = "idle" | "sending" | "sent" | "error";
@@ -14,7 +16,7 @@ type SendStatus = "idle" | "sending" | "sent" | "error";
 const iconBtn =
   "inline-flex h-9 w-9 items-center justify-center rounded-lg border transition disabled:opacity-60";
 
-export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) {
+export function MenuCardActions({ menuCardId, accepted, clientEmail }: MenuCardActionsProps) {
   const router = useRouter();
   const [sendStatus, setSendStatus] = useState<SendStatus>("idle");
   const [sendDetail, setSendDetail] = useState("");
@@ -140,6 +142,9 @@ export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) 
           </svg>
         </button>
       </div>
+
+      {/* Send to the client (cc the kitchen) */}
+      <SendToClientButton kind="menuCard" id={menuCardId} clientEmail={clientEmail} />
 
       {/* Detailed send progress */}
       {sendStatus !== "idle" && (
