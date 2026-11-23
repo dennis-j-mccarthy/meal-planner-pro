@@ -3,7 +3,7 @@
 import { useRef, useState, type RefObject } from "react";
 import { searchRecipesForPlanner } from "@/app/planner-actions";
 import type { PlannerFilters, RecipeHit } from "./planner-logic";
-import { BTN_PRIMARY, FOCUS } from "./ui";
+import { FOCUS } from "./ui";
 
 const DEFAULT_FILTERS: PlannerFilters = { safeOnly: true, notRecent: true, category: null };
 
@@ -220,9 +220,19 @@ export function Finder({
               onDragEnd={drag?.onDragEnd}
               className={drag ? "cursor-grab active:cursor-grabbing" : undefined}
             >
-              <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition hover:border-[var(--accent)] ${i === 0 && searching ? "border-[var(--accent)] bg-[var(--accent-light)]/40" : "border-slate-200 bg-white"}`}>
+              <div className={`group/hit flex items-start gap-2 rounded-xl border py-2 pr-3 transition hover:border-[var(--accent)] ${drag ? "pl-1.5" : "pl-3"} ${i === 0 && searching ? "border-[var(--accent)] bg-[var(--accent-light)]/40" : "border-slate-200 bg-white"}`}>
+                {drag && (
+                  <svg
+                    aria-hidden="true"
+                    className="mt-0.5 h-5 w-5 shrink-0 text-slate-300 transition group-hover/hit:text-slate-500"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M7 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm0 6a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm-1.5 7.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM16 4a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm-1.5 7.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM16 16a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                  </svg>
+                )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-slate-900">
+                  <p className="text-sm font-medium leading-snug text-slate-900">
                     {hit.starred && (
                       <span aria-label="Starred" className="mr-1 text-amber-500">
                         ★
@@ -230,7 +240,7 @@ export function Finder({
                     )}
                     {hit.title}
                   </p>
-                  {hit.description && <p className="truncate text-xs text-slate-500">{hit.description}</p>}
+                  {hit.description && <p className="mt-0.5 text-xs leading-snug text-slate-500">{hit.description}</p>}
                   {(hit.lastServedLabel || hit.timesKept > 1) && (
                     <p className="mt-0.5 text-xs text-slate-500">
                       {hit.lastServedLabel && <>Served to {firstName} {hit.lastServedLabel}</>}
@@ -243,9 +253,9 @@ export function Finder({
                   type="button"
                   onClick={() => onAdd(hit)}
                   aria-label={`Add ${hit.title}`}
-                  className={`${BTN_PRIMARY} h-11 w-11 shrink-0 !px-0 sm:h-9 sm:min-h-9 sm:w-9`}
+                  className={`inline-flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-full text-[var(--accent-strong)] opacity-60 transition hover:bg-[var(--accent-light)] hover:opacity-100 group-hover/hit:opacity-100 sm:h-9 sm:w-9 ${FOCUS}`}
                 >
-                  <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                  <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
                   </svg>
                 </button>
@@ -271,7 +281,7 @@ export function Finder({
               {hidden.map((hit) => (
                 <li key={hit.id} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 opacity-70">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-slate-600">{hit.title}</p>
+                    <p className="text-sm leading-snug text-slate-600">{hit.title}</p>
                     <p className={`text-xs ${hit.conflict && finder.filters.safeOnly ? "text-amber-700" : "text-slate-500"}`}>
                       {hiddenReason(hit, finder.filters)}
                     </p>
