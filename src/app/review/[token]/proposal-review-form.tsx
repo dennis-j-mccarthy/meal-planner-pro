@@ -4,21 +4,74 @@ import { useState } from "react";
 import Image from "next/image";
 import { submitProposalReview } from "@/app/actions";
 
-type ReviewRecipe = {
+export type ReviewRecipe = {
   id: string;
   title: string;
   description: string | null;
-  cuisine: string | null;
   imageUrl: string | null;
   courseLabel: string | null;
+  clientRemoved: boolean;
 };
+
+const FOCUS =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2";
+
+/** Courses in the order they first appear. */
+function byCourse<T extends { courseLabel: string | null }>(items: T[]): Array<{ course: string | null; items: T[] }> {
+  const groups: Array<{ course: string | null; items: T[] }> = [];
+  for (const item of items) {
+    const course = item.courseLabel?.trim() || null;
+    const group = groups.find((g) => g.course === course);
+    if (group) group.items.push(item);
+    else groups.push({ course, items: [item] });
+  }
+  return groups;
+}
+
+function CourseHeading({ course }: { course: string | null }) {
+  if (!course) return null;
+  return (
+    <h2 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--accent-strong)] first:mt-0">
+      {course}
+    </h2>
+  );
+}
+
+/** The approved menu: the dishes the client kept. */
+export function FinalMenu({ recipes }: { recipes: Array<Omit<ReviewRecipe, "clientRemoved">> }) {
+  if (recipes.length === 0) return null;
+  return (
+    <div className="mt-6">
+      {byCourse(recipes).map((group) => (
+        <section key={group.course ?? "_"}>
+          <CourseHeading course={group.course} />
+          <ul className="space-y-2">
+            {group.items.map((r) => (
+              <li key={r.id} className="rounded-[14px] border border-stone-200 bg-white px-4 py-3">
+                <p className="font-semibold text-stone-900">{r.title}</p>
+                {r.description && <p className="mt-0.5 line-clamp-2 text-sm text-stone-500">{r.description}</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </div>
+  );
+}
 
 export function ProposalReviewForm({
   token,
   recipes,
+  keepTarget,
+  chef,
+  firstName,
 }: {
   token: string;
   recipes: ReviewRecipe[];
+  /** How many dishes the client's plan calls for, when the menu has extras. */
+  keepTarget: number | null;
+  chef: string;
+  firstName: string;
 }) {
   const [removed, setRemoved] = useState<Set<string>>(new Set());
   const [comment, setComment] = useState("");
@@ -46,113 +99,127 @@ export function ProposalReviewForm({
       for (const id of removed) fd.append("removed", id);
       await submitProposalReview(fd);
       setDone(decision);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
-      setError("Something went wrong submitting your notes. Please try again.");
+      setError("Something went wrong sending your answer. Please try again.");
+    } finally {
       setBusy(null);
     }
   }
 
+  const kept = recipes.filter((r) => !removed.has(r.id));
+
   if (done) {
     return (
-      <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-8 text-center">
-        <h2 className="text-lg font-bold text-emerald-800">
-          {done === "approve" ? "Approved — thank you!" : "Got it — thank you!"}
-        </h2>
-        <p className="mt-2 text-sm text-emerald-700">
-          {done === "approve"
-            ? "Your chef has been notified that you approved this plan."
-            : "Your chef has been notified and will follow up with an updated plan."}
-        </p>
+      <div aria-live="polite">
+        <div className="mt-8 rounded-[14px] border border-stone-200 bg-white p-6 text-center sm:p-8">
+          <h2 className="text-xl text-stone-900" style={{ fontFamily: "var(--font-display, Georgia, 'Times New Roman', serif)" }}>
+            Thank you, {firstName}!
+          </h2>
+          <p className="mt-2 text-sm text-stone-600">
+            {done === "approve" ? `You approved this menu. ${chef} has your choices.` : `${chef} will send an updated menu.`}
+          </p>
+        </div>
+        {done === "approve" && <FinalMenu recipes={kept} />}
       </div>
     );
   }
 
-  const keptCount = recipes.length - removed.size;
+  let hint: string | null = null;
+  if (keepTarget) {
+    const extra = kept.length - keepTarget;
+    if (extra > 0) hint = `Remove ${extra} more to pick your favorite ${keepTarget}.`;
+    else if (extra === 0) hint = `That's your ${keepTarget}.`;
+    else hint = `That's fewer than ${keepTarget} — ${chef} can suggest others.`;
+  }
 
   return (
-    <div className="mt-4 space-y-3">
-      {recipes.map((r) => {
-        const isRemoved = removed.has(r.id);
-        return (
-          <div
-            key={r.id}
-            className={`flex gap-3 rounded-2xl border bg-white p-4 shadow-sm transition ${
-              isRemoved ? "border-slate-200 opacity-60" : "border-slate-200"
-            }`}
-          >
-            {r.imageUrl && (
-              <Image
-                src={r.imageUrl}
-                alt={r.title}
-                width={72}
-                height={72}
-                className="h-18 w-18 shrink-0 rounded-xl object-cover"
-                style={{ height: 72, width: 72 }}
-              />
-            )}
-            <div className="min-w-0 flex-1">
-              {r.courseLabel && (
-                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                  {r.courseLabel}
-                </p>
-              )}
-              <h3
-                className={`font-semibold text-slate-900 ${
-                  isRemoved ? "line-through" : ""
-                }`}
-              >
-                {r.title}
-              </h3>
-              {r.description && (
-                <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">
-                  {r.description}
-                </p>
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={() => toggle(r.id)}
-              className={`shrink-0 self-center rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
-                isRemoved
-                  ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                  : "border-red-200 bg-red-50 text-red-600 hover:bg-red-100"
-              }`}
-            >
-              {isRemoved ? "Add back" : "Remove"}
-            </button>
-          </div>
-        );
-      })}
+    <div className="mt-6">
+      {byCourse(recipes).map((group) => (
+        <section key={group.course ?? "_"}>
+          <CourseHeading course={group.course} />
+          <ul className="space-y-2">
+            {group.items.map((r) => {
+              const isRemoved = removed.has(r.id);
+              return (
+                <li
+                  key={r.id}
+                  className={`flex items-center gap-3 rounded-[14px] border bg-white p-4 transition ${
+                    isRemoved ? "border-stone-200 opacity-60" : "border-stone-200"
+                  }`}
+                >
+                  {r.imageUrl && (
+                    <Image
+                      src={r.imageUrl}
+                      alt=""
+                      width={64}
+                      height={64}
+                      className="h-16 w-16 shrink-0 rounded-xl object-cover"
+                    />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <h3 className={`font-semibold text-stone-900 ${isRemoved ? "line-through" : ""}`}>{r.title}</h3>
+                    {r.description && <p className="mt-0.5 line-clamp-2 text-sm text-stone-500">{r.description}</p>}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => toggle(r.id)}
+                    aria-label={isRemoved ? `Add back ${r.title}` : `Remove ${r.title}`}
+                    className={`min-h-11 shrink-0 rounded-xl border px-3.5 text-sm font-medium transition ${FOCUS} ${
+                      isRemoved
+                        ? "border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-strong)]"
+                        : "border-stone-200 bg-white text-stone-600 hover:border-stone-300 hover:text-stone-900"
+                    }`}
+                  >
+                    {isRemoved ? "Add back" : "Remove"}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
 
-      <p className="px-1 text-xs text-slate-400">
-        Keeping {keptCount} of {recipes.length} dish{recipes.length !== 1 ? "es" : ""}.
+      <p className="mt-4 px-1 text-sm text-stone-600" aria-live="polite">
+        Keeping {kept.length} of {recipes.length} {recipes.length === 1 ? "dish" : "dishes"}.
+        {hint && <span className="ml-1 font-medium text-stone-800">{hint}</span>}
       </p>
 
-      <textarea
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        placeholder="Anything you'd like your chef to know? (allergies, swaps, portion sizes, dates...)"
-        className="min-h-24 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm outline-none focus:border-[var(--accent,#f59e0b)] focus:ring-2 focus:ring-amber-200"
-      />
+      <div className="mt-6">
+        <label htmlFor="review-comment" className="text-sm font-medium text-stone-800">
+          Anything {chef} should know? <span className="font-normal text-stone-500">(optional)</span>
+        </label>
+        <textarea
+          id="review-comment"
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Allergies, swaps, portion sizes, timing…"
+          className={`mt-1.5 min-h-24 w-full rounded-xl border border-stone-200 bg-white p-3 text-sm text-stone-900 placeholder:text-stone-400 ${FOCUS}`}
+        />
+      </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-rose-700">
+          {error}
+        </p>
+      )}
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
           disabled={!!busy}
           onClick={() => submit("approve")}
-          className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+          className={`min-h-12 flex-1 rounded-xl bg-[var(--accent)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--accent-strong)] disabled:opacity-50 ${FOCUS}`}
         >
-          {busy === "approve" ? "Submitting..." : "Approve this plan"}
+          {busy === "approve" ? "Sending…" : kept.length < recipes.length ? `Approve my ${kept.length} ${kept.length === 1 ? "dish" : "dishes"}` : "Approve this menu"}
         </button>
         <button
           type="button"
           disabled={!!busy}
           onClick={() => submit("changes")}
-          className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+          className={`min-h-12 flex-1 rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-700 transition hover:bg-stone-50 disabled:opacity-50 ${FOCUS}`}
         >
-          {busy === "changes" ? "Submitting..." : "Request changes"}
+          {busy === "changes" ? "Sending…" : "Ask for changes"}
         </button>
       </div>
     </div>

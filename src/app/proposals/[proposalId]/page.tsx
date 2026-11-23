@@ -1,324 +1,240 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { format } from "date-fns";
+import { approveProposal, requestProposalRevision } from "@/app/actions";
+import { MenuPlanner } from "@/components/planner/menu-planner";
+import { isEditableStatus, safetyChips } from "@/components/planner/planner-logic";
 import {
-  approveProposal,
-  requestProposalRevision,
-  sendProposal,
-} from "@/app/actions";
-import { StatusBadge } from "@/components/status-badge";
-import { ProposalRecipeManager } from "@/components/proposal-recipe-manager";
+  loadPlannerContext,
+  loadPlannerDishes,
+  plannerSearch,
+  shortDate,
+} from "@/components/planner/planner-server";
+import { BTN_PRIMARY, BTN_QUIET, CARD, FOCUS } from "@/components/planner/ui";
 import { ShareLinkBox } from "@/components/share-link-box";
-import { parseDishQuota } from "@/lib/dish-quota";
-import { formatDateShort, formatMinutes } from "@/lib/format";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 type ProposalDetailPageProps = {
-  params: Promise<{
-    proposalId: string;
-  }>;
-  searchParams: Promise<{
-    edit?: string;
-  }>;
+  params: Promise<{ proposalId: string }>;
 };
 
-export default async function ProposalDetailPage({ params, searchParams }: ProposalDetailPageProps) {
+const LINK = `rounded-sm text-stone-700 underline-offset-2 hover:text-stone-900 hover:underline ${FOCUS}`;
+
+export default async function ProposalDetailPage({ params }: ProposalDetailPageProps) {
   const { proposalId } = await params;
-  const { edit } = await searchParams;
   const kitchen = await requireKitchen();
 
-  const [proposal, allRecipes] = await Promise.all([
-    prisma.proposal.findFirst({
-      where: {
-        id: proposalId,
-        kitchenId: kitchen.id,
-      },
-      include: {
-        cookDate: {
-          include: {
-            client: true,
-            menuCards: { select: { id: true }, take: 1 },
-            finalizedProposal: { select: { id: true } },
+  const proposal = await prisma.proposal.findFirst({
+    where: { id: proposalId, kitchenId: kitchen.id },
+    select: {
+      id: true,
+      status: true,
+      shareToken: true,
+      sentAt: true,
+      approvedAt: true,
+      clientSubmittedAt: true,
+      clientApproved: true,
+      clientComment: true,
+      cookDate: {
+        select: {
+          id: true,
+          scheduledFor: true,
+          guestCount: true,
+          client: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              exclusions: true,
+              dietaryNotes: true,
+            },
           },
-        },
-        recipes: {
-          include: { recipe: true },
-          orderBy: { position: "asc" },
+          menuCards: { select: { id: true }, orderBy: { createdAt: "desc" }, take: 1 },
         },
       },
-    }),
-    prisma.recipe.findMany({
-      where: { kitchenId: kitchen.id },
-      orderBy: { title: "asc" },
-    }),
+      recipes: {
+        where: { clientRemoved: true },
+        select: { id: true, recipe: { select: { title: true } } },
+        orderBy: { position: "asc" },
+      },
+    },
+  });
+  if (!proposal) notFound();
+
+  const ctx = await loadPlannerContext(kitchen.id, proposal.id);
+  if (!ctx) notFound();
+
+  const editable = isEditableStatus(proposal.status);
+  const [dishes, search] = await Promise.all([
+    loadPlannerDishes(ctx),
+    editable
+      ? plannerSearch(ctx, "", { safeOnly: true, notRecent: true, category: null })
+      : Promise.resolve({ results: [], hidden: [] }),
   ]);
 
-  if (!proposal) {
-    notFound();
-  }
+  const { cookDate } = proposal;
+  const client = cookDate.client;
+  const first = client.firstName;
+  const guests = cookDate.guestCount;
 
-  const isApproved = proposal.status === "APPROVED";
-  const isEditable = !isApproved;
-  // An approved plan is locked; ?edit=1 reopens the builder for a late change.
-  const isEditing = edit === "1";
-  const showBuilder = isEditable || isEditing;
-  const canShare = proposal.status === "DRAFT" || proposal.status === "REVISIONS_REQUESTED";
-  const canRequestChanges = proposal.status === "SENT" || proposal.status === "REVISIONS_REQUESTED";
-  const canApprove = proposal.status === "SENT" || proposal.status === "DRAFT" || proposal.status === "REVISIONS_REQUESTED";
+  const crumb = (
+    <>
+      <Link href={`/clients/${client.id}`} className={LINK}>
+        {client.firstName} {client.lastName}
+      </Link>
+      <span aria-hidden="true"> · </span>
+      <Link href={`/cook-dates/${cookDate.id}`} className={LINK}>
+        {format(cookDate.scheduledFor, "EEEE, MMM d")}
+      </Link>
+      {guests ? (
+        <>
+          <span aria-hidden="true"> · </span>
+          {guests} {guests === 1 ? "guest" : "guests"}
+        </>
+      ) : null}
+    </>
+  );
 
-  const client = proposal.cookDate.client;
-  const clientName = `${client.firstName} ${client.lastName}`;
+  // ---------------------------------------------------------------- status
+  const removed = proposal.recipes.map((r) => ({ id: r.id, title: r.recipe.title }));
+  const answered = !!proposal.clientSubmittedAt;
+  const answeredOn = proposal.clientSubmittedAt ? shortDate(proposal.clientSubmittedAt) : "";
+  const bonAppetitId = cookDate.menuCards[0]?.id ?? null;
 
-  const recipesForManager = allRecipes.map((r) => ({
-    id: r.id,
-    title: r.title,
-    cuisine: r.cuisine,
-    tags: r.tags,
-    description: r.description,
-    ingredientsText: r.ingredientsText,
-    instructionsText: r.instructionsText,
-    prepMinutes: r.prepMinutes,
-    cookMinutes: r.cookMinutes,
-    servings: r.servings,
-    imageUrl: r.imageUrl,
-    starred: r.starred,
-  }));
+  let statusPanel: React.ReactNode = null;
+  if (proposal.status !== "DRAFT" || answered) {
+    let pill: string;
+    let tone: string;
+    let line: string;
+    switch (proposal.status) {
+      case "SENT":
+        if (answered && proposal.clientApproved) {
+          pill = `${first} approved`;
+          tone = "bg-emerald-50 text-emerald-700";
+          line = `${first} approved this menu on ${answeredOn}. Mark it approved to make the Bon Appetit.`;
+        } else if (answered) {
+          pill = `${first} wants changes`;
+          tone = "bg-amber-50 text-amber-800";
+          line = `${first} asked for changes on ${answeredOn}. Choose “Client wants changes” to edit the menu and send an update.`;
+        } else {
+          pill = "Sent";
+          tone = "bg-sky-50 text-sky-700";
+          line = `Sent${proposal.sentAt ? ` ${shortDate(proposal.sentAt)}` : ""}. Waiting for ${first} — if they answer by text or phone, record it here.`;
+        }
+        break;
+      case "REVISIONS_REQUESTED":
+        pill = `${first} wants changes`;
+        tone = "bg-amber-50 text-amber-800";
+        line = "Change the menu below, then send the updated menu.";
+        break;
+      case "APPROVED":
+        pill = "Approved";
+        tone = "bg-emerald-50 text-emerald-700";
+        line = `Approved${proposal.approvedAt ? ` ${shortDate(proposal.approvedAt)}` : ""}. This menu is final; make any late changes on the Bon Appetit.`;
+        break;
+      case "ARCHIVED":
+        pill = "Replaced";
+        tone = "bg-stone-100 text-stone-600";
+        line = "Another menu was approved for this cook date, so this one is kept for history only.";
+        break;
+      default:
+        pill = answered ? (proposal.clientApproved ? `${first} approved` : `${first} wants changes`) : "Draft";
+        tone = "bg-stone-100 text-stone-600";
+        line = "";
+    }
 
-  return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Link href="/clients" className="hover:text-slate-900">
-          Clients
-        </Link>
-        <span>/</span>
-        <Link
-          href={`/clients/${client.id}`}
-          className="hover:text-slate-900"
-        >
-          {clientName}
-        </Link>
-        <span>/</span>
-        <Link
-          href={`/cook-dates/${proposal.cookDateId}`}
-          className="hover:text-slate-900"
-        >
-          {formatDateShort(proposal.cookDate.scheduledFor)}
-        </Link>
-        <span>/</span>
-        <span className="text-slate-900 font-medium">Menu</span>
-      </div>
-
-
-
-      {/* Header */}
-      <section className="panel p-6 sm:p-8">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge status={proposal.status} />
-            </div>
-            <h1 className="mt-3 page-title">
-              {proposal.title}
-            </h1>
-            <p className="mt-2 text-base text-slate-600">
-              {clientName} · {formatDateShort(proposal.cookDate.scheduledFor)}
-            </p>
-            {proposal.introMessage && (
-              <p className="mt-3 max-w-2xl text-sm text-slate-500">{proposal.introMessage}</p>
-            )}
-            {proposal.revisionNotes && (
-              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-amber-600">Client feedback</p>
-                <p className="mt-1 text-sm text-amber-800">{proposal.revisionNotes}</p>
-              </div>
-            )}
+    const canAnswer = proposal.status === "SENT" || proposal.status === "REVISIONS_REQUESTED";
+    statusPanel = (
+      <section aria-label="Client answer" className={`${CARD} p-5`}>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{pill}</span>
+            {line && <p className="mt-2 text-sm text-stone-600">{line}</p>}
           </div>
-
-          {/* Actions */}
-          <div className="flex flex-wrap gap-2 xl:min-w-48">
-            {canShare && (
-              <form action={sendProposal}>
-                <input name="proposalId" type="hidden" value={proposal.id} />
-                <button className="button-primary text-sm" type="submit">
-                  Send to client
-                </button>
-              </form>
-            )}
-            {canApprove && (
+          <div className="flex flex-wrap gap-2">
+            {canAnswer && (
               <form action={approveProposal}>
-                <input name="proposalId" type="hidden" value={proposal.id} />
-                <button
-                  className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                  type="submit"
-                >
+                <input type="hidden" name="proposalId" value={proposal.id} />
+                <button type="submit" className={BTN_PRIMARY}>
                   Client approved
                 </button>
               </form>
             )}
-            {canRequestChanges && (
+            {proposal.status === "SENT" && (
               <form action={requestProposalRevision}>
-                <input name="proposalId" type="hidden" value={proposal.id} />
-                <button className="button-secondary text-sm" type="submit">
+                <input type="hidden" name="proposalId" value={proposal.id} />
+                <button type="submit" className={BTN_QUIET}>
                   Client wants changes
                 </button>
               </form>
             )}
+            {proposal.status === "APPROVED" && bonAppetitId && (
+              <Link href={`/menu-cards/${bonAppetitId}`} className={BTN_PRIMARY}>
+                Open the Bon Appetit
+              </Link>
+            )}
           </div>
         </div>
-      </section>
 
-      {/* Client review link */}
-      {proposal.shareToken && (
-        <section className="panel p-6 sm:p-8">
-          <ShareLinkBox
-            token={proposal.shareToken}
-            proposalId={proposal.id}
-            clientHasEmail={!!client.email}
-          />
-        </section>
-      )}
-
-      {/* Client's response from the review link */}
-      {proposal.clientSubmittedAt && (
-        <section
-          className={`panel p-6 sm:p-8 border ${
-            proposal.clientApproved ? "border-emerald-200" : "border-amber-200"
-          }`}
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge
-              label={proposal.clientApproved ? "Client approved" : "Client requested changes"}
-            />
-            <span className="text-xs text-slate-400">
-              submitted {formatDateShort(proposal.clientSubmittedAt)}
-            </span>
-          </div>
-
-          {proposal.clientComment && (
-            <div className="mt-4 rounded-lg bg-slate-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                Client comment
-              </p>
-              <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700">
-                {proposal.clientComment}
-              </p>
-            </div>
-          )}
-
-          {(() => {
-            const removed = proposal.recipes.filter((r) => r.clientRemoved);
-            if (removed.length === 0) {
-              return (
-                <p className="mt-4 text-sm text-slate-500">
-                  The client didn&apos;t remove any dishes.
+        {answered && (proposal.clientComment || removed.length > 0) && (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {proposal.clientComment && (
+              <div className="rounded-xl bg-stone-50 px-4 py-3">
+                <p className="text-xs font-medium text-stone-500">{first}&apos;s note</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-stone-800">{proposal.clientComment}</p>
+              </div>
+            )}
+            {removed.length > 0 && (
+              <div className="rounded-xl bg-stone-50 px-4 py-3">
+                <p className="text-xs font-medium text-stone-500">
+                  {first} skipped {removed.length} {removed.length === 1 ? "dish" : "dishes"}
                 </p>
-              );
-            }
-            return (
-              <div className="mt-4">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Dishes the client removed
-                </p>
-                <ul className="mt-1 space-y-1">
+                <ul className="mt-1 space-y-0.5">
                   {removed.map((r) => (
-                    <li key={r.id} className="text-sm text-slate-700 line-through decoration-red-400">
-                      {r.recipe.title}
+                    <li key={r.id} className="text-sm text-stone-700 line-through decoration-rose-400">
+                      {r.title}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-2 text-xs text-slate-400">
-                  These are left off the Bon Appetit when you mark the menu approved.
-                </p>
+                <p className="mt-1.5 text-xs text-stone-500">Skipped dishes are left off the Bon Appetit.</p>
               </div>
-            );
-          })()}
-
-          <p className="mt-4 text-xs text-slate-400">
-            Use <strong>Client approved</strong> to finalize, or <strong>Client wants changes</strong> to send a second pass.
-          </p>
-        </section>
-      )}
-
-      {/* Recipe management or recipe list */}
-      <section className="panel p-6 sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="section-title">
-            Menu ({proposal.recipes.length} {proposal.recipes.length === 1 ? "recipe" : "recipes"})
-          </h2>
-          {!showBuilder && (
-            <Link href={`/proposals/${proposal.id}?edit=1`} className="button-secondary text-sm">
-              Edit menu
-            </Link>
-          )}
-        </div>
-
-        {isEditing && isApproved && (
-          <p className="mt-2 text-xs text-amber-600">
-            You&apos;re editing an approved menu.{" "}
-            <Link href={`/proposals/${proposal.id}`} className="font-semibold underline">
-              Done
-            </Link>
-          </p>
-        )}
-
-        {showBuilder ? (
-        <div className="mt-4">
-          <ProposalRecipeManager
-            proposalId={proposal.id}
-            currentRecipes={proposal.recipes.map((item) => ({
-              id: item.id,
-              recipeId: item.recipeId,
-              courseLabel: item.courseLabel,
-              recipe: {
-                title: item.recipe.title,
-                description: item.recipe.description,
-                ingredientsText: item.recipe.ingredientsText,
-                instructionsText: item.recipe.instructionsText,
-                prepMinutes: item.recipe.prepMinutes,
-                cookMinutes: item.recipe.cookMinutes,
-                servings: item.recipe.servings,
-                cuisine: item.recipe.cuisine,
-                imageUrl: item.recipe.imageUrl,
-              },
-            }))}
-            allRecipes={recipesForManager}
-            dishPlan={parseDishQuota(client.dishQuota)}
-          />
-        </div>
-        ) : (
-          <div className="mt-4">
-            {proposal.recipes.length === 0 ? (
-              <p className="text-sm text-slate-500">No dishes on this menu yet.</p>
-            ) : (
-              (() => {
-                let lastCategory: string | null = null;
-                return proposal.recipes.map((item, index) => {
-                  const showHeader = item.courseLabel !== lastCategory && item.courseLabel;
-                  lastCategory = item.courseLabel;
-                  return (
-                    <div key={item.id}>
-                      {showHeader && (
-                        <div className="mt-6 mb-2 text-xs font-bold uppercase tracking-widest text-[var(--accent-strong)] first:mt-0">
-                          {item.courseLabel}
-                        </div>
-                      )}
-                      <div className="mt-3 flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 shadow-sm">
-                        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-white">
-                          {index + 1}
-                        </span>
-                        <p className="text-sm font-semibold leading-snug text-slate-900">
-                          {item.recipe.title}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                });
-              })()
             )}
           </div>
         )}
+        {answered && !proposal.clientComment && removed.length === 0 && (
+          <p className="mt-3 text-xs text-stone-500">No note, and no dishes skipped.</p>
+        )}
+
+        {proposal.status === "SENT" && proposal.shareToken && (
+          <div className="mt-4">
+            <ShareLinkBox token={proposal.shareToken} proposalId={proposal.id} clientHasEmail={!!client.email} />
+          </div>
+        )}
       </section>
-    </div>
+    );
+  }
+
+  const favoriteCount = [...ctx.timesKept.keys()].filter((id) => !ctx.menuRecipeIds.has(id)).length;
+
+  return (
+    <MenuPlanner
+      proposalId={proposal.id}
+      status={proposal.status}
+      editable={editable}
+      shareToken={proposal.shareToken}
+      firstName={first}
+      clientEmail={client.email}
+      crumb={crumb}
+      dateLabel={format(cookDate.scheduledFor, "EEEE, MMMM d")}
+      statusPanel={statusPanel}
+      quota={ctx.quota}
+      safety={safetyChips(client.exclusions, client.dietaryNotes)}
+      initialDishes={dishes}
+      initialResults={search.results}
+      lastMenuLabel={ctx.lastMenu ? shortDate(ctx.lastMenu.date) : null}
+      favoriteCount={favoriteCount}
+    />
   );
 }
