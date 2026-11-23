@@ -1,3 +1,14 @@
+import {
+  ChefHat,
+  CircleCheck,
+  ExternalLink,
+  FileDown,
+  FilePlus2,
+  Maximize2,
+  Pencil,
+  Send,
+  SquarePen,
+} from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
@@ -143,8 +154,8 @@ export default async function CookDateDetailPage({
   const menuDishes = menu?.recipes ?? [];
   const otherVersions = cookDate.proposals.filter((p) => p.id !== menu?.id);
   const openMenuLink = menu && (
-    <Link href={`/proposals/${menu.id}`} className="button-secondary">
-      Open menu
+    <Link href={`/proposals/${menu.id}`} aria-label="Edit the menu" data-tip="Edit the menu" className="button-icon">
+      <SquarePen aria-hidden="true" />
     </Link>
   );
   const menuBlock = menu ? (
@@ -213,13 +224,21 @@ export default async function CookDateDetailPage({
       }
       actions={
         menu ? (
-          <Link href={`/proposals/${menu.id}`} className={btn("proposed")}>
-            {progress.done.proposed ? "Open menu" : hasDishes ? "Send menu to client" : "Plan the menu"}
-          </Link>
+          progress.done.proposed ? (
+            openMenuLink
+          ) : (
+            <Link href={`/proposals/${menu.id}`} className={btn("proposed")}>
+              {hasDishes ? <Send aria-hidden="true" /> : <ChefHat aria-hidden="true" />}
+              {hasDishes ? "Send menu to client" : "Plan the menu"}
+            </Link>
+          )
         ) : (
           <form action={quickCreateProposal}>
             <input type="hidden" name="cookDateId" value={cookDate.id} />
-            <button className={btn("proposed")}>Plan the menu</button>
+            <button className={btn("proposed")}>
+              <ChefHat aria-hidden="true" />
+              Plan the menu
+            </button>
           </form>
         )
       }
@@ -236,7 +255,10 @@ export default async function CookDateDetailPage({
     menu && (
       <form action={approveProposal}>
         <input type="hidden" name="proposalId" value={menu.id} />
-        <button className={primary ? "button-primary" : "button-secondary"}>Client approved</button>
+        <button className={primary ? "button-primary" : "button-secondary"}>
+          <CircleCheck aria-hidden="true" />
+          Client approved
+        </button>
       </form>
     );
   if (progress.done.accepted) {
@@ -265,7 +287,8 @@ export default async function CookDateDetailPage({
     acceptedActions = (
       <>
         <Link href={`/proposals/${menu.id}`} className="button-primary">
-          Open menu
+          <SquarePen aria-hidden="true" />
+          Update the menu
         </Link>
         {approveForm(false)}
       </>
@@ -294,6 +317,7 @@ export default async function CookDateDetailPage({
       href={`/menu-cards?clientId=${cookDate.clientId}&cookDateId=${cookDate.id}`}
       className={bonAppetit ? "button-secondary" : btn("bonAppetit")}
     >
+      <FilePlus2 aria-hidden="true" />
       Make Bon Appetit
     </Link>
   );
@@ -322,9 +346,11 @@ export default async function CookDateDetailPage({
             href={`/api/menu-cards/${bonAppetit.id}/pdf`}
             target="_blank"
             rel="noopener noreferrer"
-            className="button-secondary text-sm"
+            aria-label="Open the PDF"
+            data-tip="PDF"
+            className="button-icon"
           >
-            PDF
+            <FileDown aria-hidden="true" />
           </a>
         </>
       }
@@ -370,8 +396,13 @@ export default async function CookDateDetailPage({
       }
       actions={
         approved || bonAppetit ? (
-          <Link href={`/cook-dates/${cookDate.id}/groceries`} className="button-secondary">
-            Full page
+          <Link
+            href={`/cook-dates/${cookDate.id}/groceries`}
+            aria-label="Open the grocery list on its own page"
+            data-tip="Full page"
+            className="button-icon"
+          >
+            <Maximize2 aria-hidden="true" />
           </Link>
         ) : null
       }
@@ -411,8 +442,15 @@ export default async function CookDateDetailPage({
         title={`${first} answered`}
         detail={`Answered ${formatDayShort(taste.submittedAt)}.`}
         actions={
-          <a href={`/taste/${taste.token}`} target="_blank" rel="noopener noreferrer" className="button-secondary">
-            Open {first}&apos;s page
+          <a
+            href={`/taste/${taste.token}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Open ${first}'s page`}
+            data-tip={`${first}'s page`}
+            className="button-icon"
+          >
+            <ExternalLink aria-hidden="true" />
           </a>
         }
       >
@@ -455,8 +493,15 @@ export default async function CookDateDetailPage({
         actions={
           <>
             {sendTaste("Send again", false)}
-            <a href={`/taste/${taste.token}`} target="_blank" rel="noopener noreferrer" className="button-secondary">
-              Open {first}&apos;s page
+            <a
+              href={`/taste/${taste.token}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Open ${first}'s page`}
+              data-tip={`${first}'s page`}
+              className="button-icon"
+            >
+              <ExternalLink aria-hidden="true" />
             </a>
           </>
         }
@@ -522,16 +567,18 @@ export default async function CookDateDetailPage({
           {invoice.status !== "PAID" && invoice.status !== "VOID" && (
             <SendToClientButton kind="invoice" id={invoice.id} clientEmail={client.email} variant="secondary" />
           )}
-          <Link href={`/invoices/${invoice.id}`} className="button-secondary">
-            Edit
+          <Link href={`/invoices/${invoice.id}`} aria-label="Edit the invoice" data-tip="Edit" className="button-icon">
+            <Pencil aria-hidden="true" />
           </Link>
           <a
             href={`/api/invoices/${invoice.id}/pdf`}
             target="_blank"
             rel="noopener noreferrer"
-            className="button-secondary text-sm"
+            aria-label="Open the PDF"
+            data-tip="PDF"
+            className="button-icon"
           >
-            PDF
+            <FileDown aria-hidden="true" />
           </a>
         </>
       }
@@ -549,7 +596,10 @@ export default async function CookDateDetailPage({
       detail={`${first} gets one invoice for all of ${monthLabel}. No ${monthLabel} invoice yet.`}
       actions={
         <form action={createMonthlyInvoice.bind(null, cookDate.clientId, monthKey)}>
-          <button className={btn("invoice")}>Create {monthName} invoice</button>
+          <button className={btn("invoice")}>
+            <FilePlus2 aria-hidden="true" />
+            Create {monthName} invoice
+          </button>
         </form>
       }
     />
@@ -563,7 +613,10 @@ export default async function CookDateDetailPage({
       }
       actions={
         <form action={createInvoiceForCookDate.bind(null, cookDate.id)}>
-          <button className={btn("invoice")}>Create invoice</button>
+          <button className={btn("invoice")}>
+            <FilePlus2 aria-hidden="true" />
+            Create invoice
+          </button>
         </form>
       }
     />

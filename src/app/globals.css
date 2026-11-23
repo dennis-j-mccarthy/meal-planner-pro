@@ -229,6 +229,68 @@ textarea {
     transform: none;
   }
 
+  /* Icons inside buttons: one size, never squeezed. */
+  .button-primary svg,
+  .button-secondary svg,
+  .button-icon svg {
+    width: 1.0625rem;
+    height: 1.0625rem;
+    flex-shrink: 0;
+  }
+
+  /* Icon-only button: a square in the secondary style. Always carries an
+     aria-label; data-tip shows the same words on hover/focus. */
+  .button-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-soft);
+    background: var(--surface-card);
+    color: var(--text-body);
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+  }
+
+  .button-icon:hover {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .button-icon:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .button-icon[data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    background: #1e293b;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1rem;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.12s;
+    z-index: 30;
+  }
+
+  .button-icon[data-tip]:hover::after,
+  .button-icon[data-tip]:focus-visible::after {
+    opacity: 1;
+  }
+
   /* Phones: every button and field is at least 44px tall. */
   @media (max-width: 767px) {
     .button-primary,
@@ -236,6 +298,11 @@ textarea {
     input.field,
     select.field {
       min-height: 2.75rem;
+    }
+
+    .button-icon {
+      width: 2.75rem;
+      height: 2.75rem;
     }
   }
 

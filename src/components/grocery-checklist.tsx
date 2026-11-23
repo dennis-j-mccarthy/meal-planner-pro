@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Copy, Printer } from "lucide-react";
 import { useState } from "react";
 import { setGroceryItemChecked, toggleGroceryItem } from "@/app/grocery-actions";
 
@@ -75,16 +76,20 @@ export function GroceryChecklist(props: Props) {
         <button
           type="button"
           onClick={copy}
-          className="button-secondary min-h-11 text-base"
+          aria-label={copied ? "Copied" : "Copy list"}
+          data-tip={copied ? "Copied" : "Copy list"}
+          className="button-icon"
         >
-          {copied ? "Copied" : "Copy list"}
+          {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
         </button>
         <button
           type="button"
           onClick={() => window.print()}
-          className="button-secondary min-h-11 text-base"
+          aria-label="Print"
+          data-tip="Print"
+          className="button-icon"
         >
-          Print
+          <Printer aria-hidden="true" />
         </button>
       </div>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { HandCoins } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { recordInvoicePayment } from "@/app/actions";
 import { PAYMENT_METHODS } from "@/lib/payment-methods";
@@ -52,6 +53,7 @@ export function RecordPaymentForm({
             : "button-secondary text-sm border-green-200 text-green-700 hover:bg-green-50"
         }
       >
+        <HandCoins aria-hidden="true" />
         Record payment
       </button>
     </form>

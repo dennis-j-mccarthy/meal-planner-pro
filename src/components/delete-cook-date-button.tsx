@@ -1,5 +1,7 @@
 "use client";
 
+import { Trash2 } from "lucide-react";
+
 export function DeleteCookDateButton({
   cookDateId,
   clientId,
@@ -30,10 +32,11 @@ export function DeleteCookDateButton({
       onClick={handleDelete}
       className={
         quiet
-          ? "inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-[var(--muted-fg)] hover:bg-red-50 hover:text-red-700"
+          ? "inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-[var(--muted-fg)] hover:bg-red-50 hover:text-red-700"
           : "button-secondary text-sm border-red-200 text-red-600 hover:bg-red-50"
       }
     >
+      <Trash2 aria-hidden="true" className="h-4 w-4" />
       Delete cook date
     </button>
   );

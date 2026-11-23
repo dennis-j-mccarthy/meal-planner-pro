@@ -1,5 +1,6 @@
 "use client";
 
+import { Send } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendBonAppetitToClientAction, sendInvoiceToClientAction } from "@/app/actions";
@@ -78,6 +79,7 @@ export function SendToClientButton({
           disabled={stage === "sending"}
           className="button-primary text-sm disabled:opacity-60"
         >
+          <Send aria-hidden="true" />
           {stage === "sending" ? "Sending…" : "Send"}
         </button>
         <button
@@ -99,6 +101,7 @@ export function SendToClientButton({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" onClick={() => setStage("confirm")} className={`${buttonClass} text-sm`}>
+        <Send aria-hidden="true" />
         {label}
       </button>
       {stage === "error" && <span className="text-xs text-red-600">Failed — {error}</span>}

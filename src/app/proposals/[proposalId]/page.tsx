@@ -1,3 +1,4 @@
+import { CalendarCheck, CircleCheck, MessageSquareText } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
@@ -162,6 +163,7 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
               <form action={approveProposal}>
                 <input type="hidden" name="proposalId" value={proposal.id} />
                 <button type="submit" className={BTN_PRIMARY}>
+                  <CircleCheck aria-hidden="true" />
                   Client approved
                 </button>
               </form>
@@ -170,13 +172,15 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
               <form action={requestProposalRevision}>
                 <input type="hidden" name="proposalId" value={proposal.id} />
                 <button type="submit" className={BTN_QUIET}>
+                  <MessageSquareText aria-hidden="true" />
                   Client wants changes
                 </button>
               </form>
             )}
             {proposal.status === "APPROVED" && bonAppetitId && (
-              <Link href={`/menu-cards/${bonAppetitId}`} className={BTN_PRIMARY}>
-                Open the Bon Appetit
+              <Link href={`/cook-dates/${proposal.cookDate.id}`} className={BTN_PRIMARY}>
+                <CalendarCheck aria-hidden="true" />
+                Back to the cook date
               </Link>
             )}
           </div>

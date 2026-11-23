@@ -1,5 +1,6 @@
 "use client";
 
+import { Eye, History, Plus, Send, Star, Undo2, WandSparkles } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { approveProposal, emailProposalLinkToClient, sendProposal } from "@/app/actions";
@@ -98,7 +99,6 @@ export function MenuPlanner(props: MenuPlannerProps) {
     proposalId,
     status,
     editable,
-    shareToken,
     firstName,
     clientEmail,
     quota,
@@ -559,19 +559,14 @@ export function MenuPlanner(props: MenuPlannerProps) {
 
   // ---------------------------------------------------------- render
   const sendLabel = status === "REVISIONS_REQUESTED" ? "Send updated menu" : "Send menu to client";
-  // After "changes requested" the live link shows the client a thank-you, so
-  // preview the current draft in a modal instead.
-  const previewButton =
-    shareToken && status !== "REVISIONS_REQUESTED" ? (
-      <a href={`/review/${shareToken}`} target="_blank" rel="noopener noreferrer" className={BTN_QUIET}>
-        Preview what the client sees
-        <span className="sr-only">(opens in a new tab)</span>
-      </a>
-    ) : (
-      <button type="button" onClick={() => setPreviewOpen(true)} className={BTN_QUIET}>
-        Preview what the client sees
-      </button>
-    );
+  // Always the preview copy of the client's page: its buttons work but save
+  // nothing. (The live review link would let a tap here answer for the client.)
+  const previewButton = (
+    <button type="button" onClick={() => setPreviewOpen(true)} className={BTN_QUIET}>
+      <Eye aria-hidden="true" />
+      Preview what the client sees
+    </button>
+  );
 
   const pastePanel = (
     <div>
@@ -628,6 +623,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
                 title={props.lastMenuLabel ? `Copy the ${props.lastMenuLabel} menu` : `No earlier menu for ${firstName} yet`}
                 className={BTN_QUIET}
               >
+                <History aria-hidden="true" />
                 {draftBusy === "last" ? "Copying…" : "Start from last menu"}
               </button>
               <button
@@ -637,6 +633,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
                 title={props.favoriteCount > 0 ? `Dishes ${firstName} kept before, most-kept first` : `${firstName} has no kept dishes yet`}
                 className={BTN_QUIET}
               >
+                <Star aria-hidden="true" />
                 {draftBusy === "fav" ? "Adding…" : "Their favorites"}
               </button>
               <button
@@ -652,6 +649,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
                 }
                 className={BTN_QUIET}
               >
+                <WandSparkles aria-hidden="true" />
                 {draftBusy === "fill" ? "Filling…" : "Fill open slots"}
               </button>
             </div>
@@ -701,7 +699,8 @@ export function MenuPlanner(props: MenuPlannerProps) {
                       : "Use a button above to draft it, or pick dishes one by one."}
                   </p>
                   <button type="button" onClick={() => openFinder(null)} className={`${BTN_PRIMARY} mt-4 md:hidden`}>
-                    + Add a dish
+                    <Plus aria-hidden="true" />
+                  Add a dish
                   </button>
                 </>
               )}
@@ -798,7 +797,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
               onClick={() => openFinder(null)}
               className={`flex min-h-12 w-full items-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 px-4 text-sm font-medium text-slate-500 hover:border-[var(--accent)] hover:text-[var(--accent-strong)] ${FOCUS}`}
             >
-              <span aria-hidden="true">+</span> Add a dish
+              <Plus aria-hidden="true" className="h-4 w-4" /> Add a dish
             </button>
           )}
 
@@ -887,7 +886,8 @@ export function MenuPlanner(props: MenuPlannerProps) {
             {send === "idle" ? (
               <div className="flex w-full flex-wrap gap-2 sm:w-auto">
                 <button type="button" onClick={() => openFinder(finder.filters.category)} className={`${BTN_QUIET} md:hidden`}>
-                  + Add a dish
+                  <Plus aria-hidden="true" />
+                  Add a dish
                 </button>
                 {previewButton}
                 <button
@@ -902,6 +902,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
                   }}
                   className={`${BTN_PRIMARY} ${dishCount === 0 ? "opacity-50" : ""}`}
                 >
+                  <Send aria-hidden="true" />
                   {sendLabel}
                 </button>
               </div>
@@ -916,6 +917,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
                   )}
                 </p>
                 <button type="button" onClick={doSend} disabled={send === "sending"} className={BTN_PRIMARY}>
+                  <Send aria-hidden="true" />
                   {send === "sending" ? "Sending…" : clientEmail ? "Send" : "Mark as sent"}
                 </button>
                 <button type="button" onClick={() => setSend("idle")} disabled={send === "sending"} className={BTN_QUIET}>
@@ -936,8 +938,9 @@ export function MenuPlanner(props: MenuPlannerProps) {
               <button
                 type="button"
                 onClick={toast.undo}
-                className="min-h-11 shrink-0 rounded-md px-2 font-semibold text-amber-300 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 sm:min-h-8"
+                className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-md px-2 font-semibold text-amber-300 underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 sm:min-h-8"
               >
+                <Undo2 aria-hidden="true" className="h-4 w-4" />
                 Undo
               </button>
             )}

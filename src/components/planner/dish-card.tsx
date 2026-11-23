@@ -1,5 +1,6 @@
 "use client";
 
+import { Shuffle, X } from "lucide-react";
 import { OTHER_SLOT, type PlannerDish, type RecipeHit } from "./planner-logic";
 import { CARD, FOCUS, ICON_BTN } from "./ui";
 
@@ -117,8 +118,9 @@ export function DishCard({
               disabled={pending}
               aria-expanded={!!swap}
               aria-label={`Swap ${dish.title}`}
-              className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 sm:min-h-9 ${FOCUS}`}
+              className={`inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 sm:min-h-9 ${FOCUS}`}
             >
+              <Shuffle aria-hidden="true" className="h-4 w-4" />
               Swap
             </button>
             <button
@@ -128,9 +130,7 @@ export function DishCard({
               aria-label={`Remove ${dish.title}`}
               className={`${ICON_BTN} hover:bg-rose-50 hover:text-rose-600`}
             >
-              <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-              </svg>
+              <X aria-hidden="true" className="h-4 w-4" />
             </button>
           </div>
         )}

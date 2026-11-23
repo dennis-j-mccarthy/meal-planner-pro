@@ -1,5 +1,6 @@
 "use client";
 
+import { Camera, Check, Pencil, ShoppingBag, Undo2 } from "lucide-react";
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveGroceriesBought, setGroceriesDone } from "@/app/taste-actions";
@@ -131,6 +132,7 @@ export function GroceriesBought({
           onClick={() => setEditing(true)}
           className={`${primary ? "button-primary" : "button-secondary"} shrink-0`}
         >
+          <ShoppingBag aria-hidden="true" />
           Groceries bought
         </button>
       </div>
@@ -154,8 +156,14 @@ export function GroceriesBought({
             </span>
           </p>
           <div className="flex shrink-0 flex-wrap gap-2">
-            <button type="button" onClick={() => setEditing(true)} className="button-secondary">
-              Edit
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              aria-label="Edit amount and receipts"
+              data-tip="Edit"
+              className="button-icon"
+            >
+              <Pencil aria-hidden="true" />
             </button>
             <button
               type="button"
@@ -163,9 +171,11 @@ export function GroceriesBought({
                 await setGroceriesDone(cookDateId, false);
                 router.refresh();
               }}
-              className="button-secondary"
+              aria-label="Undo bought"
+              data-tip="Undo bought"
+              className="button-icon"
             >
-              Undo bought
+              <Undo2 aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -215,6 +225,7 @@ export function GroceriesBought({
             onChange={(e) => addPhotos(e.target.files)}
           />
           <label htmlFor={`receipt-${cookDateId}`} className="button-secondary cursor-pointer">
+            <Camera aria-hidden="true" />
             {uploading > 0 ? "Uploading…" : receipts.length > 0 ? "Add another photo" : "Add receipt photo"}
           </label>
         </div>
@@ -224,6 +235,7 @@ export function GroceriesBought({
 
       <div className="flex flex-wrap gap-2 border-t border-[var(--line)] pt-4">
         <button type="button" onClick={save} disabled={saving || uploading > 0} className="button-primary disabled:opacity-60">
+          <Check aria-hidden="true" />
           {saving ? "Saving…" : "Save"}
         </button>
         <button

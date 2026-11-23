@@ -1,5 +1,6 @@
 "use client";
 
+import { Pencil } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -65,6 +66,7 @@ export function CookDateHeader({
           }}
           className="button-secondary shrink-0 self-start"
         >
+          <Pencil aria-hidden="true" />
           Edit
         </button>
       </header>
