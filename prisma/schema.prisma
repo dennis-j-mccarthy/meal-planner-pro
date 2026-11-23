@@ -83,6 +83,8 @@ model Kitchen {
   invoices      Invoice[]
   menuCards     MenuCard[]
   newsletters   Newsletter[]
+  // Beth's own address: copied on everything sent to clients.
+  contactEmail    String?
 }
 
 model Client {
@@ -112,6 +114,10 @@ model Client {
   invoices       Invoice[]
   menuCards      MenuCard[]
 
+  // Billing: ONE_OFF (per cook date), MONTHLY_AHEAD or MONTHLY_AFTER.
+  billingMode     String        @default("ONE_OFF")
+  defaultRate     Float?
+  travelFee       Float?
   @@index([kitchenId, lastName, firstName])
 }
 
@@ -165,6 +171,8 @@ model CookDate {
   finalizedProposal   Proposal?      @relation("FinalizedProposal", fields: [finalizedProposalId], references: [id], onDelete: SetNull)
   menuCards           MenuCard[]
 
+  // JSON array of grocery-list item keys Beth has checked off.
+  groceryChecked  String?
   @@index([kitchenId, scheduledFor])
   @@index([clientId, scheduledFor])
 }
@@ -234,6 +242,14 @@ model Invoice {
   client          Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   lineItems       InvoiceLineItem[]
 
+  cookDateId      String?
+  // YYYY-MM for a monthly invoice.
+  billingPeriod   String?
+  paidMethod      String?
+  paidAmount      Float?
+  paidNote        String?
+  // Private link for the client pay page.
+  payToken        String?       @unique
   @@index([kitchenId, invoiceDate])
   @@index([clientId])
 }
@@ -266,6 +282,8 @@ model MenuCard {
   cookDate    CookDate?        @relation(fields: [cookDateId], references: [id], onDelete: SetNull)
   recipes     MenuCardRecipe[]
 
+  // "EMAIL" when made from an email to menu@.
+  source          String?
   @@index([kitchenId, menuDate])
   @@index([clientId])
   @@index([cookDateId])
