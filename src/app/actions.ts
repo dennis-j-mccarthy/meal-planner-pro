@@ -25,6 +25,7 @@ import { sendBonAppetitToClient, sendInvoiceToClient, type ClientSendResult } fr
 import { recordPayment } from "@/lib/invoice-payment";
 import { PAYMENT_METHODS, normalizePaymentMethod } from "@/lib/payment-methods";
 import { BILLING_MODES } from "@/lib/cook-date-progress";
+import { bonAppetitNutrition } from "@/lib/recipe-facts";
 import { format } from "date-fns";
 
 function requiredText(formData: FormData, key: string) {
@@ -1670,6 +1671,7 @@ async function buildAndSendBonAppetit(
   const clientName = `${menuCard.client.firstName} ${menuCard.client.lastName}`;
 
   const html = buildBonAppetitHtml({
+    ...(await bonAppetitNutrition(menuCard.id, kitchenId)),
     clientFirstNames: menuCard.client.firstName,
     menuDate: dateLong,
     isCoaching: menuCard.isCoaching,
