@@ -1,11 +1,12 @@
 // "Yes, Chef!" wordmark: "Yes" in a green script, ", Chef!" in the serif.
 export function Logo({ size = "md" }: { size?: "md" | "lg" }) {
+  // md = app header (text-2xl), lg = marketing hero.
   const big = size === "lg";
   return (
     <span
       role="img"
       aria-label="Yes, Chef!"
-      className={`inline-flex items-baseline whitespace-nowrap leading-none ${big ? "text-5xl sm:text-6xl" : "text-xl"}`}
+      className={`inline-flex items-baseline whitespace-nowrap leading-none ${big ? "text-5xl sm:text-6xl" : "text-2xl"}`}
     >
       <span aria-hidden className="font-script" style={{ color: "#2f7d4f", fontSize: "1.45em", marginRight: "0.03em" }}>
         Yes

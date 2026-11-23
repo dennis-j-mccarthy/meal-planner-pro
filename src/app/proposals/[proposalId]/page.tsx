@@ -19,7 +19,7 @@ type ProposalDetailPageProps = {
   params: Promise<{ proposalId: string }>;
 };
 
-const LINK = `rounded-sm text-stone-700 underline-offset-2 hover:text-stone-900 hover:underline ${FOCUS}`;
+const LINK = `rounded-sm text-slate-700 underline-offset-2 hover:text-slate-900 hover:underline ${FOCUS}`;
 
 export default async function ProposalDetailPage({ params }: ProposalDetailPageProps) {
   const { proposalId } = await params;
@@ -81,6 +81,10 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
 
   const crumb = (
     <>
+      <Link href="/proposals" className={LINK}>
+        Meal Planner
+      </Link>
+      <span aria-hidden="true"> › </span>
       <Link href={`/clients/${client.id}`} className={LINK}>
         {client.firstName} {client.lastName}
       </Link>
@@ -136,12 +140,12 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
         break;
       case "ARCHIVED":
         pill = "Replaced";
-        tone = "bg-stone-100 text-stone-600";
+        tone = "bg-slate-100 text-slate-600";
         line = "Another menu was approved for this cook date, so this one is kept for history only.";
         break;
       default:
         pill = answered ? (proposal.clientApproved ? `${first} approved` : `${first} wants changes`) : "Draft";
-        tone = "bg-stone-100 text-stone-600";
+        tone = "bg-slate-100 text-slate-600";
         line = "";
     }
 
@@ -151,7 +155,7 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${tone}`}>{pill}</span>
-            {line && <p className="mt-2 text-sm text-stone-600">{line}</p>}
+            {line && <p className="mt-2 text-sm text-slate-600">{line}</p>}
           </div>
           <div className="flex flex-wrap gap-2">
             {canAnswer && (
@@ -181,30 +185,30 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
         {answered && (proposal.clientComment || removed.length > 0) && (
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {proposal.clientComment && (
-              <div className="rounded-xl bg-stone-50 px-4 py-3">
-                <p className="text-xs font-medium text-stone-500">{first}&apos;s note</p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-stone-800">{proposal.clientComment}</p>
+              <div className="rounded-xl bg-slate-50 px-4 py-3">
+                <p className="text-xs font-medium text-slate-500">{first}&apos;s note</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{proposal.clientComment}</p>
               </div>
             )}
             {removed.length > 0 && (
-              <div className="rounded-xl bg-stone-50 px-4 py-3">
-                <p className="text-xs font-medium text-stone-500">
+              <div className="rounded-xl bg-slate-50 px-4 py-3">
+                <p className="text-xs font-medium text-slate-500">
                   {first} skipped {removed.length} {removed.length === 1 ? "dish" : "dishes"}
                 </p>
                 <ul className="mt-1 space-y-0.5">
                   {removed.map((r) => (
-                    <li key={r.id} className="text-sm text-stone-700 line-through decoration-rose-400">
+                    <li key={r.id} className="text-sm text-slate-700 line-through decoration-rose-400">
                       {r.title}
                     </li>
                   ))}
                 </ul>
-                <p className="mt-1.5 text-xs text-stone-500">Skipped dishes are left off the Bon Appetit.</p>
+                <p className="mt-1.5 text-xs text-slate-500">Skipped dishes are left off the Bon Appetit.</p>
               </div>
             )}
           </div>
         )}
         {answered && !proposal.clientComment && removed.length === 0 && (
-          <p className="mt-3 text-xs text-stone-500">No note, and no dishes skipped.</p>
+          <p className="mt-3 text-xs text-slate-500">No note, and no dishes skipped.</p>
         )}
 
         {proposal.status === "SENT" && proposal.shareToken && (

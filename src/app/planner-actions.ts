@@ -386,6 +386,49 @@ export async function setDishCategory(
   return { ok: true };
 }
 
+/**
+ * Drag and drop: save the menu's dish order (every dish id, in order) and,
+ * optionally, a new course for the dish that was moved (null = Other).
+ * The ids must be exactly this menu's dishes; positions are renumbered 1..n.
+ */
+export async function reorderDishes(
+  proposalId: string,
+  orderedIds: string[],
+  moved?: { id: string; courseLabel: string | null } | null,
+): Promise<Result<object>> {
+  const kitchen = await requireKitchen();
+  const ctx = await editableContext(kitchen.id, proposalId);
+  if ("ok" in ctx) return ctx;
+  if (!Array.isArray(orderedIds) || orderedIds.length > 500) return fail("Couldn't save the new order.");
+  const ids = orderedIds.map(id);
+  if (ids.some((x) => x === null) || new Set(ids).size !== ids.length) return fail("Couldn't save the new order.");
+
+  const rows = await prisma.proposalRecipe.findMany({
+    where: { proposalId: ctx.proposal.id, proposal: { kitchenId: kitchen.id } },
+    select: { id: true },
+  });
+  const current = new Set(rows.map((r) => r.id));
+  if (current.size !== ids.length || ids.some((x) => !current.has(x as string))) {
+    return fail("The menu changed in another window. Reload the page and try again.");
+  }
+
+  const movedId = moved ? id(moved.id) : null;
+  if (moved && (!movedId || !current.has(movedId))) return fail("Dish not found.");
+
+  await prisma.$transaction(
+    (ids as string[]).map((dishId, i) =>
+      prisma.proposalRecipe.updateMany({
+        where: { id: dishId, proposalId: ctx.proposal.id, proposal: { kitchenId: kitchen.id } },
+        data:
+          dishId === movedId
+            ? { position: i + 1, courseLabel: category(moved?.courseLabel ?? null) }
+            : { position: i + 1 },
+      }),
+    ),
+  );
+  return { ok: true };
+}
+
 /** Three safe alternatives from the same course as this dish. */
 export async function suggestSwaps(proposalRecipeId: string): Promise<Result<{ options: RecipeHit[] }>> {
   const kitchen = await requireKitchen();

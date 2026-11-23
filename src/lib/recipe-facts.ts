@@ -9,6 +9,19 @@
 // publicly callable action. Every query is scoped to the kitchen passed in.
 import { ProposalStatus } from "@/generated/prisma/client";
 import { generateRecipeFactsJson } from "@/lib/gemini";
+import { generateRecipeFactsClaude } from "@/lib/recipe-facts-claude";
+
+// Claude first (Gemini prepaid credits can run out), Gemini as the fallback.
+const generateFacts: typeof generateRecipeFactsJson = async (input) => {
+  if (process.env.ANTHROPIC_API_KEY) {
+    try {
+      return await generateRecipeFactsClaude(input);
+    } catch (e) {
+      console.warn("[recipe-facts] Claude failed, trying Gemini:", e instanceof Error ? e.message : e);
+    }
+  }
+  return generateRecipeFactsJson(input);
+};
 import { prisma } from "@/lib/prisma";
 import {
   ingredientsDisplayText,
@@ -137,7 +150,7 @@ export async function ensureRecipeFacts(
     const { r, ingredients, nutrition, needIngredients, needNutrition } = job;
 
     try {
-      const raw = await generateRecipeFactsJson({
+      const raw = await generateFacts({
         title: r.title,
         description: r.description,
         ingredientsText: needIngredients

@@ -3,7 +3,7 @@
 import { useRef, useState, type RefObject } from "react";
 import { searchRecipesForPlanner } from "@/app/planner-actions";
 import type { PlannerFilters, RecipeHit } from "./planner-logic";
-import { BTN_PRIMARY, CARD, FOCUS } from "./ui";
+import { BTN_PRIMARY, FOCUS } from "./ui";
 
 const DEFAULT_FILTERS: PlannerFilters = { safeOnly: true, notRecent: true, category: null };
 
@@ -85,7 +85,7 @@ function Chip({
       className={`inline-flex min-h-11 items-center gap-1 rounded-full border px-3 text-xs font-medium transition sm:min-h-8 ${FOCUS} ${
         active
           ? "border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-strong)]"
-          : "border-stone-200 bg-white text-stone-600 hover:border-stone-300"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
       }`}
     >
       {active && (
@@ -112,6 +112,7 @@ export function Finder({
   inputRef,
   onClose,
   paste,
+  drag,
 }: {
   finder: FinderState;
   firstName: string;
@@ -121,6 +122,11 @@ export function Finder({
   inputRef: RefObject<HTMLInputElement | null>;
   onClose: () => void;
   paste: React.ReactNode;
+  /** Desktop only: drag a result onto the menu. */
+  drag?: {
+    onDragStart: (e: React.DragEvent<HTMLElement>, hit: RecipeHit) => void;
+    onDragEnd: (e: React.DragEvent<HTMLElement>) => void;
+  };
 }) {
   const visible = finder.results.filter((r) => !onMenu.has(r.id));
   const hidden = finder.hidden.filter((r) => !onMenu.has(r.id));
@@ -129,13 +135,16 @@ export function Finder({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-sm font-semibold text-stone-900">
-          {finder.filters.category ? `Find ${finder.filters.category.toLowerCase()}` : "Find a dish"}
-        </h2>
+        <div>
+          <h2 className="text-base font-bold text-slate-900">
+            {finder.filters.category ? `Find ${finder.filters.category.toLowerCase()}` : "Recipes"}
+          </h2>
+          {drag && <p className="text-xs text-slate-500">Drag a recipe onto the menu, or tap +.</p>}
+        </div>
         <button
           type="button"
           onClick={onClose}
-          className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-stone-500 hover:bg-stone-100 lg:hidden ${FOCUS}`}
+          className={`inline-flex min-h-11 items-center rounded-lg px-3 text-sm font-medium text-slate-500 hover:bg-slate-100 md:hidden ${FOCUS}`}
         >
           Done
         </button>
@@ -145,7 +154,7 @@ export function Finder({
         Search recipes
       </label>
       <div className="relative mt-3">
-        <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+        <svg aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.2-5.2M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
         </svg>
         <input
@@ -165,10 +174,10 @@ export function Finder({
             }
           }}
           placeholder="Search title, ingredient, tag…"
-          className={`h-11 w-full rounded-xl border border-stone-200 bg-white pl-9 pr-3 text-sm text-stone-900 placeholder:text-stone-400 focus:border-[var(--accent)] ${FOCUS}`}
+          className={`h-11 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-900 placeholder:text-slate-400 focus:border-[var(--accent)] ${FOCUS}`}
         />
       </div>
-      <p className="mt-1.5 text-xs text-stone-500">Enter adds the top result.</p>
+      <p className="mt-1.5 text-xs text-slate-500">Enter adds the top result.</p>
 
       <div className="mt-3 flex flex-wrap gap-1.5" role="group" aria-label="Filters">
         <Chip active={finder.filters.safeOnly} onClick={finder.toggleSafe}>
@@ -190,7 +199,7 @@ export function Finder({
         ))}
       </div>
 
-      <div className="mt-3 min-h-0 flex-1 overflow-y-auto lg:max-h-[calc(100vh-18rem)]" aria-busy={finder.loading}>
+      <div className="mt-3 min-h-0 flex-1 overflow-y-auto md:max-h-[calc(100vh-22rem)]" aria-busy={finder.loading}>
         <p className="sr-only" aria-live="polite">
           {finder.loading ? "Searching" : `${visible.length} results`}
         </p>
@@ -204,10 +213,16 @@ export function Finder({
         )}
         <ul className={`space-y-1.5 transition-opacity ${finder.loading ? "opacity-60" : ""}`}>
           {visible.map((hit, i) => (
-            <li key={hit.id}>
-              <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 ${i === 0 && searching ? "border-[var(--accent)] bg-[var(--accent-light)]/40" : "border-stone-200 bg-white"}`}>
+            <li
+              key={hit.id}
+              draggable={!!drag}
+              onDragStart={drag ? (e) => drag.onDragStart(e, hit) : undefined}
+              onDragEnd={drag?.onDragEnd}
+              className={drag ? "cursor-grab active:cursor-grabbing" : undefined}
+            >
+              <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 transition hover:border-[var(--accent)] ${i === 0 && searching ? "border-[var(--accent)] bg-[var(--accent-light)]/40" : "border-slate-200 bg-white"}`}>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-stone-900">
+                  <p className="truncate text-sm font-medium text-slate-900">
                     {hit.starred && (
                       <span aria-label="Starred" className="mr-1 text-amber-500">
                         ★
@@ -215,9 +230,9 @@ export function Finder({
                     )}
                     {hit.title}
                   </p>
-                  {hit.description && <p className="truncate text-xs text-stone-500">{hit.description}</p>}
+                  {hit.description && <p className="truncate text-xs text-slate-500">{hit.description}</p>}
                   {(hit.lastServedLabel || hit.timesKept > 1) && (
-                    <p className="mt-0.5 text-xs text-stone-500">
+                    <p className="mt-0.5 text-xs text-slate-500">
                       {hit.lastServedLabel && <>Served to {firstName} {hit.lastServedLabel}</>}
                       {hit.lastServedLabel && hit.timesKept > 1 && " · "}
                       {hit.timesKept > 1 && <>Kept {hit.timesKept}×</>}
@@ -240,7 +255,7 @@ export function Finder({
         </ul>
 
         {!finder.loading && visible.length === 0 && !finder.error && (
-          <p className="py-6 text-center text-sm text-stone-500">
+          <p className="py-6 text-center text-sm text-slate-500">
             {searching
               ? "No matches."
               : finder.filters.category
@@ -251,13 +266,13 @@ export function Finder({
 
         {searching && hidden.length > 0 && (
           <div className="mt-4">
-            <p className="text-xs font-medium text-stone-500">Hidden by filters</p>
+            <p className="text-xs font-medium text-slate-500">Hidden by filters</p>
             <ul className="mt-1.5 space-y-1.5">
               {hidden.map((hit) => (
-                <li key={hit.id} className={`${CARD} flex items-center gap-2 px-3 py-2 opacity-70`}>
+                <li key={hit.id} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 opacity-70">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-stone-600">{hit.title}</p>
-                    <p className={`text-xs ${hit.conflict && finder.filters.safeOnly ? "text-amber-700" : "text-stone-500"}`}>
+                    <p className="truncate text-sm text-slate-600">{hit.title}</p>
+                    <p className={`text-xs ${hit.conflict && finder.filters.safeOnly ? "text-amber-700" : "text-slate-500"}`}>
                       {hiddenReason(hit, finder.filters)}
                     </p>
                   </div>
@@ -265,7 +280,7 @@ export function Finder({
                     type="button"
                     onClick={() => onAdd(hit)}
                     aria-label={`Add ${hit.title} anyway`}
-                    className={`min-h-11 shrink-0 rounded-lg px-2 text-xs font-medium text-stone-500 underline-offset-2 hover:text-stone-800 hover:underline sm:min-h-8 ${FOCUS}`}
+                    className={`min-h-11 shrink-0 rounded-lg px-2 text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-800 hover:underline sm:min-h-8 ${FOCUS}`}
                   >
                     Add anyway
                   </button>
@@ -276,7 +291,7 @@ export function Finder({
         )}
       </div>
 
-      <div className="mt-3 border-t border-stone-200 pt-3">{paste}</div>
+      <div className="mt-3 border-t border-slate-200 pt-3">{paste}</div>
     </div>
   );
 }

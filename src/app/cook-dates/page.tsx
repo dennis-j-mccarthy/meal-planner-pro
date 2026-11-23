@@ -39,7 +39,7 @@ export default async function CookDatesPage({
     .slice(0, 20);
 
   return (
-    <div className="space-y-10 fade-up">
+    <div className="space-y-8 fade-up">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="page-title">Calendar</h1>
@@ -73,27 +73,26 @@ export default async function CookDatesPage({
         <section aria-labelledby="upcoming">
           <h2 id="upcoming" className="section-title">
             Upcoming
+            <span className="ml-2 text-sm font-normal text-slate-500">{upcoming.length}</span>
           </h2>
           {upcoming.length === 0 ? (
             <p className="panel mt-4 px-5 py-8 text-center text-sm muted">
               No upcoming cook dates.
             </p>
           ) : (
-            <ul className="panel mt-4 divide-y divide-[var(--line)]">
+            <ul className="mt-4 grid gap-3 md:grid-cols-2">
               {upcoming.map((cd) => (
                 <li key={cd.id}>
                   <Link
                     href={`/cook-dates/${cd.id}`}
-                    className="flex min-h-14 items-center justify-between gap-4 px-5 py-4 hover:bg-[var(--surface-raised)]"
+                    className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[var(--accent)] hover:shadow-sm"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-ink">
+                      <p className="text-xs font-medium text-slate-500">
                         {formatWeekdayShort(cd.scheduledFor)}
-                        <span className="font-normal muted">
-                          {cd.startTimeLabel ? ` · ${cd.startTimeLabel}` : ""}
-                        </span>
+                        {cd.startTimeLabel ? ` · ${cd.startTimeLabel}` : ""}
                       </p>
-                      <p className="mt-1 truncate text-sm muted">
+                      <p className="mt-1 truncate text-base font-semibold text-slate-900">
                         {cd.client.firstName} {cd.client.lastName}
                       </p>
                     </div>

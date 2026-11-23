@@ -29,7 +29,7 @@ export function PreviewModal({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-stone-900/40 sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-900/40 sm:items-center sm:p-4" onClick={onClose}>
       <div
         role="dialog"
         aria-modal="true"
@@ -39,8 +39,8 @@ export function PreviewModal({
       >
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-stone-500">Preview · what {firstName} sees</p>
-            <h2 id="preview-title" className="mt-1 text-2xl text-stone-900" style={DISPLAY_FONT}>
+            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Preview · what {firstName} sees</p>
+            <h2 id="preview-title" className="mt-1 text-2xl text-slate-900" style={DISPLAY_FONT}>
               Your menu for {dateLabel}
             </h2>
           </div>
@@ -48,29 +48,29 @@ export function PreviewModal({
             ref={closeRef}
             type="button"
             onClick={onClose}
-            className={`min-h-11 rounded-lg px-3 text-sm font-medium text-stone-500 hover:bg-stone-100 ${FOCUS}`}
+            className={`min-h-11 rounded-lg px-3 text-sm font-medium text-slate-500 hover:bg-slate-100 ${FOCUS}`}
           >
             Close
           </button>
         </div>
         {groups.length === 0 ? (
-          <p className="mt-6 text-sm text-stone-500">No dishes yet.</p>
+          <p className="mt-6 text-sm text-slate-500">No dishes yet.</p>
         ) : (
           groups.map((g) => (
             <section key={g.name} className="mt-5">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--accent-strong)]">{g.name}</h3>
               <ul className="mt-2 space-y-2">
                 {g.dishes.map((d) => (
-                  <li key={d.id} className="rounded-xl border border-stone-200 bg-white px-4 py-3">
-                    <p className="font-semibold text-stone-900">{d.title}</p>
-                    {d.description && <p className="mt-0.5 line-clamp-2 text-sm text-stone-500">{d.description}</p>}
+                  <li key={d.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+                    <p className="font-semibold text-slate-900">{d.title}</p>
+                    {d.description && <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">{d.description}</p>}
                   </li>
                 ))}
               </ul>
             </section>
           ))
         )}
-        <p className="mt-6 text-xs text-stone-500">
+        <p className="mt-6 text-xs text-slate-500">
           Once you send it, {firstName} gets a link to remove anything they&apos;d skip, leave a note, and approve.
         </p>
       </div>

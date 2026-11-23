@@ -43,12 +43,12 @@ export default async function ClientsPage() {
   rows.sort((a, b) => Number(b.active) - Number(a.active));
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 fade-up">
+    <div className="mx-auto max-w-4xl space-y-6 fade-up">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="page-title">Clients</h1>
-          <p className="mt-2 text-sm muted">
-            {rows.length} client{rows.length === 1 ? "" : "s"}
+          <p className="mt-1 text-sm muted">
+            Households, dietary requirements, and service context · {rows.length} client{rows.length === 1 ? "" : "s"}
           </p>
         </div>
         <AddClientModal />

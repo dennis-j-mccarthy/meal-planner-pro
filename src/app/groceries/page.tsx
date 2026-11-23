@@ -44,20 +44,20 @@ export default async function WeeklyGroceriesPage({
       <GroceryPrintStyles />
 
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight text-stone-900">{title}</h1>
-        <p className="text-base text-stone-500">{subtitle}</p>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
+        <p className="text-base text-slate-500">{subtitle}</p>
       </div>
 
       <div className="no-print flex flex-wrap items-center gap-3">
         <Link
           href={`/groceries?week=${weekParam(addDays(start, -7))}`}
-          className="inline-flex min-h-11 items-center rounded-xl border border-[#e7e5e4] bg-white px-4 text-base text-stone-700"
+          className="button-secondary min-h-11 text-base"
         >
           &larr; Previous week
         </Link>
         <Link
           href={`/groceries?week=${weekParam(addDays(start, 7))}`}
-          className="inline-flex min-h-11 items-center rounded-xl border border-[#e7e5e4] bg-white px-4 text-base text-stone-700"
+          className="button-secondary min-h-11 text-base"
         >
           Next week &rarr;
         </Link>
@@ -70,12 +70,11 @@ export default async function WeeklyGroceriesPage({
             type="date"
             name="week"
             defaultValue={weekParam(start)}
-            className="min-h-11 rounded-xl border border-[#e7e5e4] bg-white px-3 text-base text-stone-700"
+            className="field min-h-11 w-auto text-base"
           />
           <button
             type="submit"
-            className="min-h-11 rounded-xl px-4 text-base font-medium text-white"
-            style={{ background: "var(--accent)" }}
+            className="button-primary min-h-11 text-base"
           >
             Show
           </button>
@@ -83,17 +82,17 @@ export default async function WeeklyGroceriesPage({
       </div>
 
       {list.cookDates.length > 0 && (
-        <ul className="no-print overflow-hidden rounded-2xl border border-[#e7e5e4] bg-stone-50">
+        <ul className="no-print panel overflow-hidden">
           {list.cookDates.map((cd) => (
-            <li key={cd.id} className="border-t border-[#e7e5e4] bg-white first:border-t-0">
+            <li key={cd.id} className="border-t border-[var(--border-soft)] bg-white first:border-t-0">
               <Link
                 href={`/cook-dates/${cd.id}/groceries`}
                 className="flex min-h-11 items-center justify-between gap-3 px-4 py-3 text-base"
               >
-                <span className="text-stone-800">
+                <span className="text-slate-800">
                   {format(cd.scheduledFor, "EEE, MMM d")} · {cd.clientName}
                 </span>
-                <span className="shrink-0 text-sm text-stone-400">
+                <span className="shrink-0 text-sm text-slate-400">
                   {cd.hasMenu ? plural(cd.dishCount, "dish", "dishes") : "No final menu yet"}
                 </span>
               </Link>
@@ -103,7 +102,7 @@ export default async function WeeklyGroceriesPage({
       )}
 
       {withMenu.length === 0 ? (
-        <div className="rounded-2xl border border-[#e7e5e4] bg-stone-50 px-5 py-8 text-center text-base text-stone-500">
+        <div className="rounded-2xl border-2 border-dashed border-slate-200 px-5 py-8 text-center text-base text-slate-500">
           {list.cookDates.length === 0
             ? "No cook dates this week."
             : "Groceries appear once the menu is accepted."}
@@ -111,7 +110,7 @@ export default async function WeeklyGroceriesPage({
       ) : (
         <>
           {list.missing.length > 0 && (
-            <p className="no-print rounded-xl border border-[#e7e5e4] bg-white px-4 py-3 text-base text-stone-600">
+            <p className="no-print rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3 text-base text-slate-600">
               No ingredients yet for {list.missing.join(", ")}. Reload in a minute to try again.
             </p>
           )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { approveProposal, emailProposalLinkToClient, sendProposal } from "@/app/actions";
 import {
@@ -9,6 +9,7 @@ import {
   fillOpenSlots,
   reloadPlannerDishes,
   removeDish,
+  reorderDishes,
   restoreDish,
   setDishCategory,
   startFromLastMenu,
@@ -17,10 +18,11 @@ import {
   undoAdds,
 } from "@/app/planner-actions";
 import type { DishQuotaRow } from "@/lib/dish-quota";
-import { DishCard, type SwapState } from "./dish-card";
+import { DishCard, type DishDrag, type SwapState } from "./dish-card";
 import { Finder, useFinder } from "./finder";
 import {
   groupDishes,
+  OTHER_SLOT,
   openSlots,
   singularLabel,
   slotNames,
@@ -34,6 +36,44 @@ import { BTN_PRIMARY, BTN_QUIET, CARD, DISPLAY_FONT, FOCUS } from "./ui";
 type Fail = { ok: false; error: string };
 type Toast = { id: number; message: string; undo?: () => void };
 type Restore = { proposalId: string; recipeId: string; courseLabel: string | null; position: number };
+
+// Drag and drop runs on desktop only (md and up). Phones keep the tap flow:
+// iOS would otherwise start an HTML5 drag on long-press.
+const DESKTOP_QUERY = "(min-width: 768px)";
+function subscribeDesktop(onChange: () => void) {
+  const mq = window.matchMedia(DESKTOP_QUERY);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+type DragItem = { kind: "recipe"; hit: RecipeHit } | { kind: "dish"; dish: PlannerDish };
+/** Where a drop would land: before a dish in a group (null = end of the group), or the recipe list. */
+type DropTarget = { kind: "slot"; group: string; beforeId: string | null } | { kind: "finder" };
+
+function sameTarget(a: DropTarget | null, b: DropTarget | null) {
+  if (!a || !b) return a === b;
+  if (a.kind === "finder" || b.kind === "finder") return a.kind === b.kind;
+  return a.group === b.group && a.beforeId === b.beforeId;
+}
+
+/** Course label for a group ("Other" = no label). */
+function courseFor(group: string): string | null {
+  return group === OTHER_SLOT ? null : group;
+}
+
+/** A small accent chip with the dish title, used as the drag image. */
+function setDragGhost(e: React.DragEvent, title: string) {
+  e.dataTransfer.setData("text/plain", title); // Firefox needs data to start a drag
+  const ghost = document.createElement("div");
+  ghost.textContent = title;
+  ghost.style.cssText =
+    "position:fixed;top:-1000px;left:-1000px;max-width:280px;padding:8px 14px;border-radius:10px;" +
+    "font:600 14px/1.3 system-ui,-apple-system,sans-serif;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" +
+    "background:linear-gradient(135deg,var(--accent),var(--accent-strong));box-shadow:0 8px 20px rgba(15,23,42,.25);";
+  document.body.appendChild(ghost);
+  e.dataTransfer.setDragImage(ghost, 16, 16);
+  setTimeout(() => ghost.remove(), 0);
+}
 
 export type MenuPlannerProps = {
   proposalId: string;
@@ -85,6 +125,23 @@ export function MenuPlanner(props: MenuPlannerProps) {
   const [pasteText, setPasteText] = useState("");
   const [pasteBusy, setPasteBusy] = useState(false);
 
+  // ---------------------------------------------------------- drag and drop state
+  const desktop = useSyncExternalStore(
+    subscribeDesktop,
+    () => window.matchMedia(DESKTOP_QUERY).matches,
+    () => false,
+  );
+  const dnd = editable && desktop;
+  const dragItem = useRef<DragItem | null>(null);
+  const [dragKind, setDragKind] = useState<null | "recipe" | "dish">(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  // Latest dishes for async follow-ups (add, then place where it was dropped).
+  const dishesRef = useRef(dishes);
+  useEffect(() => {
+    dishesRef.current = dishes;
+  }, [dishes]);
+
   // Toasts fade on their own; ones with Undo linger a little longer.
   useEffect(() => {
     if (!toast) return;
@@ -116,6 +173,13 @@ export function MenuPlanner(props: MenuPlannerProps) {
   // Sending again clears the client's skips, so skipped dishes still here go back out.
   const skippedStill = dishes.length - dishCount;
   const hasQuota = quota.length > 0;
+  // While dragging, show every course as a drop zone, even ones with no dishes yet.
+  const displayGroups = dragKind
+    ? [
+        ...slots.map((name) => groups.find((g) => g.name === name) ?? { name, target: null, dishes: [] }),
+        ...groups.filter((g) => !slots.includes(g.name)),
+      ]
+    : groups;
 
   // ---------------------------------------------------------- helpers
   function showToast(message: string, undo?: () => void) {
@@ -151,9 +215,9 @@ export function MenuPlanner(props: MenuPlannerProps) {
   }
 
   // ---------------------------------------------------------- dish actions
-  function addHit(hit: RecipeHit) {
+  function addHit(hit: RecipeHit, target?: { course: string | null; group: string; beforeId: string | null }) {
     if (!editable || onMenu.has(hit.id)) return;
-    const course = finder.filters.category ?? hit.category ?? firstOpenSlot ?? null;
+    const course = target ? target.course : (finder.filters.category ?? hit.category ?? firstOpenSlot ?? null);
     const tempId = `tmp-${hit.id}`;
     const temp: PlannerDish = {
       id: tempId,
@@ -176,7 +240,14 @@ export function MenuPlanner(props: MenuPlannerProps) {
           const swapped = ds.map((d) => (d.id === tempId ? dish : d));
           return swapped.filter((d, i) => swapped.findIndex((x) => x.id === d.id) === i);
         });
-        showToast(`Added “${hit.title}” to ${course ?? "Other"}.`, () => remove(dish, true));
+        showToast(`Added “${hit.title}” to ${course ?? OTHER_SLOT}.`, () => remove(dish, true));
+        // Dropped onto a dish: move the new one in front of it.
+        if (target?.beforeId) {
+          const list = dishesRef.current.map((d) => (d.id === tempId ? dish : d));
+          if (!list.some((d) => d.id.startsWith("tmp-"))) {
+            applyOrder(list, orderedWith(list, dish.id, target.group, target.beforeId));
+          }
+        }
       } else {
         setDishes((ds) => ds.filter((d) => d.id !== tempId));
       }
@@ -266,6 +337,129 @@ export function MenuPlanner(props: MenuPlannerProps) {
           applySwap(now, dish.recipeId, dish);
         }),
     );
+  }
+
+  // ---------------------------------------------------------- drag and drop
+  /** Dish ids in their new order: `movingId` goes before `beforeId`, or after the last dish of `group`. */
+  function orderedWith(list: PlannerDish[], movingId: string, group: string, beforeId: string | null): string[] {
+    const rest = [...list].sort((a, b) => a.position - b.position).filter((d) => d.id !== movingId);
+    let at = beforeId ? rest.findIndex((d) => d.id === beforeId) : -1;
+    if (at < 0) {
+      const inGroup = new Set(
+        (groupDishes(rest, quota).find((g) => g.name === group)?.dishes ?? []).map((d) => d.id),
+      );
+      let last = -1;
+      rest.forEach((d, i) => {
+        if (inGroup.has(d.id)) last = i;
+      });
+      at = last >= 0 ? last + 1 : rest.length;
+    }
+    const ids = rest.map((d) => d.id);
+    ids.splice(at, 0, movingId);
+    return ids;
+  }
+
+  /** Save a new order (and optionally a new course for the moved dish); roll back if it fails. */
+  function applyOrder(list: PlannerDish[], ids: string[], moved?: { id: string; courseLabel: string | null }) {
+    const rank = new Map(ids.map((id, i) => [id, i + 1]));
+    const previous = list.map((d) => ({ id: d.id, position: d.position, courseLabel: d.courseLabel }));
+    setDishes((ds) =>
+      ds.map((d) => {
+        const position = rank.get(d.id) ?? d.position;
+        return moved && d.id === moved.id ? { ...d, position, courseLabel: moved.courseLabel } : { ...d, position };
+      }),
+    );
+    void save(reorderDishes(proposalId, ids, moved ?? null)).then((res) => {
+      if (res && res.ok) return;
+      const back = new Map(previous.map((p) => [p.id, p]));
+      setDishes((ds) =>
+        ds.map((d) => {
+          const p = back.get(d.id);
+          return p ? { ...d, position: p.position, courseLabel: p.courseLabel } : d;
+        }),
+      );
+    });
+  }
+
+  function moveDish(dish: PlannerDish, group: string, beforeId: string | null) {
+    if (beforeId === dish.id) return;
+    if (inflight > 0 || dishes.some((d) => d.id.startsWith("tmp-"))) {
+      showToast("Still saving the last change. Try again in a moment.");
+      return;
+    }
+    const from = groups.find((g) => g.dishes.some((d) => d.id === dish.id))?.name ?? null;
+    const changeCourse = from !== group;
+    const ids = orderedWith(dishes, dish.id, group, beforeId);
+    const current = [...dishes].sort((a, b) => a.position - b.position).map((d) => d.id);
+    if (!changeCourse && ids.every((id, i) => id === current[i])) return;
+    applyOrder(dishes, ids, changeCourse ? { id: dish.id, courseLabel: courseFor(group) } : undefined);
+    if (changeCourse) showToast(`Moved “${dish.title}” to ${group}.`);
+  }
+
+  function startDrag(e: React.DragEvent, item: DragItem) {
+    dragItem.current = item;
+    e.dataTransfer.effectAllowed = item.kind === "recipe" ? "copy" : "move";
+    setDragGhost(e, item.kind === "recipe" ? item.hit.title : item.dish.title);
+    if (swapFor) closeSwap();
+    // Changing the DOM inside dragstart can cancel the drag in Chrome.
+    requestAnimationFrame(() => {
+      if (dragItem.current !== item) return; // the drag already ended
+      setDragKind(item.kind);
+      setDraggingId(item.kind === "dish" ? item.dish.id : null);
+    });
+  }
+
+  function endDrag() {
+    dragItem.current = null;
+    setDragKind(null);
+    setDraggingId(null);
+    setDropTarget(null);
+  }
+
+  function dragOver(e: React.DragEvent, target: DropTarget) {
+    const item = dragItem.current;
+    if (!item) return;
+    if (target.kind === "finder" && item.kind !== "dish") return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = item.kind === "recipe" ? "copy" : "move";
+    setDropTarget((prev) => (sameTarget(prev, target) ? prev : target));
+  }
+
+  function dragLeave(e: React.DragEvent) {
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    setDropTarget(null);
+  }
+
+  function drop(e: React.DragEvent, target: DropTarget) {
+    const item = dragItem.current;
+    if (!item) return;
+    e.preventDefault();
+    e.stopPropagation();
+    endDrag();
+    if (target.kind === "finder") {
+      if (item.kind === "dish") remove(item.dish);
+      return;
+    }
+    if (item.kind === "recipe") {
+      addHit(item.hit, { course: courseFor(target.group), group: target.group, beforeId: target.beforeId });
+    } else {
+      moveDish(item.dish, target.group, target.beforeId);
+    }
+  }
+
+  function dishDrag(dish: PlannerDish, group: string): DishDrag | undefined {
+    if (!dnd) return undefined;
+    const target: DropTarget = { kind: "slot", group, beforeId: dish.id };
+    return {
+      onDragStart: (e) => startDrag(e, { kind: "dish", dish }),
+      onDragEnd: endDrag,
+      onDragOver: (e) => dragOver(e, target),
+      onDrop: (e) => drop(e, target),
+      dropBefore:
+        dropTarget?.kind === "slot" && dropTarget.beforeId === dish.id && draggingId !== dish.id,
+      dragging: draggingId === dish.id,
+    };
   }
 
   // ---------------------------------------------------------- draft buttons
@@ -385,13 +579,13 @@ export function MenuPlanner(props: MenuPlannerProps) {
         <button
           type="button"
           onClick={() => setPasteOpen(true)}
-          className={`min-h-11 rounded-lg text-sm font-medium text-stone-500 underline-offset-2 hover:text-stone-900 hover:underline sm:min-h-8 ${FOCUS}`}
+          className={`min-h-11 rounded-lg text-sm font-medium text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline sm:min-h-8 ${FOCUS}`}
         >
           Paste a list instead
         </button>
       ) : (
         <div>
-          <label htmlFor="planner-paste" className="text-xs font-medium text-stone-600">
+          <label htmlFor="planner-paste" className="text-xs font-medium text-slate-600">
             Paste a menu (one dish per line, course headings optional)
           </label>
           <textarea
@@ -399,7 +593,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
             rows={6}
             value={pasteText}
             onChange={(e) => setPasteText(e.target.value)}
-            className={`mt-1 w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-900 ${FOCUS}`}
+            className={`mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 ${FOCUS}`}
             placeholder={"Entrées\nLemon herb chicken\nSides\nRoasted carrots"}
           />
           <div className="mt-2 flex gap-2">
@@ -410,7 +604,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
               Cancel
             </button>
           </div>
-          <p className="mt-1.5 text-xs text-stone-500">New dish names are also saved to your recipe library.</p>
+          <p className="mt-1.5 text-xs text-slate-500">New dish names are also saved to your recipe library.</p>
         </div>
       )}
     </div>
@@ -420,9 +614,9 @@ export function MenuPlanner(props: MenuPlannerProps) {
     <div className={editable ? "pb-4" : ""}>
       {/* Header */}
       <header>
-        <div className="text-sm text-stone-500">{props.crumb}</div>
+        <div className="text-sm text-slate-500">{props.crumb}</div>
         <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-          <h1 className="text-4xl leading-none text-stone-900 sm:text-5xl" style={DISPLAY_FONT}>
+          <h1 className="text-4xl leading-none text-slate-900 sm:text-5xl" style={DISPLAY_FONT}>
             Menu
           </h1>
           {editable ? (
@@ -489,16 +683,24 @@ export function MenuPlanner(props: MenuPlannerProps) {
         </div>
       )}
 
-      <div className={`mt-6 grid gap-6 ${editable ? "lg:grid-cols-[minmax(0,1fr)_380px]" : "max-w-3xl"}`}>
-        {/* Slots */}
+      <div
+        className={`mt-6 grid gap-6 ${
+          editable ? "md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]" : "max-w-3xl"
+        }`}
+      >
+        {/* Slots (the menu): first on phones, right column on desktop */}
         <section aria-label="Dishes on this menu" className="min-w-0 space-y-6">
-          {groups.length === 0 && (
+          {displayGroups.length === 0 && (
             <div className={`${CARD} px-5 py-8 text-center`}>
-              <p className="text-sm text-stone-600">Nothing on this menu yet.</p>
+              <p className="text-sm font-semibold text-slate-700">Nothing on this menu yet.</p>
               {editable && (
                 <>
-                  <p className="mt-1 text-sm text-stone-500">Use a button above to draft it, or pick dishes one by one.</p>
-                  <button type="button" onClick={() => openFinder(null)} className={`${BTN_PRIMARY} mt-4`}>
+                  <p className="mt-1 text-sm text-slate-500">
+                    {dnd
+                      ? "Drag recipes from the list on the left, use a button above to draft it, or pick dishes one by one."
+                      : "Use a button above to draft it, or pick dishes one by one."}
+                  </p>
+                  <button type="button" onClick={() => openFinder(null)} className={`${BTN_PRIMARY} mt-4 md:hidden`}>
                     + Add a dish
                   </button>
                 </>
@@ -506,18 +708,30 @@ export function MenuPlanner(props: MenuPlannerProps) {
             </div>
           )}
 
-          {groups.map((group) => {
+          {displayGroups.map((group) => {
             const have = group.dishes.filter((d) => !d.clientRemoved).length;
             const full = group.target !== null && have >= group.target;
             const empties = editable && group.target !== null ? Math.max(0, group.target - have) : 0;
+            const groupTarget: DropTarget = { kind: "slot", group: group.name, beforeId: null };
+            const overEnd =
+              dropTarget?.kind === "slot" && dropTarget.group === group.name && dropTarget.beforeId === null;
+            const overGroup = dropTarget?.kind === "slot" && dropTarget.group === group.name;
             return (
-              <div key={group.name}>
+              <div
+                key={group.name}
+                onDragOver={dnd ? (e) => dragOver(e, groupTarget) : undefined}
+                onDragLeave={dnd ? dragLeave : undefined}
+                onDrop={dnd ? (e) => drop(e, groupTarget) : undefined}
+                className={`-mx-2 rounded-2xl px-2 py-2 transition-colors ${
+                  overGroup ? "bg-[var(--accent-light)]/50 ring-2 ring-[var(--accent)]" : dragKind ? "bg-slate-50/60" : ""
+                }`}
+              >
                 <div className="mb-2 flex items-baseline justify-between gap-3">
-                  <h2 className="text-lg text-stone-900" style={DISPLAY_FONT}>
+                  <h2 className="text-lg text-slate-900" style={DISPLAY_FONT}>
                     {group.name}
                   </h2>
                   {group.target !== null && (
-                    <span className={`inline-flex items-center gap-1 text-xs font-medium ${full ? "text-emerald-700" : "text-stone-500"}`}>
+                    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${full ? "text-emerald-700" : "text-slate-500"}`}>
                       {full && (
                         <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.8 3.8 6.8-6.8a1 1 0 0 1 1.4 0Z" clipRule="evenodd" />
@@ -527,7 +741,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
                     </span>
                   )}
                 </div>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {group.dishes.map((dish) => (
                     <DishCard
                       key={dish.id}
@@ -542,6 +756,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
                       onCloseSwap={closeSwap}
                       onRemove={() => remove(dish)}
                       onCategory={(value) => setCourse(dish, value)}
+                      drag={dishDrag(dish, group.name)}
                     />
                   ))}
                   {Array.from({ length: empties }, (_, i) => (
@@ -549,61 +764,104 @@ export function MenuPlanner(props: MenuPlannerProps) {
                       <button
                         type="button"
                         onClick={() => openFinder(group.name)}
-                        className={`flex min-h-12 w-full items-center gap-2 rounded-[14px] border border-dashed border-stone-300 px-4 text-left text-sm text-stone-500 transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)] ${FOCUS}`}
+                        className={`flex min-h-12 w-full items-center gap-2 rounded-2xl border-2 border-dashed px-4 text-left text-sm font-medium transition hover:border-[var(--accent)] hover:text-[var(--accent-strong)] ${FOCUS} ${
+                          overEnd && i === 0
+                            ? "border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-strong)]"
+                            : "border-slate-300 text-slate-500"
+                        }`}
                       >
                         <span aria-hidden="true" className="text-base leading-none">+</span>
-                        Add {withArticle(singularLabel(group.name))}
+                        {overEnd && i === 0 ? `Drop to add ${withArticle(singularLabel(group.name))}` : `Add ${withArticle(singularLabel(group.name))}`}
                       </button>
                     </li>
                   ))}
+                  {dragKind && empties === 0 && (
+                    <li
+                      aria-hidden="true"
+                      className={`flex min-h-12 items-center justify-center rounded-2xl border-2 border-dashed text-sm font-medium ${
+                        overEnd
+                          ? "border-[var(--accent)] bg-[var(--accent-light)] text-[var(--accent-strong)]"
+                          : "border-slate-200 text-slate-400"
+                      }`}
+                    >
+                      Drop here for {group.name}
+                    </li>
+                  )}
                 </ul>
               </div>
             );
           })}
 
-          {editable && !hasQuota && groups.length > 0 && (
+          {editable && !hasQuota && groups.length > 0 && !dragKind && (
             <button
               type="button"
               onClick={() => openFinder(null)}
-              className={`flex min-h-12 w-full items-center gap-2 rounded-[14px] border border-dashed border-stone-300 px-4 text-sm text-stone-500 hover:border-[var(--accent)] ${FOCUS}`}
+              className={`flex min-h-12 w-full items-center gap-2 rounded-2xl border-2 border-dashed border-slate-300 px-4 text-sm font-medium text-slate-500 hover:border-[var(--accent)] hover:text-[var(--accent-strong)] ${FOCUS}`}
             >
               <span aria-hidden="true">+</span> Add a dish
             </button>
           )}
 
           {editable && dishCount > 0 && (
-            <form action={approveProposal} className="pt-2 text-xs text-stone-500">
+            <form action={approveProposal} className="pt-2 text-xs text-slate-500">
               <input type="hidden" name="proposalId" value={proposalId} />
               Already agreed by text or phone?{" "}
-              <button type="submit" className={`min-h-11 font-medium text-stone-700 underline underline-offset-2 sm:min-h-0 ${FOCUS}`}>
+              <button type="submit" className={`min-h-11 font-semibold text-slate-700 underline underline-offset-2 sm:min-h-0 ${FOCUS}`}>
                 Mark it approved
               </button>
             </form>
           )}
         </section>
 
-        {/* Finder: a column on desktop, a bottom sheet on phones */}
+        {/* Recipe list: left column on desktop, a bottom sheet on phones */}
         {editable && (
           <>
             {sheetOpen && (
-              <div aria-hidden="true" onClick={() => setSheetOpen(false)} className="fixed inset-0 z-[55] bg-stone-900/30 lg:hidden" />
+              <div aria-hidden="true" onClick={() => setSheetOpen(false)} className="fixed inset-0 z-[55] bg-slate-900/30 md:hidden" />
             )}
             <aside
-              aria-label="Find a dish"
+              aria-label="Recipes"
+              onDragOver={dnd ? (e) => dragOver(e, { kind: "finder" }) : undefined}
+              onDragLeave={dnd ? dragLeave : undefined}
+              onDrop={dnd ? (e) => drop(e, { kind: "finder" }) : undefined}
               className={`${
-                sheetOpen ? "fixed inset-x-0 bottom-0 z-[60] flex max-h-[85dvh] rounded-t-2xl border-t border-stone-200 p-4 shadow-2xl" : "hidden"
-              } flex-col bg-white lg:static lg:z-auto lg:flex lg:max-h-none lg:self-start lg:rounded-[14px] lg:border lg:border-stone-200 lg:p-4 lg:shadow-none`}
+                sheetOpen ? "fixed inset-x-0 bottom-0 z-[60] flex max-h-[85dvh] rounded-t-2xl border-t border-slate-200 p-4 shadow-2xl" : "relative hidden"
+              } flex-col bg-white md:sticky md:inset-auto md:top-24 md:z-auto md:order-first md:flex md:max-h-none md:self-start md:rounded-2xl md:border md:border-[var(--border-soft)] md:p-4 md:shadow-[0_1px_3px_rgba(30,41,59,0.04),0_4px_16px_color-mix(in_srgb,var(--accent)_8%,transparent)]`}
             >
               <Finder
                 finder={finder}
                 firstName={firstName}
                 slots={slots}
                 onMenu={onMenu}
-                onAdd={addHit}
+                onAdd={(hit) => addHit(hit)}
                 inputRef={inputRef}
                 onClose={() => setSheetOpen(false)}
                 paste={pastePanel}
+                drag={
+                  dnd
+                    ? {
+                        onDragStart: (e, hit) => startDrag(e, { kind: "recipe", hit }),
+                        onDragEnd: endDrag,
+                      }
+                    : undefined
+                }
               />
+              {dragKind === "dish" && (
+                <div
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center backdrop-blur-[1px] ${
+                    dropTarget?.kind === "finder"
+                      ? "border-[var(--accent)] bg-[var(--accent-light)]/90 text-[var(--accent-strong)]"
+                      : "border-slate-300 bg-white/80 text-slate-500"
+                  }`}
+                >
+                  <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                  </svg>
+                  <p className="text-sm font-semibold">Drop here to take it off the menu</p>
+                  <p className="text-xs">You can undo it.</p>
+                </div>
+              )}
             </aside>
           </>
         )}
@@ -611,24 +869,24 @@ export function MenuPlanner(props: MenuPlannerProps) {
 
       {/* Footer */}
       {editable && (
-        <div className="sticky bottom-0 z-40 -mx-4 mt-8 border-t border-stone-200 bg-white/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-t-2xl sm:border-x">
+        <div className="sticky bottom-[calc(var(--tab-bar-h)+1px+env(safe-area-inset-bottom))] z-40 -mx-4 mt-8 border-t border-[var(--border-soft)] bg-white/95 px-4 py-3 shadow-[0_-4px_16px_color-mix(in_srgb,var(--accent)_8%,transparent)] backdrop-blur sm:mx-0 sm:rounded-2xl sm:border-x lg:bottom-0 lg:rounded-b-none">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-stone-600">
-              <span className={`font-medium ${hasQuota && slotsLeft === 0 ? "text-emerald-700" : "text-stone-900"}`}>
+            <p className="text-sm text-slate-600">
+              <span className={`font-medium ${hasQuota && slotsLeft === 0 ? "text-emerald-700" : "text-slate-900"}`}>
                 {hasQuota
                   ? slotsLeft === 0
                     ? "Menu complete"
                     : `${slotsLeft} ${slotsLeft === 1 ? "slot" : "slots"} left`
                   : `${dishCount} ${dishCount === 1 ? "dish" : "dishes"}`}
               </span>
-              <span className="ml-2 text-xs text-stone-500" aria-live="polite">
+              <span className="ml-2 text-xs text-slate-500" aria-live="polite">
                 {inflight > 0 ? "Saving…" : saveState === "saved" ? "Saved" : saveState === "error" ? "Not saved" : ""}
               </span>
             </p>
 
             {send === "idle" ? (
               <div className="flex w-full flex-wrap gap-2 sm:w-auto">
-                <button type="button" onClick={() => openFinder(finder.filters.category)} className={`${BTN_QUIET} lg:hidden`}>
+                <button type="button" onClick={() => openFinder(finder.filters.category)} className={`${BTN_QUIET} md:hidden`}>
                   + Add a dish
                 </button>
                 {previewButton}
@@ -649,7 +907,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
               </div>
             ) : (
               <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto" role="group" aria-label="Confirm send">
-                <p className="text-sm font-medium text-stone-900">
+                <p className="text-sm font-medium text-slate-900">
                   {clientEmail ? `Send to ${clientEmail}?` : `${firstName} has no email on file. Mark as sent and share the link yourself?`}
                   {skippedStill > 0 && (
                     <span className="block text-xs font-normal text-amber-800">
@@ -670,9 +928,9 @@ export function MenuPlanner(props: MenuPlannerProps) {
       )}
 
       {/* Toast */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-28 z-[65] flex justify-center px-4" role="status" aria-live="polite">
+      <div className="pointer-events-none fixed inset-x-0 bottom-44 z-[65] flex justify-center px-4 lg:bottom-28" role="status" aria-live="polite">
         {toast && (
-          <div className="pointer-events-auto flex max-w-md items-center gap-3 rounded-xl bg-stone-900 px-4 py-2.5 text-sm text-white shadow-lg">
+          <div className="pointer-events-auto flex max-w-md items-center gap-3 rounded-xl bg-slate-900 px-4 py-2.5 text-sm text-white shadow-xl">
             <p>{toast.message}</p>
             {toast.undo && (
               <button

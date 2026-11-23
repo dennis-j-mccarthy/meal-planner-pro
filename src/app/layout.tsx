@@ -83,13 +83,13 @@ export default async function RootLayout({
           <div className="min-h-screen text-slate-900">
             <header
               className="sticky top-0 z-50 border-b backdrop-blur-sm"
-              style={{ background: "var(--header-bg)", borderColor: "var(--line)" }}
+              style={{ background: "var(--header-bg)", borderColor: "var(--border-soft)" }}
             >
-              <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-                <div className="flex min-w-0 items-center gap-8">
+              <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
+                <div className="flex min-w-0 items-center gap-6">
                   <Link
                     href="/"
-                    className="shrink-0"
+                    className="shrink-0 rounded-lg"
                     title={kitchen?.name}
                   >
                     <Logo />
@@ -99,7 +99,7 @@ export default async function RootLayout({
                 <div className="flex shrink-0 items-center justify-end gap-3">
                   <Show when="signed-out">
                     <SignInButton mode="modal">
-                      <button className="button-secondary">Sign in</button>
+                      <button className="button-secondary text-sm">Sign in</button>
                     </SignInButton>
                   </Show>
                   <Show when="signed-in">
@@ -114,7 +114,7 @@ export default async function RootLayout({
                     <UserButton
                       appearance={{
                         elements: {
-                          avatarBox: "h-9 w-9",
+                          avatarBox: "h-10 w-10 ring-2 ring-slate-200",
                         },
                       }}
                     />
@@ -123,7 +123,7 @@ export default async function RootLayout({
               </div>
             </header>
             <main
-              className={`mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8 ${
+              className={`mx-auto max-w-7xl px-4 pt-8 sm:px-6 lg:px-8 ${
                 loggedIn ? "page-bottom-pad" : "pb-12"
               }`}
             >

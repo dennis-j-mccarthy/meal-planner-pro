@@ -75,14 +75,14 @@ export function GroceryChecklist(props: Props) {
         <button
           type="button"
           onClick={copy}
-          className="min-h-11 rounded-xl border border-[#e7e5e4] bg-white px-4 text-base font-medium text-stone-700 active:bg-stone-50"
+          className="button-secondary min-h-11 text-base"
         >
           {copied ? "Copied" : "Copy list"}
         </button>
         <button
           type="button"
           onClick={() => window.print()}
-          className="min-h-11 rounded-xl border border-[#e7e5e4] bg-white px-4 text-base font-medium text-stone-700 active:bg-stone-50"
+          className="button-secondary min-h-11 text-base"
         >
           Print
         </button>
@@ -103,13 +103,13 @@ export function GroceryChecklist(props: Props) {
         return (
           <section
             key={group.section}
-            className="grocery-section overflow-hidden rounded-2xl border border-[#e7e5e4] bg-stone-50"
+            className="grocery-section panel overflow-hidden"
           >
-            <div className="flex items-baseline justify-between px-4 py-2.5">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-stone-500">
+            <div className="flex items-baseline justify-between bg-[var(--accent-light)]/50 px-4 py-2.5">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--accent-strong)]">
                 {group.section}
               </h2>
-              <span className="text-sm text-stone-400">
+              <span className="text-sm text-slate-400">
                 {done}/{group.items.length}
               </span>
             </div>
@@ -117,7 +117,7 @@ export function GroceryChecklist(props: Props) {
               {ordered.map((item) => {
                 const isChecked = checked.has(item.key);
                 return (
-                  <li key={item.key} className="border-t border-[#e7e5e4] bg-white">
+                  <li key={item.key} className="border-t border-[var(--border-soft)] bg-white">
                     <button
                       type="button"
                       role="checkbox"
@@ -129,7 +129,7 @@ export function GroceryChecklist(props: Props) {
                         aria-hidden
                         className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2"
                         style={{
-                          borderColor: isChecked ? "var(--accent)" : "#d6d3d1",
+                          borderColor: isChecked ? "var(--accent)" : "#cbd5e1",
                           background: isChecked ? "var(--accent)" : "transparent",
                         }}
                       >
@@ -142,14 +142,14 @@ export function GroceryChecklist(props: Props) {
                       <span className="min-w-0 flex-1">
                         <span
                           className={`block text-base leading-snug ${
-                            isChecked ? "text-stone-400 line-through" : "text-stone-800"
+                            isChecked ? "text-slate-400 line-through" : "text-slate-800"
                           }`}
                         >
                           {item.amount && <span className="font-semibold">{item.amount} </span>}
                           {item.name}
                         </span>
                         {item.detail && (
-                          <span className="mt-0.5 block text-sm text-stone-400">{item.detail}</span>
+                          <span className="mt-0.5 block text-sm text-slate-400">{item.detail}</span>
                         )}
                       </span>
                     </button>

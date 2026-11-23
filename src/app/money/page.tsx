@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
 import { UnpaidInvoiceList } from "@/components/unpaid-invoice-list";
 import {
@@ -96,7 +97,7 @@ export default async function MoneyPage({
   const nextIsFuture = next > currentMonth;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-12 fade-up">
+    <div className="mx-auto max-w-5xl space-y-10 fade-up">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="page-title">Money</h1>
@@ -108,22 +109,20 @@ export default async function MoneyPage({
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2" aria-label="Summary">
-        <div className="panel px-5 py-5">
-          <p className="text-sm muted">Not marked paid</p>
-          <p className="mt-1 font-display text-3xl font-semibold text-ink">
-            {formatMoney(unpaidTotal)}
-          </p>
-          <p className="mt-1 text-sm muted">
-            {unpaidRows.length} invoice{unpaidRows.length === 1 ? "" : "s"}
-          </p>
-        </div>
-        <div className="panel px-5 py-5">
-          <p className="text-sm muted">Paid this month</p>
-          <p className="mt-1 font-display text-3xl font-semibold text-ink">
-            {formatMoney(paidThisMonthTotal)}
-          </p>
-          <p className="mt-1 text-sm muted">{formatMonthKey(currentMonth)}</p>
-        </div>
+        <StatCard
+          value={formatMoney(unpaidTotal)}
+          label="Not marked paid"
+          hint={`${unpaidRows.length} invoice${unpaidRows.length === 1 ? "" : "s"}`}
+          color="amber"
+          icon="dollar"
+        />
+        <StatCard
+          value={formatMoney(paidThisMonthTotal)}
+          label="Paid this month"
+          hint={formatMonthKey(currentMonth)}
+          color="green"
+          icon="dollar"
+        />
       </section>
 
       <section aria-labelledby="not-marked-paid">
@@ -176,12 +175,12 @@ export default async function MoneyPage({
           </p>
         ) : (
           <>
-            <ul className="panel mt-4 divide-y divide-[var(--line)]">
+            <ul className="mt-4 space-y-3">
               {paidSelected.map((inv) => (
                 <li key={inv.id}>
                   <Link
                     href={`/invoices/${inv.id}`}
-                    className="flex min-h-14 items-center justify-between gap-4 px-5 py-4 hover:bg-[var(--surface-raised)]"
+                    className="flex min-h-14 items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 transition-all hover:border-[var(--accent)] hover:shadow-sm"
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-ink">

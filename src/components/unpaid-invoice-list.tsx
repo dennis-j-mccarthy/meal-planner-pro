@@ -141,7 +141,7 @@ export function UnpaidInvoiceList({
 
       {visibleSelected.length > 0 && (
         <div
-          className="panel sticky bottom-24 z-40 flex flex-col gap-4 px-5 py-4 shadow-lg md:bottom-4 md:flex-row md:items-end"
+          className="panel sticky bottom-24 z-40 flex flex-col gap-4 px-5 py-4 shadow-lg md:flex-row md:items-end lg:bottom-4"
           role="region"
           aria-label="Mark selected as paid"
         >

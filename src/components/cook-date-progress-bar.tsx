@@ -31,7 +31,7 @@ export function CookDateProgressBar({ progress }: { progress: CookDateProgress }
             <span
               className={`relative flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
                 isCurrent
-                  ? "bg-[var(--accent)] text-white ring-4 ring-[var(--accent-light)]"
+                  ? "bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] text-white shadow-md ring-4 ring-[var(--accent-light)]"
                   : isDone
                     ? "bg-emerald-600 text-white"
                     : "border border-[var(--line)] bg-[var(--card)] text-[var(--muted-fg)]"
