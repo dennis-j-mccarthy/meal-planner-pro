@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { approveProposal, quickCreateProposal } from "@/app/actions";
 import { createInvoiceForCookDate, createMonthlyInvoice } from "@/app/billing-actions";
 import { setGroceriesDone } from "@/app/taste-actions";
 import { BonAppetitPreview } from "@/components/bon-appetit-preview";
+import { CookDateGroceries, CookDateGroceriesLoading } from "@/components/cook-date-groceries";
 import { CookDateHeader } from "@/components/cook-date-header";
 import { CookDateWalkthrough } from "@/components/cook-date-walkthrough";
 import { DeleteCookDateButton } from "@/components/delete-cook-date-button";
@@ -387,13 +389,13 @@ export default async function CookDateDetailPage({
               ? "The cook date has passed."
               : checkedCount > 0
                 ? `${checkedCount} item${checkedCount === 1 ? "" : "s"} checked off so far.`
-                : `Everything for ${cookDay}, scaled to the guests and grouped by store section.`
+                : `Everything for ${cookDay}, scaled to the guests. Tap an item to check it off.`
       }
       actions={
         approved || bonAppetit ? (
           <>
-            <Link href={`/cook-dates/${cookDate.id}/groceries`} className={btn("groceries")}>
-              Open grocery list
+            <Link href={`/cook-dates/${cookDate.id}/groceries`} className="button-secondary">
+              Full page
             </Link>
             {cookDate.groceriesDoneAt ? (
               <form action={setGroceriesDone.bind(null, cookDate.id, false)}>
@@ -402,14 +404,20 @@ export default async function CookDateDetailPage({
             ) : (
               !progress.done.groceries && (
                 <form action={setGroceriesDone.bind(null, cookDate.id, true)}>
-                  <button className="button-secondary">Groceries bought</button>
+                  <button className={btn("groceries")}>Groceries bought</button>
                 </form>
               )
             )}
           </>
         ) : null
       }
-    />
+    >
+      {(approved || bonAppetit) && (
+        <Suspense fallback={<CookDateGroceriesLoading />}>
+          <CookDateGroceries cookDateId={cookDate.id} kitchenId={kitchen.id} />
+        </Suspense>
+      )}
+    </StepPanel>
   );
 
   // ── 6. How did it taste? ──
