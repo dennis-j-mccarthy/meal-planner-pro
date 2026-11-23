@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireKitchen } from "@/lib/guard";
 import { formatDateShort } from "@/lib/format";
+import { ingredientsDisplayText } from "@/lib/recipe-facts-format";
 import { MenuCardActions } from "@/components/menu-card-actions";
 
 // PDF rendering (headless Chromium) for the "Email PDF to me" action can exceed the
@@ -128,13 +129,13 @@ export default async function MenuCardDetailPage({
                         {mr.recipe.description}
                       </p>
                     )}
-                    {menuCard.isCoaching && mr.recipe.ingredientsText && (
+                    {menuCard.isCoaching && ingredientsDisplayText(mr.recipe.ingredientsText) && (
                       <div className="mt-2">
                         <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                           Ingredients
                         </p>
                         <p className="mt-1 text-sm text-slate-600 whitespace-pre-line">
-                          {mr.recipe.ingredientsText}
+                          {ingredientsDisplayText(mr.recipe.ingredientsText)}
                         </p>
                       </div>
                     )}

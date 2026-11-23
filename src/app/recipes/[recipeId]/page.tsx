@@ -15,6 +15,11 @@ import {
   formatMinutes,
 } from "@/lib/format";
 import { requireKitchen } from "@/lib/guard";
+import {
+  hasEstimatedIngredients,
+  ingredientsDisplayText,
+  parseNutrition,
+} from "@/lib/recipe-facts-format";
 import { prisma } from "@/lib/prisma";
 
 type RecipeDetailPageProps = {
@@ -59,25 +64,29 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
     notFound();
   }
 
-  const ingredients = toList(recipe.ingredientsText);
+  // Beth's own ingredients vs. AI-estimated ones (stored as "##json"; see
+  // recipe-facts-format.ts). Estimated ones are shown, labelled, but never
+  // treated as hers: the edit box and "Add recipe details" ignore them.
+  const ownIngredientsText = ingredientsDisplayText(recipe.ingredientsText);
+  const ingredientsEstimated = hasEstimatedIngredients(recipe.ingredientsText);
+  const ingredients = toList(
+    ingredientsDisplayText(recipe.ingredientsText, { includeEstimated: true }),
+  );
+  const ownIngredients = toList(ownIngredientsText);
   const instructions = toList(recipe.instructionsText);
 
-  type Nutrition = {
-    calories: number | null;
-    protein: string | null;
-    carbs: string | null;
-    fat: string | null;
-    fiber: string | null;
-    sodium: string | null;
-  };
-  let nutrition: Nutrition | null = null;
-  if (recipe.nutrition) {
-    try {
-      nutrition = JSON.parse(recipe.nutrition) as Nutrition;
-    } catch {
-      nutrition = null;
-    }
-  }
+  // Reads both stored shapes (Nutrition button and grocery/Bon Appetit facts).
+  const facts = parseNutrition(recipe);
+  const nutrition = facts
+    ? {
+        calories: facts.calories,
+        protein: facts.proteinG !== null ? `${facts.proteinG} g` : null,
+        carbs: facts.carbsG !== null ? `${facts.carbsG} g` : null,
+        fat: facts.fatG !== null ? `${facts.fatG} g` : null,
+        fiber: facts.fiberG !== null ? `${facts.fiberG} g` : null,
+        sodium: facts.sodiumMg !== null ? `${facts.sodiumMg} mg` : null,
+      }
+    : null;
 
   return (
     <div className="space-y-6">
@@ -119,7 +128,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
             )}
             {/* Actions */}
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              {recipe.description && ingredients.length === 0 && instructions.length === 0 && (
+              {recipe.description && ownIngredients.length === 0 && instructions.length === 0 && (
                 <AddRecipeDetailsButton recipeId={recipe.id} hasImage={!!recipe.imageUrl} />
               )}
               <EditRecipeModal
@@ -133,7 +142,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                   tags: recipe.tags,
                   dietaryFlags: recipe.dietaryFlags,
                   description: recipe.description,
-                  ingredientsText: recipe.ingredientsText,
+                  ingredientsText: ownIngredientsText,
                   instructionsText: recipe.instructionsText,
                 }}
               />
@@ -196,7 +205,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       {/* Ingredients — only if present */}
       {ingredients.length > 0 && (
         <section className="panel p-6">
-          <h2 className="section-title">Ingredients</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="section-title">Ingredients</h2>
+            {ingredientsEstimated && (
+              <span className="text-xs text-slate-400">AI estimate · for the grocery list</span>
+            )}
+          </div>
           <ul className="mt-3 columns-2 gap-x-6 text-sm text-slate-700">
             {ingredients.map((ingredient, index) => (
               <li

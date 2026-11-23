@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { buildInvoiceHtml, PAYMENT_TEXT } from "@/lib/invoice-template";
 import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
+import { bonAppetitNutrition } from "@/lib/recipe-facts";
 import { sendEmail } from "@/lib/email";
 import { formatMoney } from "@/lib/format";
 import { chefSignoff, escapeHtml } from "@/lib/inbound-mail";
@@ -136,6 +137,7 @@ export async function sendBonAppetitToClient(
       const fromEmail = menuCard.source === "EMAIL";
       pdf = await generatePdfFromHtml(
         buildBonAppetitHtml({
+          ...(await bonAppetitNutrition(menuCard.id, kitchen.id)),
           clientFirstNames: menuCard.client.firstName,
           menuDate: format(menuCard.menuDate, opts.monthOnly ? "MMMM, yyyy" : "MMMM d, yyyy"),
           isCoaching: menuCard.isCoaching,

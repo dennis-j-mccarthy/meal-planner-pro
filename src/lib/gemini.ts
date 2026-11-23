@@ -390,3 +390,70 @@ export async function generateRecipeNutrition(
     sodium: str(parsed.sodium),
   };
 }
+
+/**
+ * Structured ingredients + per-serving nutrition for one recipe, as raw
+ * parsed JSON. The caller validates and clamps it (recipe-facts-format.ts);
+ * nothing here is trusted. One call per recipe.
+ */
+export async function generateRecipeFactsJson(input: {
+  title: string;
+  description?: string | null;
+  ingredientsText?: string | null;
+  servings?: number | null;
+  timeoutMs?: number;
+}): Promise<unknown> {
+  if (!API_KEY) {
+    throw new Error("GEMINI_API_KEY is not set");
+  }
+
+  const prompt = [
+    "You are a professional personal chef and registered dietitian.",
+    "From the dish below, write the shopping ingredients and estimate nutrition PER SERVING.",
+    input.ingredientsText
+      ? "The chef's own ingredient list is given: use exactly those ingredients and amounts."
+      : "No ingredient list exists: write a realistic one a professional chef would use for this dish.",
+    input.servings
+      ? `Write quantities for ${input.servings} servings and return "servings": ${input.servings}.`
+      : "Choose a sensible yield and write quantities for it.",
+    "If unsure, make a sensible professional estimate — do not refuse.",
+    "",
+    `Dish: ${input.title}`,
+    input.description ? `Description: ${input.description}` : "",
+    input.ingredientsText ? `Ingredients:\n${input.ingredientsText}` : "",
+    "",
+    "Return ONLY valid JSON with exactly these fields:",
+    "{",
+    '  "servings": integer,',
+    '  "ingredients": [{ "name": "plain ingredient name, no prep notes (e.g. chicken thighs)", "quantity": number or null, "unit": "tsp|tbsp|cup|oz|lb|g|ml|clove|can|bunch|... or null for a count", "section": "Produce|Meat & Fish|Dairy & Eggs|Bakery|Pantry|Frozen|Spices|Other" }],',
+    '  "nutritionPerServing": { "calories": integer kcal, "proteinG": number, "carbsG": number, "fatG": number, "fiberG": number, "sodiumMg": number }',
+    "}",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json" },
+      }),
+      signal: AbortSignal.timeout(input.timeoutMs ?? 25_000),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error ${response.status}: ${errorText.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) {
+    throw new Error("No recipe facts returned from Gemini");
+  }
+  return JSON.parse(text) as unknown;
+}

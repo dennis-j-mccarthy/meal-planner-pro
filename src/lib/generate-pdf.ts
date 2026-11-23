@@ -50,10 +50,17 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
     // makes sense on a single page (on multi-page layouts it picks the wrong
     // block and opens a gap mid-column), so render once and keep that PDF if
     // it already runs past one page.
-    const firstPass = Buffer.from(
-      await page.pdf({ format: "Letter", printBackground: true }),
-    );
-    if (countPdfPages(firstPass) > 1) return firstPass;
+    const render = async () =>
+      Buffer.from(await page.pdf({ format: "Letter", printBackground: true }));
+
+    const firstPass = await render();
+    if (countPdfPages(firstPass) > 1) {
+      // A Bon Appetit nutrition footer must never be what pushes a one-page
+      // menu onto page 2. If the menu runs long even without it, keep the
+      // first render (footer and all) exactly as it was.
+      if (!(await shrinkFooterToFit(page, render))) return firstPass;
+      // Fits on one page now: fall through to the alignment pass.
+    }
 
     // Align column 2's first blue recipe title with column 1's first blue
     // recipe title. When col 1 has a category header but col 2 doesn't, we
@@ -101,11 +108,42 @@ export async function generatePdfFromHtml(html: string): Promise<Buffer> {
       if (!adjusted) break;
     }
 
-    const pdf = await page.pdf({ format: "Letter", printBackground: true });
-    return Buffer.from(pdf);
+    const pdf = await render();
+    // The alignment spacer can tip a footer-carrying page over by a line.
+    if (countPdfPages(pdf) > 1) {
+      return (await shrinkFooterToFit(page, render)) ?? pdf;
+    }
+    return pdf;
   } finally {
     await browser.close();
   }
+}
+
+// Shrinks the Bon Appetit nutrition footer ([data-nutrition-footer]) until
+// the page fits: first compact (smaller, Fiber/Sodium dropped), then removed.
+// Returns the one-page PDF, or null when there is no footer or even removing
+// it does not fit (the DOM is then left without the footer).
+async function shrinkFooterToFit(
+  page: any,
+  render: () => Promise<Buffer>,
+): Promise<Buffer | null> {
+  for (const step of ["compact", "remove"] as const) {
+    const changed: boolean = await page.evaluate((s: "compact" | "remove") => {
+      const el = document.querySelector("[data-nutrition-footer]");
+      if (!el) return false;
+      if (s === "remove") {
+        el.remove();
+        return true;
+      }
+      if (el.classList.contains("compact")) return false;
+      el.classList.add("compact");
+      return true;
+    }, step);
+    if (!changed) continue;
+    const pdf = await render();
+    if (countPdfPages(pdf) === 1) return pdf;
+  }
+  return null;
 }
 
 // Page objects in a Chrome-generated PDF ("/Type /Page", not "/Pages").

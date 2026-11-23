@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { join } from "path";
+import { ingredientsDisplayText, type NutritionRow } from "@/lib/recipe-facts-format";
 
 interface MenuRecipe {
   title: string;
@@ -19,6 +20,12 @@ interface BonAppetitData {
   preserveOrder?: boolean;
   // Optional line under the title, e.g. "A Special Mom-Daughter Weekend Retreat".
   subtitle?: string | null;
+  // Optional per-serving nutrition footer, one row per dish that has it. Left
+  // out entirely when empty. generatePdfFromHtml shrinks it (drops Fiber and
+  // Sodium) or removes it if it would push a one-page menu onto page 2.
+  nutrition?: NutritionRow[];
+  // Kitchen-neutral note shown beside the footer title.
+  nutritionNote?: string | null;
 }
 
 function loadAssetBase64(relativePath: string, mime: string): string {
@@ -80,9 +87,11 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
       }
 
       if (data.isCoaching) {
-        if (recipe.ingredientsText) {
+        // Beth's own ingredient text only; AI-estimated lists are not printed.
+        const ingredients = ingredientsDisplayText(recipe.ingredientsText);
+        if (ingredients) {
           blockHtml += `<div class="recipe-section-label">Ingredients</div>
-            <div class="recipe-desc">${formatMultiline(recipe.ingredientsText)}</div>`;
+            <div class="recipe-desc">${formatMultiline(ingredients)}</div>`;
         }
         if (recipe.instructionsText) {
           blockHtml += `<div class="recipe-section-label">Instructions</div>
@@ -108,6 +117,8 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
           .map((n) => `<div class="note-line">${escapeHtml(n)}</div>`)
           .join("")}</div>`
       : "";
+
+  const nutritionHtml = renderNutritionFooter(data.nutrition ?? [], data.nutritionNote);
 
   return `<!DOCTYPE html>
 <html>
@@ -286,6 +297,76 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
     color: #666;
   }
 
+  /* Nutrition footer: full width under the columns, small and muted. */
+  .nutrition-footer {
+    margin-top: 14px;
+    padding-top: 6px;
+    border-top: 1px solid #e5e5e5;
+    font-size: 8.5px;
+    color: #888;
+    break-inside: avoid;
+  }
+
+  .nf-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 3px;
+  }
+
+  .nf-title {
+    font-weight: 600;
+    color: #666;
+    letter-spacing: 0.02em;
+  }
+
+  .nf-note {
+    font-style: italic;
+  }
+
+  .nf-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .nf-table th,
+  .nf-table td {
+    padding: 1.5px 4px;
+    text-align: right;
+    white-space: nowrap;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .nf-table th {
+    font-weight: 600;
+    color: #777;
+  }
+
+  .nf-table .nf-dish {
+    text-align: left;
+    width: 40%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding-left: 0;
+  }
+
+  .nutrition-footer.compact {
+    margin-top: 8px;
+    padding-top: 4px;
+    font-size: 7.5px;
+  }
+
+  .nutrition-footer.compact .nf-table th,
+  .nutrition-footer.compact .nf-table td {
+    padding: 0.5px 3px;
+  }
+
+  .nutrition-footer.compact .nf-opt {
+    display: none;
+  }
+
   .signoff-name {
     font-family: 'Lucky Fellas', cursive;
     font-size: 24px;
@@ -316,9 +397,48 @@ export function buildBonAppetitHtml(data: BonAppetitData): string {
         <div class="signoff-name">Chef Beth</div>
       </div>
     </div>
+    ${nutritionHtml}
   </div>
 </body>
 </html>`;
+}
+
+// Compact per-serving table. Empty string when no dish has nutrition. Never
+// uses the recipe-block class, so the PDF column-alignment pass ignores it.
+export function renderNutritionFooter(
+  rows: NutritionRow[],
+  note?: string | null,
+): string {
+  const usable = rows.filter((r) => r.calories !== null);
+  if (usable.length === 0) return "";
+
+  const num = (v: number | null, unit = "") => (v === null ? "–" : `${Math.round(v)}${unit}`);
+  const body = usable
+    .map(
+      (r) => `<tr>
+        <td class="nf-dish">${escapeHtml(r.title)}</td>
+        <td>${num(r.calories)}</td>
+        <td>${num(r.proteinG, "g")}</td>
+        <td>${num(r.carbsG, "g")}</td>
+        <td>${num(r.fatG, "g")}</td>
+        <td class="nf-opt">${num(r.fiberG, "g")}</td>
+        <td class="nf-opt">${num(r.sodiumMg, "mg")}</td>
+      </tr>`,
+    )
+    .join("");
+
+  return `<div class="nutrition-footer" data-nutrition-footer>
+      <div class="nf-head">
+        <span class="nf-title">Nutrition facts · per serving</span>
+        ${note ? `<span class="nf-note">${escapeHtml(note)}</span>` : ""}
+      </div>
+      <table class="nf-table">
+        <thead><tr>
+          <th class="nf-dish">Dish</th><th>Calories</th><th>Protein</th><th>Carbs</th><th>Fat</th><th class="nf-opt">Fiber</th><th class="nf-opt">Sodium</th>
+        </tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
 }
 
 function categoryRank(category: string): number {

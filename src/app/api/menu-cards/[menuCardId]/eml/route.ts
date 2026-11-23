@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireKitchenApi } from "@/lib/guard";
 import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
+import { bonAppetitNutrition } from "@/lib/recipe-facts";
 import { buildEml } from "@/lib/eml-builder";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { format } from "date-fns";
@@ -38,6 +39,7 @@ export async function GET(
 
   // Generate PDF
   const html = buildBonAppetitHtml({
+    ...(await bonAppetitNutrition(menuCard.id, kitchen.id)),
     clientFirstNames: menuCard.client.firstName,
     menuDate: dateLong,
     isCoaching: menuCard.isCoaching,
