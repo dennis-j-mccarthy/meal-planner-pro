@@ -12,13 +12,16 @@ export function CookDateWalkthrough({
   progress,
   panels,
   cancelledNote,
+  openStep,
 }: {
   progress: CookDateProgress;
+  /** Open on this step instead of the current one (e.g. ?step=proposed after sending the menu). */
+  openStep?: StepKey | null;
   panels: Record<StepKey, React.ReactNode>;
   cancelledNote: React.ReactNode;
 }) {
   const { done, skipped, current, cancelled } = progress;
-  const [selected, setSelected] = useState<StepKey>(current ?? "paid");
+  const [selected, setSelected] = useState<StepKey>(openStep ?? current ?? "paid");
 
   return (
     <section aria-label="Steps for this cook date" className="panel space-y-6 p-5 sm:p-6">

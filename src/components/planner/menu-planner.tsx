@@ -547,8 +547,8 @@ export function MenuPlanner(props: MenuPlannerProps) {
     if (clientEmail) {
       try {
         await emailProposalLinkToClient(fd);
-        // Sent: back to the cook date's steps (they open on "Waiting for …").
-        router.push(`/cook-dates/${cookDateId}`);
+        // Sent: back to the cook date's steps, on step 1 ("Menu sent").
+        router.push(`/cook-dates/${cookDateId}?step=proposed`);
         return;
       } catch {
         setError(

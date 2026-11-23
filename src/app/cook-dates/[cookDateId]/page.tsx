@@ -30,6 +30,7 @@ import {
   computeProgress,
   isMenuApproved,
   isMonthlyBilling,
+  STEP_KEYS,
   type StepKey,
 } from "@/lib/cook-date-progress";
 import { formatDayShort, formatMonthKey, formatWeekdayLong, todayYmd } from "@/lib/dates";
@@ -84,10 +85,14 @@ function daysBetween(fromYmd: string, toYmd: string) {
 
 export default async function CookDateDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ cookDateId: string }>;
+  searchParams: Promise<{ step?: string }>;
 }) {
   const { cookDateId } = await params;
+  const { step } = await searchParams;
+  const openStep = (STEP_KEYS as readonly string[]).includes(step ?? "") ? (step as StepKey) : null;
   const kitchen = await requireKitchen();
 
   const cookDate = await prisma.cookDate.findFirst({
@@ -666,8 +671,9 @@ export default async function CookDateDetailPage({
       {/* Keyed on the current step: after any action moves the job along,
           the steps open on the new current step. */}
       <CookDateWalkthrough
-        key={progress.current ?? "done"}
+        key={`${progress.current ?? "done"}-${openStep ?? ""}`}
         progress={progress}
+        openStep={openStep}
         cancelledNote={<p className="text-sm muted">This cook date is cancelled. Use Edit to bring it back.</p>}
         panels={{
           proposed: proposedPanel,
