@@ -116,7 +116,6 @@ export default async function CookDateDetailPage({
 
   const progress = computeProgress({
     cancelled: cookDate.status === "CANCELLED",
-    menuHasDishes: !!menu && menu.recipes.length > 0,
     menuSent: !!menu && (menu.status === "SENT" || menu.status === "APPROVED"),
     approved,
     hasBonAppetit: !!bonAppetit,
@@ -139,7 +138,7 @@ export default async function CookDateDetailPage({
           : "Paid"
       : null;
 
-  // ── The menu, shown inside Plan / Proposed / Accepted ──
+  // ── The menu, shown inside Proposed / Accepted ──
   const menuDishes = menu?.recipes ?? [];
   const otherVersions = cookDate.proposals.filter((p) => p.id !== menu?.id);
   const openMenuLink = menu && (
@@ -193,62 +192,42 @@ export default async function CookDateDetailPage({
     </div>
   ) : null;
 
-  // ── 1. Plan ──
-  const planPanel = (
-    <StepPanel
-      title={progress.done.plan ? "Menu planned" : "Plan the menu"}
-      detail={
-        progress.done.plan
-          ? `${menuDishes.filter((d) => !d.clientRemoved).length} dishes for ${first}.`
-          : menu
-            ? "The menu has no dishes yet."
-            : `Pick the dishes for ${first}.`
-      }
-      actions={
-        menu ? (
-          <Link href={`/proposals/${menu.id}`} className={btn("plan")}>
-            {progress.done.plan ? "Open menu" : "Plan the menu"}
-          </Link>
-        ) : (
-          <form action={quickCreateProposal}>
-            <input type="hidden" name="cookDateId" value={cookDate.id} />
-            <button className={btn("plan")}>Plan the menu</button>
-          </form>
-        )
-      }
-    >
-      {menuBlock}
-    </StepPanel>
-  );
-
-  // ── 2. Proposed ──
+  // ── 1. Proposed (planning the menu included) ──
+  const hasDishes = !!menu && menuDishes.length > 0;
   const proposedPanel = (
     <StepPanel
-      title={progress.done.proposed ? "Menu sent" : "Send the menu"}
+      title={progress.done.proposed ? "Menu sent" : hasDishes ? "Send the menu" : "Plan the menu"}
       detail={
         progress.done.proposed
           ? menu?.sentAt
             ? `Sent to ${first} on ${formatDayShort(menu.sentAt)}.`
             : `${first} has the menu.`
-          : !progress.done.plan
-            ? "Plan the menu first."
+          : !hasDishes
+            ? menu
+              ? "The menu has no dishes yet."
+              : `Pick the dishes for ${first}.`
             : menu?.status === "REVISIONS_REQUESTED"
               ? `${first} asked for changes. Update the menu, then send it again.`
               : `The menu is ready to send to ${first}.`
       }
       actions={
-        menu && progress.done.plan ? (
+        menu ? (
           <Link href={`/proposals/${menu.id}`} className={btn("proposed")}>
-            {progress.done.proposed ? "Open menu" : "Send menu to client"}
+            {progress.done.proposed ? "Open menu" : hasDishes ? "Send menu to client" : "Plan the menu"}
           </Link>
-        ) : null
+        ) : (
+          <form action={quickCreateProposal}>
+            <input type="hidden" name="cookDateId" value={cookDate.id} />
+            <button className={btn("proposed")}>Plan the menu</button>
+          </form>
+        )
       }
     >
-      {menu && menuDishes.length > 0 ? <ClientPagePreview src={`/preview/review/${menu.id}`} firstName={first} /> : menuBlock}
+      {hasDishes ? <ClientPagePreview src={`/preview/review/${menu.id}`} firstName={first} /> : menuBlock}
     </StepPanel>
   );
 
-  // ── 3. Accepted ──
+  // ── 2. Accepted ──
   let acceptedTitle: React.ReactNode;
   let acceptedDetail: React.ReactNode;
   let acceptedActions: React.ReactNode = null;
@@ -308,7 +287,7 @@ export default async function CookDateDetailPage({
     </StepPanel>
   );
 
-  // ── 4. Bon Appetit ──
+  // ── 3. Bon Appetit ──
   const makeBonAppetit = (
     <Link
       href={`/menu-cards?clientId=${cookDate.clientId}&cookDateId=${cookDate.id}`}
@@ -377,7 +356,7 @@ export default async function CookDateDetailPage({
     />
   );
 
-  // ── 5. Groceries ──
+  // ── 4. Groceries ──
   const groceriesPanel = (
     <StepPanel
       title={progress.done.groceries ? "Groceries done" : "Groceries"}
@@ -421,7 +400,7 @@ export default async function CookDateDetailPage({
     </StepPanel>
   );
 
-  // ── 6. How did it taste? ──
+  // ── 5. How did it taste? ──
   const tasteDishes = parseTasteDishes(taste?.dishes);
   const sendTaste = (label: string, primary: boolean) => (
     <SendToClientButton
@@ -514,7 +493,7 @@ export default async function CookDateDetailPage({
     );
   }
 
-  // ── 7. Invoice ──
+  // ── 6. Invoice ──
   const invoiceRow = invoice && (
     <Link
       href={`/invoices/${invoice.id}`}
@@ -586,7 +565,7 @@ export default async function CookDateDetailPage({
     />
   );
 
-  // ── 8. Paid ──
+  // ── 7. Paid ──
   const paidPanel = !invoice ? (
     <StepPanel title="Payment" detail="Create the invoice first." />
   ) : invoice.status === "PAID" ? (
@@ -622,7 +601,6 @@ export default async function CookDateDetailPage({
         progress={progress}
         cancelledNote={<p className="text-sm muted">This cook date is cancelled. Use Edit to bring it back.</p>}
         panels={{
-          plan: planPanel,
           proposed: proposedPanel,
           accepted: acceptedPanel,
           bonAppetit: bonAppetitPanel,

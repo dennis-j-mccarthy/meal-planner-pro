@@ -1,4 +1,4 @@
-// Where a cook date is in the job: Plan → Proposed → Accepted → Bon Appetit →
+// Where a cook date is in the job: Proposed → Accepted → Bon Appetit →
 // Groceries → How did it taste? → Invoice → Paid. Worked out from the data, never stored. Plain module (not
 // "use server"): safe to import from server and client components.
 
@@ -22,7 +22,6 @@ export function isMonthlyBilling(mode: string | null | undefined) {
 }
 
 export const STEP_KEYS = [
-  "plan",
   "proposed",
   "accepted",
   "bonAppetit",
@@ -34,7 +33,6 @@ export const STEP_KEYS = [
 export type StepKey = (typeof STEP_KEYS)[number];
 
 export const STEP_LABEL: Record<StepKey, string> = {
-  plan: "Plan",
   proposed: "Proposed",
   accepted: "Accepted",
   bonAppetit: "Bon Appetit",
@@ -99,7 +97,7 @@ export type CookDateProgress = {
 const TASTE_WINDOW_DAYS = 14;
 
 /**
- * Three chains: the menu (Plan → Bon Appetit), the cook (Groceries → How did
+ * Three chains: the menu (Proposed → Bon Appetit), the cook (Groceries → How did
  * it taste?) and the money (Invoice → Paid). Later evidence implies the
  * earlier steps of its chain (a Bon Appetit made from an email means the menu
  * was settled; an approval means it was sent). Groceries count as done once
@@ -108,7 +106,6 @@ const TASTE_WINDOW_DAYS = 14;
  */
 export function computeProgress(input: {
   cancelled: boolean;
-  menuHasDishes: boolean;
   menuSent: boolean;
   approved: boolean;
   hasBonAppetit: boolean;
@@ -123,7 +120,6 @@ export function computeProgress(input: {
   const bonAppetit = input.bonAppetitSent;
   const accepted = bonAppetit || input.hasBonAppetit || input.approved;
   const proposed = accepted || input.menuSent;
-  const plan = proposed || input.menuHasDishes;
   const cooked = input.daysSinceCookDate >= 0;
   const groceries = input.groceriesDone || cooked;
   const tasteTooOld = !input.tasteSent && input.daysSinceCookDate > TASTE_WINDOW_DAYS;
@@ -132,7 +128,6 @@ export function computeProgress(input: {
   const invoice = paid || input.hasInvoice;
 
   const done: Record<StepKey, boolean> = {
-    plan,
     proposed,
     accepted,
     bonAppetit,

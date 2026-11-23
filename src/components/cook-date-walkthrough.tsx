@@ -5,7 +5,8 @@ import { STEP_KEYS, STEP_LABEL, type CookDateProgress, type StepKey } from "@/li
 
 // The steps for one cook date, with the panel for one step underneath. Every
 // step number is a button: it opens on the current step, and any step (done or
-// not) can be opened to look back or jump ahead. Phones: two rows of four.
+// not) can be opened to look back or jump ahead. Phones: a row of four, then
+// three.
 // Wider screens: one row.
 export function CookDateWalkthrough({
   progress,
@@ -21,7 +22,7 @@ export function CookDateWalkthrough({
 
   return (
     <section aria-label="Steps for this cook date" className="panel space-y-6 p-5 sm:p-6">
-      <ol className={`grid grid-cols-4 gap-x-2 gap-y-5 sm:grid-cols-8 ${cancelled ? "opacity-50" : ""}`}>
+      <ol className={`grid grid-cols-4 gap-x-2 gap-y-5 sm:grid-cols-7 ${cancelled ? "opacity-50" : ""}`}>
         {STEP_KEYS.map((key, i) => {
           const isDone = done[key];
           const isSkipped = !!skipped[key];
