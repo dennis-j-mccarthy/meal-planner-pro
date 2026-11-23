@@ -229,6 +229,7 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
   return (
     <MenuPlanner
       proposalId={proposal.id}
+      cookDateId={cookDate.id}
       status={proposal.status}
       editable={editable}
       shareToken={proposal.shareToken}

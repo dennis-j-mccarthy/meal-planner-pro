@@ -78,6 +78,8 @@ function setDragGhost(e: React.DragEvent, title: string) {
 
 export type MenuPlannerProps = {
   proposalId: string;
+  /** Where "Send menu to client" lands: the cook date's steps. */
+  cookDateId: string;
   status: string;
   editable: boolean;
   shareToken: string | null;
@@ -97,6 +99,7 @@ export type MenuPlannerProps = {
 export function MenuPlanner(props: MenuPlannerProps) {
   const {
     proposalId,
+    cookDateId,
     status,
     editable,
     firstName,
@@ -544,7 +547,9 @@ export function MenuPlanner(props: MenuPlannerProps) {
     if (clientEmail) {
       try {
         await emailProposalLinkToClient(fd);
-        showToast(`Sent to ${clientEmail}.`);
+        // Sent: back to the cook date's steps (they open on "Waiting for …").
+        router.push(`/cook-dates/${cookDateId}`);
+        return;
       } catch {
         setError(
           `The menu is marked as sent, but the email to ${clientEmail} didn't go out. Copy the review link above and text it to ${firstName}, or try “Email to client” again.`,
