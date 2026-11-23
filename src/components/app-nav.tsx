@@ -43,17 +43,18 @@ const NEWSLETTERS = icon(
 // Header nav (lg and up).
 const LINKS: NavLink[] = [
   { href: "/", label: "Dashboard", icon: DASHBOARD },
+  // Every menu is built from the recipe database, so it comes right after Dashboard.
+  { href: "/recipes", label: "Recipes", icon: RECIPES },
   { href: "/proposals", label: "Meal Planner", icon: PLANNER },
   { href: "/cook-dates", label: "Calendar", icon: CALENDAR },
   { href: "/clients", label: "Clients", icon: CLIENTS },
-  { href: "/recipes", label: "Recipes", icon: RECIPES },
   { href: "/money", label: "Money", icon: MONEY },
   { href: "/newsletters", label: "Newsletters", icon: NEWSLETTERS },
 ];
 
-// Phone/tablet tab bar: the five places Beth goes every day.
+// Phone/tablet tab bar: the places Beth goes every day.
 const TABS: NavLink[] = LINKS.filter((l) =>
-  ["/", "/proposals", "/cook-dates", "/clients", "/money"].includes(l.href),
+  ["/", "/recipes", "/proposals", "/cook-dates", "/clients", "/money"].includes(l.href),
 );
 
 function isActive(pathname: string, href: string) {
@@ -99,7 +100,7 @@ export function MobileTabBar() {
       className="tab-bar fixed inset-x-0 bottom-0 z-50 border-t backdrop-blur-sm lg:hidden"
       style={{ background: "var(--header-bg)", borderColor: "var(--border-soft)" }}
     >
-      <ul className="mx-auto grid max-w-xl grid-cols-5">
+      <ul className="mx-auto grid max-w-xl grid-cols-6">
         {TABS.map((tab) => {
           const active = isActive(pathname, tab.href);
           return (
