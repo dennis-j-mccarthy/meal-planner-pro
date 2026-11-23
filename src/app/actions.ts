@@ -1246,7 +1246,7 @@ export async function createInvoice(formData: FormData) {
 
   await assertClientInKitchen(kitchen.id, clientId);
 
-  const invoice = await createWithInvoiceNumber((invoiceNumber) =>
+  const invoice = await createWithInvoiceNumber(kitchen.id, (invoiceNumber) =>
     prisma.invoice.create({
       data: {
         kitchenId: kitchen.id,

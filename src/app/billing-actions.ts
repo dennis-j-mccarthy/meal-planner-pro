@@ -137,7 +137,7 @@ export async function createInvoiceForCookDate(cookDateId: string) {
     lines.push({ description: "Travel", amount: client.travelFee });
   }
 
-  const invoice = await createWithInvoiceNumber((invoiceNumber) =>
+  const invoice = await createWithInvoiceNumber(kitchen.id, (invoiceNumber) =>
     prisma.invoice.create({
       data: {
         kitchenId: kitchen.id,
@@ -193,7 +193,7 @@ export async function createMonthlyInvoice(clientId: string, monthKey: string) {
     lines.push({ description: `Travel × ${n}`, amount: Math.round(client.travelFee * n * 100) / 100 });
   }
 
-  const invoice = await createWithInvoiceNumber((invoiceNumber) =>
+  const invoice = await createWithInvoiceNumber(kitchen.id, (invoiceNumber) =>
     prisma.invoice.create({
       data: {
         kitchenId: kitchen.id,

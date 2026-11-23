@@ -14,7 +14,7 @@ export default async function InvoicesPage({
   const kitchen = await requireKitchen();
   const params = await searchParams;
   const preselectedClientId = params.clientId || "";
-  const nextNumber = await getNextInvoiceNumber();
+  const nextNumber = await getNextInvoiceNumber(kitchen.id);
 
   const [clients, invoices] = await Promise.all([
     prisma.client.findMany({

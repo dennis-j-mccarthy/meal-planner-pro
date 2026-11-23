@@ -370,7 +370,7 @@ export async function handleInboundInvoice(opts: {
         ).id;
       }
 
-      invoice = await createWithInvoiceNumber((invoiceNumber) => prisma.invoice.create({
+      invoice = await createWithInvoiceNumber(kitchenId, (invoiceNumber) => prisma.invoice.create({
         data: {
           kitchenId,
           clientId: client.id,
