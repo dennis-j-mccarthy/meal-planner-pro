@@ -42,14 +42,14 @@ export function MarketingPage() {
           },
           {
             color: "from-purple-500 to-purple-600",
-            title: "Meal Plan Builder",
+            title: "Menu Builder",
             desc: "Two-column drag-and-drop editor. Search 2,500+ recipes, group by category (Entrees, Salads, Breakfast, A Gift from Beth), and build menus in minutes.",
             icon: "M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z",
           },
           {
             color: "from-amber-500 to-orange-500",
             title: "Branded Bon Appetit PDFs",
-            desc: "One click generates a beautifully designed menu card — custom fonts, two-column balanced layout, your brand colors. Ready to deliver to clients.",
+            desc: "One click generates a beautifully designed Bon Appetit — custom fonts, two-column balanced layout, your brand colors. Ready to deliver to clients.",
             icon: "M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z",
           },
           {
@@ -90,7 +90,7 @@ export function MarketingPage() {
         <div className="grid gap-6 md:grid-cols-3 relative">
           {[
             { n: 1, t: "Pick a date", d: "Click a day on the calendar from any client's profile. Cook date created, ready to build." },
-            { n: 2, t: "Build the menu", d: "Search your library, drag recipes onto the meal plan, organize by category. Send to the client for approval." },
+            { n: 2, t: "Build the menu", d: "Search your library, drag recipes onto the menu, organize by category. Send to the client for approval." },
             { n: 3, t: "Deliver", d: "Client approves → Bon Appetit PDF auto-generated. Download, email, or send to your client." },
           ].map((s) => (
             <div key={s.n} className="text-center relative">
@@ -109,7 +109,7 @@ export function MarketingPage() {
         {[
           { v: "2,500+", l: "Recipes in library" },
           { v: "1-click", l: "PDF & email delivery" },
-          { v: "3 steps", l: "Meal plan to approved menu" },
+          { v: "3 steps", l: "Draft menu to approved menu" },
         ].map((s) => (
           <div key={s.l} className="panel p-6 text-center">
             <p className="text-4xl font-bold bg-gradient-to-r from-teal-500 to-blue-600 bg-clip-text text-transparent">

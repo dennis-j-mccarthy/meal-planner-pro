@@ -8,7 +8,7 @@ export function DeleteCookDateButton({
   clientId: string;
 }) {
   async function handleDelete() {
-    if (!confirm("Delete this cook date and all its proposals and bon appetits?")) return;
+    if (!confirm("Delete this cook date and all its menus and Bon Appetits?")) return;
     const res = await fetch("/api/cook-dates/delete", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

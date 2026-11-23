@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createCookDate } from "@/app/actions";
+import { EditClientModal } from "@/components/edit-client-modal";
 import { StatusBadge } from "@/components/status-badge";
-import { formatDateShort, formatDateLong, formatEnum, formatMoney } from "@/lib/format";
+import { formatDateShort, formatDateLong, formatMoney } from "@/lib/format";
 import { parsePreferenceList } from "@/lib/preference-options";
 import { parseDishQuota, totalDishes } from "@/lib/dish-quota";
 import { requireKitchen } from "@/lib/guard";
@@ -76,7 +77,7 @@ export default async function ClientDetailPage({
       <div className="panel p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="page-title">
               {client.firstName} {client.lastName}
             </h1>
             {client.householdLabel && (
@@ -99,7 +100,29 @@ export default async function ClientDetailPage({
             )}
           </div>
           <div className="flex flex-col items-start gap-2 md:items-end">
-            <StatusBadge label={client.active ? "Active" : "Inactive"} />
+            <div className="flex items-center gap-3">
+              <StatusBadge status={client.active ? "ACTIVE" : "INACTIVE"} />
+              <EditClientModal
+                client={{
+                  id: client.id,
+                  firstName: client.firstName,
+                  lastName: client.lastName,
+                  email: client.email,
+                  secondaryEmail: client.secondaryEmail,
+                  phone: client.phone,
+                  householdLabel: client.householdLabel,
+                  dietaryNotes: client.dietaryNotes,
+                  inclusions: client.inclusions,
+                  exclusions: client.exclusions,
+                  profileNotes: client.profileNotes,
+                  dishQuota: client.dishQuota,
+                  street: client.street,
+                  city: client.city,
+                  state: client.state,
+                  zip: client.zip,
+                }}
+              />
+            </div>
             <div className="text-right text-xs text-slate-500">
               <p>{client.cookDates.length} cook date{client.cookDates.length !== 1 ? "s" : ""}</p>
               <p>{client.invoices.length} invoice{client.invoices.length !== 1 ? "s" : ""}</p>
@@ -168,7 +191,7 @@ export default async function ClientDetailPage({
                 Dish plan
               </h2>
               <span className="text-xs text-slate-400">
-                {totalDishes(quota)} dish{totalDishes(quota) !== 1 ? "es" : ""} per proposal
+                {totalDishes(quota)} dish{totalDishes(quota) !== 1 ? "es" : ""} per menu
               </span>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -189,7 +212,7 @@ export default async function ClientDetailPage({
       {/* Quick actions */}
       <div className="flex flex-wrap gap-2">
         <Link
-          href={`/cook-dates?clientId=${client.id}`}
+          href={`/cook-dates?clientId=${client.id}#new-cook-date`}
           className="button-primary text-sm"
         >
           + New cook date
@@ -211,7 +234,7 @@ export default async function ClientDetailPage({
       {/* Upcoming cook dates */}
       {upcomingCookDates.length > 0 && (
         <section>
-          <h2 className="text-lg font-bold text-slate-900 mb-4">
+          <h2 className="section-title mb-4">
             Upcoming cook dates
           </h2>
           <div className="space-y-3">
@@ -227,7 +250,7 @@ export default async function ClientDetailPage({
                       <p className="font-semibold text-slate-900">
                         {formatDateLong(cd.scheduledFor)}
                       </p>
-                      <StatusBadge label={formatEnum(cd.status)} />
+                      <StatusBadge status={cd.status} />
                     </div>
                     {cd.startTimeLabel && (
                       <p className="mt-0.5 text-sm text-slate-500">
@@ -263,7 +286,7 @@ export default async function ClientDetailPage({
       {/* Past cook dates */}
       {pastCookDates.length > 0 && (
         <section>
-          <h2 className="text-lg font-bold text-slate-900 mb-4">
+          <h2 className="section-title mb-4">
             Past cook dates
           </h2>
           <div className="space-y-2">
@@ -277,7 +300,7 @@ export default async function ClientDetailPage({
                   <p className="text-sm font-medium text-slate-700">
                     {formatDateShort(cd.scheduledFor)}
                   </p>
-                  <StatusBadge label={formatEnum(cd.status)} />
+                  <StatusBadge status={cd.status} />
                 </div>
                 <p className="text-xs text-slate-500">
                   {cd.finalizedProposal?.title || `${cd.proposals.length} proposal${cd.proposals.length !== 1 ? "s" : ""}`}
@@ -291,7 +314,7 @@ export default async function ClientDetailPage({
       {/* Invoices */}
       {standaloneInvoices.length > 0 && (
         <section>
-          <h2 className="text-lg font-bold text-slate-900 mb-4">Invoices</h2>
+          <h2 className="section-title mb-4">Invoices</h2>
           <div className="space-y-2">
             {standaloneInvoices.map((inv) => {
               const total = inv.lineItems.reduce(
@@ -308,7 +331,7 @@ export default async function ClientDetailPage({
                     <p className="text-sm font-semibold text-slate-900">
                       #{inv.invoiceNumber}
                     </p>
-                    <StatusBadge label={inv.status} />
+                    <StatusBadge status={inv.status} />
                     <p className="text-xs text-slate-500">
                       {formatDateShort(inv.invoiceDate)}
                     </p>
@@ -326,7 +349,7 @@ export default async function ClientDetailPage({
       {/* Ad-hoc Bon Appetits (no cook date) */}
       {client.menuCards.length > 0 && (
         <section>
-          <h2 className="text-lg font-bold text-slate-900 mb-4">
+          <h2 className="section-title mb-4">
             Ad-hoc Bon Appetits
           </h2>
           <div className="space-y-2">

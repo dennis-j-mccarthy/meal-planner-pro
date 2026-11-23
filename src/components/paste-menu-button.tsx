@@ -54,7 +54,7 @@ export function PasteMenuButton({ proposalId }: { proposalId: string }) {
         className="fixed inset-0 m-auto w-full max-w-2xl max-h-[90vh] rounded-2xl border border-slate-200 p-0 shadow-xl backdrop:bg-black/40 overflow-hidden"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900">Paste menu</h2>
+          <h2 className="section-title">Paste menu</h2>
           <button
             type="button"
             onClick={() => setOpen(false)}

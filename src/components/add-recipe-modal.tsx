@@ -334,7 +334,7 @@ export function AddRecipeModal() {
         className="fixed inset-0 m-auto w-full max-w-2xl max-h-[90vh] rounded-2xl border border-slate-200 p-0 shadow-xl backdrop:bg-black/40 overflow-hidden"
       >
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-          <h2 className="text-lg font-bold text-slate-900">Add a recipe</h2>
+          <h2 className="section-title">Add a recipe</h2>
           <button
             type="button"
             onClick={() => setOpen(false)}
@@ -438,12 +438,12 @@ export function AddRecipeModal() {
                           </p>
                           <div className="mt-1 flex flex-wrap gap-1">
                             {recipe.dietLabels.slice(0, 2).map((d) => (
-                              <span key={d} className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                              <span key={d} className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
                                 {d}
                               </span>
                             ))}
                             {recipe.cuisineType.slice(0, 1).map((c) => (
-                              <span key={c} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                              <span key={c} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
                                 {c}
                               </span>
                             ))}
@@ -593,12 +593,12 @@ export function AddRecipeModal() {
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {recipe.dietLabels.slice(0, 3).map((d) => (
-                          <span key={d} className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                          <span key={d} className="rounded bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
                             {d}
                           </span>
                         ))}
                         {recipe.cuisineType.slice(0, 2).map((c) => (
-                          <span key={c} className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                          <span key={c} className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600">
                             {c}
                           </span>
                         ))}

@@ -25,10 +25,13 @@ export function CookDatesView({
   cookDates,
   clients,
   preselectedClientId = "",
+  children,
 }: {
   cookDates: CalendarCookDate[];
   clients: Client[];
   preselectedClientId?: string;
+  /** Rendered between the calendar and the create form (the Upcoming list). */
+  children?: React.ReactNode;
 }) {
   const [date, setDate] = useState("");
   const [clientId, setClientId] = useState(preselectedClientId);
@@ -36,7 +39,7 @@ export function CookDatesView({
   return (
     <>
       {/* Calendar */}
-      <section className="panel p-6">
+      <section className="panel p-4 sm:p-6">
         <CookDateCalendar
           cookDates={cookDates}
           initialMonth={new Date().getMonth()}
@@ -46,13 +49,15 @@ export function CookDatesView({
         />
       </section>
 
+      {children}
+
       {/* Create form */}
-      <form action={createCookDate} className="panel p-6">
-        <h2 className="text-lg font-bold text-slate-900">
-          Create a cook date
+      <form id="new-cook-date" action={createCookDate} className="panel scroll-mt-20 p-6">
+        <h2 className="section-title">
+          New cook date
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Click a day on the calendar to pre-fill the date.
+          Or click a day on the calendar and choose a client.
         </p>
         <div className="mt-5 grid gap-3">
           <select className="field" name="clientId" required value={clientId} onChange={(e) => setClientId(e.target.value)}>

@@ -46,13 +46,13 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
           e.stopPropagation();
           setOpen(true);
         }}
-        className="button-secondary text-xs px-3 py-1.5"
+        className="button-secondary"
         title="Edit client"
       >
-        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
         </svg>
-        Edit
+        Edit client
       </button>
 
       <dialog
@@ -62,7 +62,7 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-slate-900">Edit client</h2>
+            <h2 className="section-title">Edit client</h2>
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -151,7 +151,7 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
               </div>
               <div className="md:col-span-2">
                 <p className="mb-1.5 text-xs font-semibold text-slate-500">
-                  Dish plan — how many of each per proposal
+                  Dish plan — how many of each per menu
                 </p>
                 <DishQuotaEditor defaultValue={parseDishQuota(client.dishQuota)} />
               </div>

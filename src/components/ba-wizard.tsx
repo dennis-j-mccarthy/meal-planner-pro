@@ -96,7 +96,7 @@ export function BaWizard({ clients }: BaWizardProps) {
         ))}
       </div>
 
-      <h1 className="mb-1 text-center text-xl font-bold text-slate-900">
+      <h1 className="mb-1 text-center page-title">
         Quick Bon Appetit
       </h1>
       <p className="mb-5 text-center text-sm text-slate-500">

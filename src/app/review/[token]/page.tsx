@@ -3,7 +3,7 @@ import { formatDateShort } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 export const metadata = {
-  title: "Your meal plan",
+  title: "Your menu",
 };
 
 type ReviewPageProps = {
@@ -39,7 +39,7 @@ export default async function ReviewPage({ params }: ReviewPageProps) {
         <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
           <h1 className="text-xl font-bold text-slate-900">This link is no longer active</h1>
           <p className="mt-2 text-sm text-slate-500">
-            Please reach out to your chef for an up-to-date meal plan link.
+            Please reach out to your chef for an up-to-date menu link.
           </p>
         </div>
       </Shell>

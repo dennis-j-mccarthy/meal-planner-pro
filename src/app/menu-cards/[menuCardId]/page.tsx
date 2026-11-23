@@ -67,7 +67,7 @@ export default async function MenuCardDetailPage({
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="page-title">
                 {menuCard.title}{" "}
                 <span className="text-lg font-semibold text-slate-400">
                   ({menuCard.recipes.length} recipe
@@ -104,7 +104,7 @@ export default async function MenuCardDetailPage({
 
       {/* Recipes grouped by category */}
       <div className="panel p-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Menu</h2>
+        <h2 className="section-title mb-4">Menu</h2>
 
         <div className="space-y-6">
           {[...grouped.entries()].map(([category, recipes]) => (
@@ -159,7 +159,7 @@ export default async function MenuCardDetailPage({
       {/* Notes */}
       {menuCard.notes && (
         <div className="panel p-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-2">Notes</h2>
+          <h2 className="section-title mb-2">Notes</h2>
           <p className="text-sm text-slate-600 leading-relaxed">
             {menuCard.notes}
           </p>

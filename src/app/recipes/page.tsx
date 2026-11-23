@@ -106,47 +106,19 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
   const hasFilters = query || activeTag || showStarred || showUsed;
 
   return (
-    <div className="space-y-8">
-      {/* Hero header */}
-      <section className="relative overflow-hidden rounded-3xl accent-hero px-8 py-10 border">
-        {/* Decorative blobs */}
-        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--accent-light)] blur-3xl opacity-60" />
-        <div className="absolute -left-16 -bottom-20 h-56 w-56 rounded-full bg-[var(--accent-light)] blur-3xl opacity-60" />
-
-        <div className="relative flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--accent-strong)] mb-2 opacity-80">
-              Your library
-            </p>
-            <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">
-              Recipes
-            </h1>
-            <p className="mt-3 text-base text-slate-600 max-w-xl">
-              {totalCount.toLocaleString()} recipe{totalCount !== 1 ? "s" : ""} ready to inspire your next
-              menu. Search, filter, or discover something new.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            {/* Stat chips */}
-            <div className="flex gap-3">
-              <div className="rounded-2xl bg-white/70 backdrop-blur border border-white/80 px-4 py-3 shadow-sm">
-                <p className="text-2xl font-bold text-slate-900">{totalCount.toLocaleString()}</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total</p>
-              </div>
-              <div className="rounded-2xl bg-white/70 backdrop-blur border border-white/80 px-4 py-3 shadow-sm">
-                <p className="text-2xl font-bold text-[var(--accent-strong)]">{starredCount}</p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Starred</p>
-              </div>
-            </div>
-
-            <AddRecipeModal />
-          </div>
+    <div className="space-y-8 fade-up">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="page-title">Recipes</h1>
+          <p className="mt-2 text-sm muted">
+            {totalCount.toLocaleString()} recipe{totalCount !== 1 ? "s" : ""} · {starredCount} starred
+          </p>
         </div>
-      </section>
+        <AddRecipeModal />
+      </header>
 
       {/* Search + filter bar */}
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="panel p-5">
         <form className="flex items-center gap-3">
           <div className="relative flex-1">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -179,7 +151,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
             href={showStarred ? "/recipes" : "/recipes?starred=1"}
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
               showStarred
-                ? "bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md"
+                ? "bg-amber-500 text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-amber-50 hover:text-amber-600"
             }`}
           >
@@ -202,7 +174,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
             href={showUsed ? "/recipes" : "/recipes?used=1"}
             className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
               showUsed
-                ? "bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] text-white shadow-md"
+                ? "bg-[var(--accent)] text-white"
                 : "bg-slate-100 text-slate-600 hover:bg-[var(--accent-light)] hover:text-[var(--accent)]"
             }`}
           >
@@ -220,7 +192,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
               Tags:
             </span>
             <Link
-              className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+              className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
                 !activeTag
                   ? "bg-slate-900 text-white"
                   : "bg-slate-100 text-slate-500 hover:bg-slate-200"
@@ -232,7 +204,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
             {topTags.map(([tag, count]) => (
               <Link
                 key={tag}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+                className={`rounded-full px-2.5 py-1 text-xs font-medium transition ${
                   activeTag.toLowerCase() === tag.toLowerCase()
                     ? "bg-[var(--accent)] text-white shadow-sm"
                     : "bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
@@ -261,7 +233,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
       {/* Recipe grid */}
       {recipes.length === 0 ? (
         <div className="rounded-2xl border-2 border-dashed border-slate-200 px-4 py-16 text-center">
-          <div className="mx-auto h-16 w-16 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center mb-4">
+          <div className="mx-auto h-16 w-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
             <svg className="h-8 w-8 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
             </svg>

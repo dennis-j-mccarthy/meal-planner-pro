@@ -271,7 +271,7 @@ export function NewsletterComposer({
         )}
 
         <div>
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="section-title">
             {isEdit ? "Edit newsletter" : "New newsletter"}
           </h2>
         </div>

@@ -35,7 +35,7 @@ export default async function InvoicesPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Invoices</h1>
+        <h1 className="page-title">Invoices</h1>
         <p className="mt-1 text-sm text-slate-500">
           Create and manage client invoices.
         </p>
@@ -47,7 +47,7 @@ export default async function InvoicesPage({
         {/* Invoice list */}
         <div className="panel p-6">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-bold text-slate-900">All invoices</h2>
+            <h2 className="section-title">All invoices</h2>
             <span className="text-sm text-slate-500">{invoices.length} total</span>
           </div>
 
@@ -75,7 +75,7 @@ export default async function InvoicesPage({
                           <h3 className="text-base font-semibold text-slate-900">
                             #{invoice.invoiceNumber}
                           </h3>
-                          <StatusBadge label={invoice.status} />
+                          <StatusBadge status={invoice.status} />
                         </div>
                         <p className="mt-1 text-sm text-slate-600">
                           {invoice.client.firstName} {invoice.client.lastName}

@@ -67,7 +67,7 @@ export function InvoiceEditForm({
   return (
     <div className="panel p-6 space-y-5">
       <div>
-        <h2 className="text-lg font-bold text-slate-900">
+        <h2 className="section-title">
           Edit invoice #{invoice.invoiceNumber}
         </h2>
       </div>

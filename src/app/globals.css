@@ -7,24 +7,38 @@
   --accent-light: #fde5dd;
   --theme-bg: #fffdfa;
 
-  --foreground: #1e293b;
-  --panel: #ffffff;
-  --panel-strong: #fff8f0;
-  --border-soft: #fde9d4;
-  --muted: #64748b;
-  --surface: #fdf6ec;
+  /* Calm, warm-neutral base. --border-soft is overridden inline by the theme,
+     so neutral surfaces use --line instead. */
+  --paper: #fffdf9;
+  --card: #ffffff;
+  --line: #e7e5e4;
+  --ink: #1c1917;
+  --muted-fg: #78716c;
 
-  --header-bg: rgba(255, 255, 255, 0.95);
-  --text-strong: #0f172a;
-  --text-body: #1e293b;
-  --text-muted: #64748b;
-  --text-subtle: #94a3b8;
+  --foreground: #1c1917;
+  --panel: #ffffff;
+  --panel-strong: #fafaf9;
+  --border-soft: #e7e5e4;
+  --muted: #78716c;
+  --surface: #f5f5f4;
+
+  --header-bg: color-mix(in srgb, var(--paper) 92%, transparent);
+  --text-strong: #1c1917;
+  --text-body: #292524;
+  --text-muted: #78716c;
+  --text-subtle: #a8a29e;
   --surface-card: #ffffff;
-  --surface-raised: #fff8f0;
+  --surface-raised: #fafaf9;
 }
 
 /* Dark theme overrides */
 html.dark {
+  --paper: var(--theme-bg);
+  --card: #1a1a24;
+  --line: rgba(255, 255, 255, 0.1);
+  --ink: #f8fafc;
+  --muted-fg: #a1a1aa;
+
   --foreground: #f1f5f9;
   --panel: #1a1a24;
   --panel-strong: #24222e;
@@ -32,7 +46,7 @@ html.dark {
   --muted: #94a3b8;
   --surface: #0f0e18;
 
-  --header-bg: rgba(15, 14, 24, 0.85);
+  --header-bg: color-mix(in srgb, var(--paper) 88%, transparent);
   --text-strong: #f8fafc;
   --text-body: #e2e8f0;
   --text-muted: #94a3b8;
@@ -45,9 +59,15 @@ html.dark {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-accent-light: var(--accent-light);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted-fg: var(--muted-fg);
 }
 
 * {
@@ -56,12 +76,7 @@ html.dark {
 
 html {
   scroll-behavior: smooth;
-  background:
-    radial-gradient(circle at 20% 0%, var(--accent-light) 0%, transparent 45%),
-    radial-gradient(circle at 85% 15%, var(--accent-light) 0%, transparent 40%),
-    radial-gradient(circle at 50% 100%, var(--accent-light) 0%, transparent 55%),
-    var(--theme-bg);
-  background-attachment: fixed;
+  background: var(--paper);
   color: var(--foreground);
 }
 
@@ -111,97 +126,186 @@ textarea {
 }
 
 .panel {
-  border: 1px solid var(--border-soft);
-  background: var(--panel);
-  border-radius: 16px;
-  box-shadow:
-    0 1px 3px rgba(30, 41, 59, 0.04),
-    0 4px 16px color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 14px;
   color: var(--foreground);
 }
 
 .field {
   width: 100%;
   border-radius: 10px;
-  border: 1px solid var(--border-soft);
-  background: var(--surface-card);
-  padding: 0.7rem 0.875rem;
+  border: 1px solid var(--line);
+  background: var(--card);
+  padding: 0.625rem 0.875rem;
   color: var(--foreground);
   font-size: 0.875rem;
   outline: none;
 }
 
-.field:focus {
+.field:focus,
+.field:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Single-line fields only: a min-height here would override min-h-* on textareas. */
+input.field,
+select.field {
+  min-height: 2.75rem;
 }
 
 .field::placeholder {
-  color: #94a3b8;
+  color: var(--text-subtle);
 }
 
-.button-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-  color: #ffffff;
-  font-weight: 600;
-  font-size: 0.875rem;
-  padding: 0.625rem 1.25rem;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
-}
-
-.button-primary:hover {
-  filter: brightness(1.05);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent) 45%, transparent);
-}
-
+.button-primary,
 .button-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 0.375rem;
+  min-height: 2.5rem;
   border-radius: 10px;
-  border: 1px solid var(--border-soft);
-  background: var(--surface-card);
-  color: var(--text-body);
   font-weight: 600;
   font-size: 0.875rem;
-  padding: 0.625rem 1.25rem;
+  line-height: 1.25rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+.button-primary {
+  background: var(--accent);
+  color: #ffffff;
+  border: 1px solid var(--accent);
+}
+
+.button-primary:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+.button-secondary {
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
 }
 
 .button-secondary:hover {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
+  border-color: color-mix(in srgb, var(--ink) 30%, transparent);
 }
 
-/* Gradient hero helper — uses accent variables */
-.accent-hero {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--accent-light) 80%, white) 0%,
-    color-mix(in srgb, var(--accent) 18%, white) 100%
-  );
-  border-color: color-mix(in srgb, var(--accent) 25%, white);
+.button-primary:disabled,
+.button-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Phones: every button and field is at least 44px tall. */
+@media (max-width: 767px) {
+  .button-primary,
+  .button-secondary,
+  input.field,
+  select.field {
+    min-height: 2.75rem;
+  }
+}
+
+/* Visible keyboard focus on everything interactive. */
+:where(a, button, input, select, textarea, summary, [role="button"], [role="link"], [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Page and section headings in the display serif. */
+.page-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  color: var(--ink);
+}
+
+.muted {
+  color: var(--muted-fg);
+}
+
+/* One status badge for invoices, cook dates and menus. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 0.125rem 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.125rem;
+  font-weight: 500;
+  border: 1px solid transparent;
+}
+.badge-neutral { background: #f5f5f4; color: #57534e; border-color: #e7e5e4; }
+.badge-accent  { background: color-mix(in srgb, var(--accent) 12%, white); color: var(--accent-strong); border-color: color-mix(in srgb, var(--accent) 30%, white); }
+.badge-info    { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+.badge-warning { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.badge-success { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.badge-danger  { background: #fff1f2; color: #be123c; border-color: #fecdd3; }
+.badge-muted   { background: transparent; color: #a8a29e; border-color: #e7e5e4; text-decoration: line-through; }
+
+html.dark .badge-neutral { background: rgba(255,255,255,0.06); color: #d4d4d8; border-color: rgba(255,255,255,0.1); }
+html.dark .badge-accent  { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+html.dark .badge-info    { background: rgba(59,130,246,0.15); color: #93c5fd; border-color: rgba(59,130,246,0.3); }
+html.dark .badge-warning { background: rgba(245,158,11,0.15); color: #fcd34d; border-color: rgba(245,158,11,0.3); }
+html.dark .badge-success { background: rgba(16,185,129,0.15); color: #6ee7b7; border-color: rgba(16,185,129,0.3); }
+html.dark .badge-danger  { background: rgba(244,63,94,0.15); color: #fda4af; border-color: rgba(244,63,94,0.3); }
+html.dark .badge-muted   { color: #71717a; border-color: rgba(255,255,255,0.1); }
+
+/* Calendar dots, same tones as the badges. */
+.dot { display: inline-block; height: 0.5rem; width: 0.5rem; flex-shrink: 0; border-radius: 999px; }
+.dot-neutral { background: #a8a29e; }
+.dot-accent  { background: var(--accent); }
+.dot-info    { background: #3b82f6; }
+.dot-warning { background: #f59e0b; }
+.dot-success { background: #10b981; }
+.dot-danger  { background: #f43f5e; }
+.dot-muted   { background: #d6d3d1; }
+
+/* Phone bottom tab bar */
+.tab-bar {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.page-bottom-pad {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+}
+@media (min-width: 768px) {
+  .page-bottom-pad {
+    padding-bottom: 3rem;
+  }
 }
 
 .fade-up {
-  animation: fade-up 400ms ease both;
+  animation: fade-up 300ms ease both;
 }
 
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up { animation: none; }
 }

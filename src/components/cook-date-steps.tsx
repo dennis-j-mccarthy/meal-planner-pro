@@ -22,7 +22,7 @@ export function CookDateSteps({
   const steps = [
     {
       number: 1 as const,
-      label: "Meal Plan",
+      label: "Menu",
       done: hasMealPlan,
       href: mealPlanId ? `/proposals/${mealPlanId}` : `/cook-dates/${cookDateId}`,
     },

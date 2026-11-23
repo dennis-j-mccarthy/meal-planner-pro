@@ -117,7 +117,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               <span className="text-2xl leading-none shrink-0">{icon}</span>
             )}
             {recipe.cuisine && (
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 truncate">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-400 truncate">
                 {recipe.cuisine}
               </p>
             )}
@@ -159,7 +159,7 @@ export function RecipeCard({ recipe }: RecipeCardProps) {
               </span>
             )}
             {topTag && (
-              <span className="ml-auto inline-flex rounded-full bg-[var(--accent-light)] px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-strong)]">
+              <span className="ml-auto inline-flex rounded-full bg-[var(--accent-light)] px-2 py-0.5 text-xs font-semibold text-[var(--accent-strong)]">
                 {topTag}
               </span>
             )}

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { quickCreateProposal } from "@/app/actions";
 import { StatusBadge } from "@/components/status-badge";
 import { DeleteCookDateButton } from "@/components/delete-cook-date-button";
-import { formatDateLong, formatDateShort, formatEnum, formatMinutes, formatMoney } from "@/lib/format";
+import { formatDateLong, formatDateShort, formatMinutes, formatMoney } from "@/lib/format";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
@@ -96,10 +96,10 @@ export default async function CookDateDetailPage({
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="page-title">
                 {formatDateLong(cookDate.scheduledFor)}
               </h1>
-              <StatusBadge label={formatEnum(cookDate.status)} />
+              <StatusBadge status={cookDate.status} />
             </div>
             <p className="mt-1 text-sm text-slate-600">
               {cookDate.client.firstName} {cookDate.client.lastName}
@@ -132,13 +132,13 @@ export default async function CookDateDetailPage({
             <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${hasMealPlan ? "bg-green-500 text-white" : "bg-[var(--accent)] text-white"}`}>
               {hasMealPlan ? "✓" : "1"}
             </span>
-            <h2 className="text-lg font-bold text-slate-900">Meal Plan</h2>
+            <h2 className="section-title">Menu</h2>
           </div>
           {!hasMealPlan && (
             <form action={quickCreateProposal}>
               <input type="hidden" name="cookDateId" value={cookDate.id} />
               <button className="button-primary text-sm">
-                Create meal plan
+                Create menu
               </button>
             </form>
           )}
@@ -149,13 +149,13 @@ export default async function CookDateDetailPage({
             <div className="flex items-center justify-between gap-2 mb-3">
               <div className="flex items-center gap-2">
                 <p className="text-sm text-slate-500">{approvedMealPlan.title}</p>
-                <StatusBadge label={formatEnum(approvedMealPlan.status)} />
+                <StatusBadge status={approvedMealPlan.status} />
               </div>
               <Link
                 href={`/proposals/${approvedMealPlan.id}`}
                 className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
               >
-                Edit meal plan &rarr;
+                Edit menu &rarr;
               </Link>
             </div>
             <div className="space-y-2">
@@ -164,7 +164,7 @@ export default async function CookDateDetailPage({
                   key={item.id}
                   className="flex items-start gap-3 rounded-lg border border-slate-100 p-3"
                 >
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-white">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-white">
                     {index + 1}
                   </span>
                   <div className="min-w-0">
@@ -191,7 +191,7 @@ export default async function CookDateDetailPage({
               >
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-slate-900">{mp.title}</p>
-                  <StatusBadge label={formatEnum(mp.status)} />
+                  <StatusBadge status={mp.status} />
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
                   {mp.recipes.length} recipe{mp.recipes.length !== 1 ? "s" : ""}
@@ -204,7 +204,7 @@ export default async function CookDateDetailPage({
           </div>
         ) : (
           <p className="text-sm text-slate-400">
-            Start by creating a meal plan — search and drag recipes to build the menu.
+            Start by creating a menu — search and drag recipes onto it.
           </p>
         )}
       </div>
@@ -215,7 +215,7 @@ export default async function CookDateDetailPage({
           <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${isApproved ? "bg-green-500 text-white" : hasMealPlan ? "bg-[var(--accent)] text-white" : "bg-slate-200 text-slate-400"}`}>
             {isApproved ? "✓" : "2"}
           </span>
-          <h2 className="text-lg font-bold text-slate-900">Client Approval</h2>
+          <h2 className="section-title">Client Approval</h2>
         </div>
         {isApproved ? (
           <p className="text-sm text-green-600 font-medium">
@@ -223,11 +223,11 @@ export default async function CookDateDetailPage({
           </p>
         ) : hasMealPlan ? (
           <p className="text-sm text-slate-500">
-            Open the meal plan above, then click &ldquo;Client approved&rdquo; when ready.
+            Open the menu above, then click &ldquo;Client approved&rdquo; when ready.
           </p>
         ) : (
           <p className="text-sm text-slate-400">
-            Create a meal plan first, then share it for client approval.
+            Create a menu first, then share it for client approval.
           </p>
         )}
       </div>
@@ -238,7 +238,7 @@ export default async function CookDateDetailPage({
           <span className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${hasBonAppetit ? "bg-green-500 text-white" : isApproved ? "bg-[var(--accent)] text-white" : "bg-slate-200 text-slate-400"}`}>
             {hasBonAppetit ? "✓" : "3"}
           </span>
-          <h2 className="text-lg font-bold text-slate-900">Bon Appetit</h2>
+          <h2 className="section-title">Bon Appetit</h2>
         </div>
         {hasBonAppetit ? (
           <div className="space-y-2">
@@ -270,12 +270,20 @@ export default async function CookDateDetailPage({
             ))}
           </div>
         ) : isApproved ? (
-          <p className="text-sm text-slate-500">
-            Bon Appetit was auto-generated when the meal plan was approved. Check above.
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-500">
+              The menu is approved, but there is no Bon Appetit for this cook date yet.
+            </p>
+            <Link
+              href={`/menu-cards?clientId=${cookDate.clientId}&cookDateId=${cookDate.id}`}
+              className="button-primary"
+            >
+              Make Bon Appetit
+            </Link>
+          </div>
         ) : (
           <p className="text-sm text-slate-400">
-            The Bon Appetit is created automatically when the client approves the meal plan.
+            The Bon Appetit is created automatically when the client approves the menu.
           </p>
         )}
       </div>
@@ -283,7 +291,7 @@ export default async function CookDateDetailPage({
       {/* ===== INVOICES ===== */}
       <div className="panel p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-bold text-slate-900">Invoices</h2>
+          <h2 className="section-title">Invoices</h2>
           <Link
             href={`/invoices?clientId=${cookDate.clientId}`}
             className="text-xs font-semibold text-[var(--accent)] hover:text-[var(--accent-strong)]"
@@ -308,7 +316,7 @@ export default async function CookDateDetailPage({
                     <p className="text-sm font-semibold text-slate-900">
                       #{inv.invoiceNumber}
                     </p>
-                    <StatusBadge label={inv.status} />
+                    <StatusBadge status={inv.status} />
                     <p className="text-xs text-slate-500">
                       {formatDateShort(inv.invoiceDate)}
                     </p>

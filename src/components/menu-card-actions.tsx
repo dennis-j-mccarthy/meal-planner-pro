@@ -109,8 +109,8 @@ export function MenuCardActions({ menuCardId, accepted, clientEmail }: MenuCardA
           <form action={acceptMenuCard}>
             <input type="hidden" name="menuCardId" value={menuCardId} />
             <button
-              title="Mark proposal accepted"
-              aria-label="Mark proposal accepted"
+              title="Mark menu accepted"
+              aria-label="Mark menu accepted"
               className={`${iconBtn} border-green-200 text-green-600 hover:bg-green-50`}
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">

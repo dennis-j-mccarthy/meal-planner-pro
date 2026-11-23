@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import { StatusBadge } from "@/components/status-badge";
+import { COOK_DATE_LEGEND, statusDotClass, statusLabel } from "@/lib/status";
+
+const noopSubscribe = () => () => {};
 
 type CalendarCookDate = {
   id: string;
@@ -37,30 +41,6 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-function statusColor(status: string) {
-  switch (status) {
-    case "COMPLETED":
-      return "bg-emerald-500";
-    case "APPROVED":
-    case "SCHEDULED":
-      return "bg-[var(--accent)]";
-    case "PROPOSED":
-      return "bg-amber-400";
-    case "CANCELLED":
-      return "bg-slate-300";
-    default:
-      return "bg-slate-400";
-  }
-}
-
-function formatStatus(status: string) {
-  return status
-    .toLowerCase()
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients, onDateSelect, onMonthChange }: CookDateCalendarProps) {
   const router = useRouter();
   const [month, setMonth] = useState(initialMonth);
@@ -68,10 +48,10 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [creatingClientId, setCreatingClientId] = useState<string | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   // Portals need the DOM; only render the popup after mount
-  useEffect(() => setMounted(true), []);
+  // true in the browser, false during server render (portals need the DOM)
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   function closeModal() {
     setSelectedDate(null);
@@ -103,7 +83,7 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
       });
       const data = await res.json();
       if (data.proposalUrl) {
-        window.location.href = data.proposalUrl;
+        router.push(data.proposalUrl);
       } else {
         setCreatingClientId(null);
         setCreateError(data.error || "Failed to create cook date");
@@ -179,13 +159,13 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
       {/* Month navigation */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="section-title">
             {MONTH_NAMES[month]} {year}
           </h2>
           <button
             type="button"
             onClick={goToToday}
-            className="rounded-md bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200"
+            className="button-secondary px-3"
           >
             Today
           </button>
@@ -194,7 +174,8 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
           <button
             type="button"
             onClick={prevMonth}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            aria-label="Previous month"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
@@ -203,7 +184,8 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
           <button
             type="button"
             onClick={nextMonth}
-            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+            aria-label="Next month"
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700"
           >
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
@@ -274,14 +256,14 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
                         }}
                         className="flex cursor-pointer items-center gap-1 rounded px-1 py-0.5 hover:bg-slate-100"
                       >
-                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusColor(ev.status)}`} />
-                        <span className="truncate text-[10px] font-medium text-slate-700">
+                        <span className={statusDotClass(ev.status)} />
+                        <span className="truncate text-xs font-medium text-slate-700">
                           {ev.clientName}
                         </span>
                       </div>
                     ))}
                     {events.length > 3 && (
-                      <p className="px-1 text-[10px] text-slate-400">+{events.length - 3} more</p>
+                      <p className="px-1 text-xs text-slate-500">+{events.length - 3} more</p>
                     )}
                   </div>
                 )}
@@ -343,21 +325,13 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
                           <p className="mt-2 text-sm text-slate-600">{cd.serviceNotes}</p>
                         )}
                         <p className="mt-2 text-xs text-slate-400">
-                          {cd.proposalTitle || "No approved proposal yet"}
+                          {cd.proposalTitle || "No approved menu yet"}
                         </p>
                         <p className="mt-2 text-xs font-medium text-[var(--accent-strong)]">
-                          View meal plan &rarr;
+                          Open cook date &rarr;
                         </p>
                       </div>
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-                        cd.status === "COMPLETED" ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
-                        cd.status === "APPROVED" || cd.status === "SCHEDULED" ? "bg-teal-50 text-teal-700 ring-teal-200" :
-                        cd.status === "PROPOSED" ? "bg-amber-50 text-amber-700 ring-amber-200" :
-                        cd.status === "CANCELLED" ? "bg-slate-50 text-slate-500 ring-slate-200" :
-                        "bg-slate-50 text-slate-600 ring-slate-200"
-                      }`}>
-                        {formatStatus(cd.status)}
-                      </span>
+                      <StatusBadge status={cd.status} />
                     </div>
                   </div>
                 ))}
@@ -404,27 +378,13 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
       )}
 
       {/* Legend */}
-      <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-slate-400" />
-          Draft
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-amber-400" />
-          Proposed
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
-          Approved / Scheduled
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          Completed
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="h-2 w-2 rounded-full bg-slate-300" />
-          Cancelled
-        </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500">
+        {COOK_DATE_LEGEND.map((status) => (
+          <div key={status} className="flex items-center gap-1.5">
+            <span className={statusDotClass(status)} />
+            {statusLabel(status)}
+          </div>
+        ))}
       </div>
     </div>
   );

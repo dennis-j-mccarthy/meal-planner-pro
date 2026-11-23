@@ -92,7 +92,7 @@ export function ProposalReviewForm({
             )}
             <div className="min-w-0 flex-1">
               {r.courseLabel && (
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <p className="text-xs font-bold uppercase tracking-wider text-slate-400">
                   {r.courseLabel}
                 </p>
               )}

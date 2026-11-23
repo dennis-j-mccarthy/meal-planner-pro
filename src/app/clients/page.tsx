@@ -1,107 +1,60 @@
 import { ClientList } from "@/components/client-list";
 import { AddClientModal } from "@/components/add-client-modal";
+import { formatWeekdayShort, todayStart } from "@/lib/dates";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
 export default async function ClientsPage() {
   const kitchen = await requireKitchen();
+  const start = todayStart();
+
   const clients = await prisma.client.findMany({
     where: { kitchenId: kitchen.id },
     include: {
+      // The soonest upcoming cook date only.
       cookDates: {
-        include: {
-          proposals: {
-            select: { id: true, title: true, status: true },
-            orderBy: { createdAt: "desc" },
-          },
-          menuCards: {
-            select: { id: true, title: true, accepted: true },
-            orderBy: { menuDate: "desc" },
-          },
-          finalizedProposal: { select: { id: true, title: true } },
-        },
-        orderBy: { scheduledFor: "desc" },
+        where: { scheduledFor: { gte: start }, status: { not: "CANCELLED" } },
+        select: { scheduledFor: true },
+        orderBy: { scheduledFor: "asc" },
+        take: 1,
       },
       invoices: {
-        include: { lineItems: { select: { amount: true } } },
-        orderBy: { invoiceDate: "desc" },
+        where: { status: { in: ["DRAFT", "SENT"] } },
+        select: { lineItems: { select: { amount: true } } },
       },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
   });
 
-  const now = new Date();
+  const rows = clients.map((client) => ({
+    id: client.id,
+    name: `${client.firstName} ${client.lastName}`.trim(),
+    active: client.active,
+    nextCookDateLabel: client.cookDates[0]
+      ? formatWeekdayShort(client.cookDates[0].scheduledFor)
+      : null,
+    notMarkedPaid: client.invoices.reduce(
+      (sum, inv) => sum + inv.lineItems.reduce((s, li) => s + li.amount, 0),
+      0,
+    ),
+  }));
 
-  const clientData = clients.map((client) => {
-    const nextCookDate = client.cookDates.find(
-      (cd) => cd.scheduledFor >= now,
-    );
-
-    return {
-      id: client.id,
-      firstName: client.firstName,
-      lastName: client.lastName,
-      email: client.email,
-      secondaryEmail: client.secondaryEmail,
-      phone: client.phone,
-      householdLabel: client.householdLabel,
-      dietaryNotes: client.dietaryNotes,
-      inclusions: client.inclusions,
-      exclusions: client.exclusions,
-      profileNotes: client.profileNotes,
-      dishQuota: client.dishQuota,
-      address: client.address,
-      street: client.street,
-      city: client.city,
-      state: client.state,
-      zip: client.zip,
-      active: client.active,
-      nextCookDate: nextCookDate?.scheduledFor.toISOString() ?? null,
-      cookDateCount: client.cookDates.length,
-      invoiceCount: client.invoices.length,
-      cookDates: client.cookDates.map((cd) => ({
-        id: cd.id,
-        scheduledFor: cd.scheduledFor.toISOString(),
-        status: cd.status,
-        startTimeLabel: cd.startTimeLabel,
-        hasApprovedMenu: cd.finalizedProposal !== null,
-        approvedMenuTitle: cd.finalizedProposal?.title ?? null,
-        proposals: cd.proposals.map((p) => ({
-          id: p.id,
-          title: p.title,
-          status: p.status,
-        })),
-        bonAppetits: cd.menuCards.map((mc) => ({
-          id: mc.id,
-          title: mc.title,
-          accepted: mc.accepted,
-        })),
-      })),
-      invoices: client.invoices.map((inv) => ({
-        id: inv.id,
-        invoiceNumber: inv.invoiceNumber,
-        invoiceDate: inv.invoiceDate.toISOString(),
-        status: inv.status,
-        total: inv.lineItems.reduce((sum, li) => sum + li.amount, 0),
-      })),
-    };
-  });
+  // Active clients first, then inactive.
+  rows.sort((a, b) => Number(b.active) - Number(a.active));
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-3xl space-y-8 fade-up">
+      <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Clients
-          </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Manage households, dietary requirements, and service context.
+          <h1 className="page-title">Clients</h1>
+          <p className="mt-2 text-sm muted">
+            {rows.length} client{rows.length === 1 ? "" : "s"}
           </p>
         </div>
         <AddClientModal />
-      </div>
+      </header>
 
-      <ClientList clients={clientData} />
+      <ClientList clients={rows} />
     </div>
   );
 }

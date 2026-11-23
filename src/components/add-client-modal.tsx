@@ -38,7 +38,7 @@ export function AddClientModal() {
       >
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-slate-900">Add a client</h2>
+            <h2 className="section-title">Add a client</h2>
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -82,7 +82,7 @@ export function AddClientModal() {
               </div>
               <div className="md:col-span-2">
                 <p className="mb-1.5 text-xs font-semibold text-slate-500">
-                  Dish plan — how many of each per proposal
+                  Dish plan — how many of each per menu
                 </p>
                 <DishQuotaEditor defaultValue={[]} />
               </div>

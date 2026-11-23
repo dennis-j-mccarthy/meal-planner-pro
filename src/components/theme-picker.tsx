@@ -23,7 +23,8 @@ export function ThemePicker({ currentId }: { currentId: string }) {
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 hover:border-slate-300 transition-colors"
+        className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 hover:border-slate-300 transition-colors md:h-9 md:w-9"
+        aria-label="Change theme"
         title="Change theme"
       >
         <div className="h-4 w-4 rounded-full bg-[var(--accent)]" />
@@ -31,8 +32,8 @@ export function ThemePicker({ currentId }: { currentId: string }) {
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-80 rounded-xl border shadow-xl z-[100] p-4"
-          style={{ background: "var(--panel)", borderColor: "var(--border-soft)" }}
+          className="absolute -right-14 mt-2 w-[min(20rem,calc(100vw-2rem))] rounded-xl border shadow-xl z-[100] p-4 md:right-0"
+          style={{ background: "var(--card)", borderColor: "var(--line)" }}
         >
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
             Light themes
@@ -61,7 +62,7 @@ export function ThemePicker({ currentId }: { currentId: string }) {
                       background: `linear-gradient(135deg, ${t.accent} 0%, ${t.accentStrong} 100%)`,
                     }}
                   />
-                  <span className="text-[10px] text-slate-600 truncate w-full text-center leading-tight">
+                  <span className="text-xs text-slate-600 truncate w-full text-center leading-tight">
                     {t.name}
                   </span>
                 </button>
@@ -101,7 +102,7 @@ export function ThemePicker({ currentId }: { currentId: string }) {
                       }}
                     />
                   </div>
-                  <span className="text-[10px] text-slate-600 truncate w-full text-center leading-tight">
+                  <span className="text-xs text-slate-600 truncate w-full text-center leading-tight">
                     {t.name.replace("Dark ", "")}
                   </span>
                 </button>

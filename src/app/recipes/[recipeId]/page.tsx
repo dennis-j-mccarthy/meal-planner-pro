@@ -12,7 +12,6 @@ import { NutritionButton } from "@/components/nutrition-button";
 import { RegenerateTextButton } from "@/components/regenerate-text-button";
 import { StarButton } from "@/components/star-button";
 import {
-  formatEnum,
   formatMinutes,
 } from "@/lib/format";
 import { requireKitchen } from "@/lib/guard";
@@ -96,11 +95,11 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl">
             <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge label={formatEnum(recipe.detailStatus)} />
-              <StatusBadge label={formatEnum(recipe.sourceType)} />
+              <StatusBadge status={recipe.detailStatus} />
+              <StatusBadge status={recipe.sourceType} />
             </div>
             <div className="mt-3 flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+              <h1 className="page-title">
                 {recipe.title}
               </h1>
               <StarButton recipeId={recipe.id} starred={recipe.starred} />
@@ -166,7 +165,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       {nutrition && (
         <section className="panel p-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-slate-900">Nutrition</h2>
+            <h2 className="section-title">Nutrition</h2>
             <span className="text-xs text-slate-400">AI estimate · per serving</span>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -185,7 +184,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
                   className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-center"
                 >
                   <p className="text-lg font-bold text-slate-900">{m.value}</p>
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                     {m.label}
                   </p>
                 </div>
@@ -197,7 +196,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       {/* Ingredients — only if present */}
       {ingredients.length > 0 && (
         <section className="panel p-6">
-          <h2 className="text-lg font-bold text-slate-900">Ingredients</h2>
+          <h2 className="section-title">Ingredients</h2>
           <ul className="mt-3 columns-2 gap-x-6 text-sm text-slate-700">
             {ingredients.map((ingredient, index) => (
               <li
@@ -215,14 +214,14 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
       {/* Method — only if present */}
       {instructions.length > 0 && (
         <section className="panel p-6">
-          <h2 className="text-lg font-bold text-slate-900">Method</h2>
+          <h2 className="section-title">Method</h2>
           <ol className="mt-3 space-y-2">
             {instructions.map((step, index) => (
               <li
                 key={`${step}-${index}`}
                 className="flex items-start gap-3 text-sm text-slate-700"
               >
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-[10px] font-bold text-white">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-xs font-bold text-white">
                   {index + 1}
                 </span>
                 <span className="pt-px">{step}</span>

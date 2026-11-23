@@ -42,10 +42,10 @@ export default async function InvoiceDetailPage({
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">
+              <h1 className="page-title">
                 Invoice #{invoice.invoiceNumber}
               </h1>
-              <StatusBadge label={invoice.status} />
+              <StatusBadge status={invoice.status} />
             </div>
             <p className="mt-1 text-sm text-slate-500">
               {invoice.client.firstName} {invoice.client.lastName}
@@ -89,7 +89,7 @@ export default async function InvoiceDetailPage({
 
       {/* Line items */}
       <div className="panel p-6">
-        <h2 className="text-lg font-bold text-slate-900 mb-4">Line items</h2>
+        <h2 className="section-title mb-4">Line items</h2>
         <div className="overflow-hidden rounded-lg border border-slate-200">
           <table className="w-full text-sm">
             <thead>
@@ -119,7 +119,7 @@ export default async function InvoiceDetailPage({
       {/* Remarks */}
       {invoice.remarks && (
         <div className="panel p-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-2">Remarks</h2>
+          <h2 className="section-title mb-2">Remarks</h2>
           <p className="text-sm text-slate-600 leading-relaxed">{invoice.remarks}</p>
         </div>
       )}

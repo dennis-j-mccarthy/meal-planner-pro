@@ -1,15 +1,14 @@
-import type { Metadata } from "next";
-import Image from "next/image";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { Inter } from "next/font/google";
+import { Fraunces, Inter } from "next/font/google";
 import {
   ClerkProvider,
   Show,
   SignInButton,
   UserButton,
 } from "@clerk/nextjs";
-import { AppNav } from "@/components/app-nav";
+import { AppNav, MobileTabBar } from "@/components/app-nav";
 import { KitchenSwitcher } from "@/components/kitchen-switcher";
 import { ThemePicker } from "@/components/theme-picker";
 import { getKitchen, getAllKitchens } from "@/lib/data";
@@ -21,9 +20,23 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+// Variable font (covers the 500/600 weights used for headings). Listing
+// static weights makes Google serve a "kit" URL that Turbopack cannot load.
+const fraunces = Fraunces({
+  variable: "--font-fraunces",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Meal Planner Pro",
-  description: "Operations software for professional chefs managing clients, proposals, and cook dates.",
+  description: "Operations software for professional chefs managing clients, menus, and cook dates.",
+};
+
+// viewport-fit=cover so env(safe-area-inset-bottom) works for the phone tab bar.
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default async function RootLayout({
@@ -57,32 +70,27 @@ export default async function RootLayout({
 
   return (
     <html lang="en" style={themeStyle} className={theme.dark ? "dark" : ""}>
-      <body className={`${inter.variable} antialiased`}>
+      <body className={`${inter.variable} ${fraunces.variable} antialiased`}>
         <ClerkProvider>
           <div className="min-h-screen text-slate-900">
             <header
               className="sticky top-0 z-50 border-b backdrop-blur-sm"
-              style={{ background: "var(--header-bg)", borderColor: "var(--border-soft)" }}
+              style={{ background: "var(--header-bg)", borderColor: "var(--line)" }}
             >
-              <div className="mx-auto flex h-48 max-w-7xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
-                <div className="flex items-center gap-6 shrink-0">
-                  <Link href="/" className="block shrink-0">
-                    <Image
-                      src="/logo-v2.png"
-                      alt="Meal Planner Pro"
-                      width={800}
-                      height={400}
-                      className="w-auto object-contain"
-                      style={{ height: "12rem" }}
-                      priority
-                    />
+              <div className="mx-auto flex h-14 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6 lg:px-8">
+                <div className="flex min-w-0 items-center gap-8">
+                  <Link
+                    href="/"
+                    className="truncate font-display text-xl font-semibold tracking-tight text-ink"
+                  >
+                    {kitchen?.name ?? "Meal Planner Pro"}
                   </Link>
                   {loggedIn && <AppNav />}
                 </div>
-                <div className="flex items-center justify-end gap-3">
+                <div className="flex shrink-0 items-center justify-end gap-3">
                   <Show when="signed-out">
                     <SignInButton mode="modal">
-                      <button className="button-secondary text-sm">Sign in</button>
+                      <button className="button-secondary">Sign in</button>
                     </SignInButton>
                   </Show>
                   <Show when="signed-in">
@@ -97,7 +105,7 @@ export default async function RootLayout({
                     <UserButton
                       appearance={{
                         elements: {
-                          avatarBox: "h-10 w-10 ring-2 ring-slate-200",
+                          avatarBox: "h-9 w-9",
                         },
                       }}
                     />
@@ -105,9 +113,14 @@ export default async function RootLayout({
                 </div>
               </div>
             </header>
-            <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            <main
+              className={`mx-auto max-w-6xl px-4 pt-8 sm:px-6 lg:px-8 ${
+                loggedIn ? "page-bottom-pad" : "pb-12"
+              }`}
+            >
               {children}
             </main>
+            {loggedIn && <MobileTabBar />}
           </div>
         </ClerkProvider>
       </body>

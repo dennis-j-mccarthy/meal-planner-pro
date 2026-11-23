@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { ProposalRecipeManager } from "@/components/proposal-recipe-manager";
 import { ShareLinkBox } from "@/components/share-link-box";
 import { parseDishQuota } from "@/lib/dish-quota";
-import { formatDateShort, formatEnum, formatMinutes } from "@/lib/format";
+import { formatDateShort, formatMinutes } from "@/lib/format";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
@@ -106,7 +106,7 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
           {formatDateShort(proposal.cookDate.scheduledFor)}
         </Link>
         <span>/</span>
-        <span className="text-slate-900 font-medium">Meal Plan</span>
+        <span className="text-slate-900 font-medium">Menu</span>
       </div>
 
 
@@ -116,9 +116,9 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
         <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <StatusBadge label={formatEnum(proposal.status)} />
+              <StatusBadge status={proposal.status} />
             </div>
-            <h1 className="mt-3 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+            <h1 className="mt-3 page-title">
               {proposal.title}
             </h1>
             <p className="mt-2 text-base text-slate-600">
@@ -228,7 +228,7 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
                   ))}
                 </ul>
                 <p className="mt-2 text-xs text-slate-400">
-                  These are left off the Bon Appetit when you mark the proposal approved.
+                  These are left off the Bon Appetit when you mark the menu approved.
                 </p>
               </div>
             );
@@ -243,19 +243,19 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
       {/* Recipe management or recipe list */}
       <section className="panel p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="section-title">
             Menu ({proposal.recipes.length} {proposal.recipes.length === 1 ? "recipe" : "recipes"})
           </h2>
           {!showBuilder && (
             <Link href={`/proposals/${proposal.id}?edit=1`} className="button-secondary text-sm">
-              Edit meal plan
+              Edit menu
             </Link>
           )}
         </div>
 
         {isEditing && isApproved && (
           <p className="mt-2 text-xs text-amber-600">
-            You&apos;re editing an approved meal plan.{" "}
+            You&apos;re editing an approved menu.{" "}
             <Link href={`/proposals/${proposal.id}`} className="font-semibold underline">
               Done
             </Link>

@@ -47,7 +47,7 @@ export default async function MenuCardsPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+        <h1 className="page-title">
           Bon Appetit
         </h1>
         <p className="mt-1 text-sm text-slate-500">
@@ -58,7 +58,7 @@ export default async function MenuCardsPage({
       <section className="grid gap-6 xl:grid-cols-[1fr_1.3fr]">
         {/* Create form */}
         <form action={createMenuCard} className="panel p-6">
-          <h2 className="text-lg font-bold text-slate-900">
+          <h2 className="section-title">
             New Bon Appetit
           </h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -135,7 +135,7 @@ export default async function MenuCardsPage({
               <textarea
                 className="field min-h-16"
                 name="notes"
-                placeholder="Internal notes about this menu card"
+                placeholder="Internal notes about this Bon Appetit"
               />
             </div>
           </div>
@@ -148,7 +148,7 @@ export default async function MenuCardsPage({
         {/* List */}
         <div className="panel p-6">
           <div className="flex items-center justify-between gap-4">
-            <h2 className="text-lg font-bold text-slate-900">
+            <h2 className="section-title">
               All Bon Appetits
             </h2>
             <span className="text-sm text-slate-500">

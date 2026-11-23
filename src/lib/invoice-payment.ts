@@ -14,6 +14,8 @@ export async function recordPayment(opts: {
   invoiceNumber?: string;
   method: string;
   note: string | null;
+  /** When it was paid. Defaults to now. */
+  paidAt?: Date;
 }): Promise<PaymentResult> {
   if (!opts.invoiceId && !opts.invoiceNumber) return { ok: false, reason: "not-found" };
   const invoice = await prisma.invoice.findFirst({
@@ -29,7 +31,7 @@ export async function recordPayment(opts: {
   }
   if (invoice.status === "VOID") return { ok: false, reason: "void" };
 
-  const paidAt = new Date();
+  const paidAt = opts.paidAt ?? new Date();
   await prisma.invoice.updateMany({
     where: { id: invoice.id, kitchenId: opts.kitchenId },
     data: {

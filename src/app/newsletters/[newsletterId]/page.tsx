@@ -49,7 +49,7 @@ export default async function NewsletterDetailPage({
 
       <div className="panel p-5 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-slate-900">{newsletter.title}</h1>
+          <h1 className="page-title">{newsletter.title}</h1>
           <p className="mt-1 text-sm text-slate-500">
             {newsletter.publishDate
               ? formatDateShort(newsletter.publishDate)

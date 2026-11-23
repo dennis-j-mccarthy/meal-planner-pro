@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState, useTransition, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { addRecipeToProposal, removeRecipeFromProposal, updateProposalRecipeCategory } from "@/app/actions";
 import { categoriesMatch, totalDishes, type DishQuotaRow } from "@/lib/dish-quota";
+
+const noopSubscribe = () => () => {};
 
 type Recipe = {
   id: string;
@@ -138,7 +140,7 @@ function RecipeAccordion({
       <button
         type="button"
         onClick={onToggle}
-        className="text-[11px] text-slate-400 hover:text-slate-600"
+        className="text-xs text-slate-400 hover:text-slate-600"
       >
         Collapse
       </button>
@@ -164,8 +166,8 @@ export function ProposalRecipeManager({
   const [justRemoved, setJustRemoved] = useState<Set<string>>(new Set());
   const [dropOver, setDropOver] = useState(false);
   const [pendingDropRecipeId, setPendingDropRecipeId] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  // true in the browser, false during server render (portals need the DOM)
+  const mounted = useSyncExternalStore(noopSubscribe, () => true, () => false);
   const [openLeft, setOpenLeft] = useState<Set<string>>(new Set());
   const [openRight, setOpenRight] = useState<Set<string>>(new Set());
 
@@ -294,10 +296,10 @@ export function ProposalRecipeManager({
         {planProgress.length > 0 && (
           <div className="mb-4 rounded-lg border border-slate-200 bg-white p-3">
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">
                 Dish plan ({visibleCurrentRecipes.length}/{planTarget})
               </p>
-              <span className="text-[10px] text-slate-400">guideline — override freely</span>
+              <span className="text-xs text-slate-400">guideline — override freely</span>
             </div>
             <div className="flex flex-wrap gap-1.5">
               {planProgress.map((p) => {
@@ -322,7 +324,7 @@ export function ProposalRecipeManager({
 
         <div className="flex items-center justify-between mb-5">
           <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            Proposed Meal Plan ({visibleCurrentRecipes.length})
+            Proposed menu ({visibleCurrentRecipes.length})
           </p>
           {dropOver && (
             <p className="text-xs font-medium text-[var(--accent)]">Drop to tag &amp; add</p>
@@ -374,7 +376,7 @@ export function ProposalRecipeManager({
                                   fd.set("courseLabel", active ? "" : cat);
                                   startTransition(() => updateProposalRecipeCategory(fd));
                                 }}
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                                className={`rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
                                   active
                                     ? "bg-[var(--accent)] text-white shadow-sm"
                                     : "bg-slate-100 text-slate-500 hover:bg-slate-200"
@@ -452,7 +454,7 @@ export function ProposalRecipeManager({
               <button
                 type="button"
                 onClick={() => { setPasteText(""); setPasteExpanded(false); }}
-                className="text-[10px] text-slate-400 hover:text-slate-600"
+                className="text-xs text-slate-400 hover:text-slate-600"
               >
                 Clear
               </button>
@@ -488,7 +490,7 @@ export function ProposalRecipeManager({
             <button
               type="button"
               onClick={() => setShowStarred(!showStarred)}
-              className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors ${
+              className={`rounded-md px-2 py-0.5 text-xs font-medium transition-colors ${
                 showStarred
                   ? "bg-amber-50 text-amber-600 ring-1 ring-amber-200"
                   : "bg-slate-100 text-slate-500 hover:bg-amber-50 hover:text-amber-500"
@@ -499,7 +501,7 @@ export function ProposalRecipeManager({
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors ${
+              className={`rounded-md px-2 py-0.5 text-xs font-medium transition-colors ${
                 showFilters || activeTag
                   ? "bg-[var(--accent-light)] text-[var(--accent)]"
                   : "bg-slate-100 text-slate-500 hover:bg-slate-200"
@@ -515,7 +517,7 @@ export function ProposalRecipeManager({
             <button
               type="button"
               onClick={() => setActiveTag("")}
-              className={`rounded-md px-2 py-0.5 text-[10px] font-medium ${
+              className={`rounded-md px-2 py-0.5 text-xs font-medium ${
                 !activeTag ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
@@ -526,7 +528,7 @@ export function ProposalRecipeManager({
                 key={tag}
                 type="button"
                 onClick={() => setActiveTag(activeTag === tag ? "" : tag)}
-                className={`rounded-md px-2 py-0.5 text-[10px] font-medium ${
+                className={`rounded-md px-2 py-0.5 text-xs font-medium ${
                   activeTag === tag
                     ? "bg-[var(--accent)] text-white"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200"
@@ -580,7 +582,7 @@ export function ProposalRecipeManager({
                     <p className="text-sm font-medium text-slate-800 truncate">
                       {recipe.title}
                     </p>
-                    <p className="text-[11px] text-slate-400 truncate">
+                    <p className="text-xs text-slate-400 truncate">
                       {[recipe.cuisine, recipe.tags].filter(Boolean).join(" · ") || "No tags"}
                     </p>
                   </button>
@@ -656,7 +658,7 @@ export function ProposalRecipeManager({
               </button>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              The course sets where it lands in the meal plan.
+              The course sets where it lands in the menu.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {COURSE_CATEGORIES.map((cat) => (

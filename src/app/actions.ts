@@ -23,6 +23,7 @@ import { buildBonAppetitHtml } from "@/lib/bon-appetit-template";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { sendBonAppetitToClient, sendInvoiceToClient, type ClientSendResult } from "@/lib/client-email";
 import { recordPayment } from "@/lib/invoice-payment";
+import { PAYMENT_METHODS, normalizePaymentMethod } from "@/lib/payment-methods";
 import { format } from "date-fns";
 
 function requiredText(formData: FormData, key: string) {
@@ -78,7 +79,7 @@ function appBaseUrl() {
 }
 
 function revalidateApp() {
-  ["/", "/recipes", "/clients", "/cook-dates", "/proposals", "/invoices", "/menu-cards"].forEach((path) =>
+  ["/", "/recipes", "/clients", "/cook-dates", "/proposals", "/invoices", "/menu-cards", "/money"].forEach((path) =>
     revalidatePath(path),
   );
 }
@@ -1322,15 +1323,12 @@ export async function updateInvoiceStatus(formData: FormData) {
   revalidateApp();
 }
 
-const PAYMENT_METHODS = ["Zelle", "Check", "Cash", "Card", "Other"];
-
 // Mark an invoice paid and record how: method, optional note (check #), and
 // the amount (the invoice total).
 export async function recordInvoicePayment(formData: FormData) {
   const kitchen = await requireKitchen();
   const invoiceId = requiredText(formData, "invoiceId");
-  const rawMethod = optionalText(formData, "method") ?? "Other";
-  const method = PAYMENT_METHODS.includes(rawMethod) ? rawMethod : "Other";
+  const method = normalizePaymentMethod(optionalText(formData, "method"));
   const note = optionalText(formData, "note");
 
   const result = await recordPayment({ kitchenId: kitchen.id, invoiceId, method, note });
@@ -1340,6 +1338,48 @@ export async function recordInvoicePayment(formData: FormData) {
 
   revalidateApp();
   revalidatePath(`/invoices/${invoiceId}`);
+}
+
+// Money page: mark several invoices paid at once (method + date), e.g. old
+// drafts that were actually paid. Each one goes through recordPayment, scoped
+// to the caller's kitchen; paid and void invoices are skipped.
+export async function bulkRecordPayment(
+  invoiceIds: string[],
+  method: string,
+  date: string,
+): Promise<{ paid: number; skipped: number }> {
+  const kitchen = await requireKitchen();
+
+  if (!Array.isArray(invoiceIds)) throw new Error("No invoices selected");
+  const ids = [...new Set(invoiceIds.filter((id): id is string => typeof id === "string" && id.length > 0))];
+  if (ids.length === 0) throw new Error("No invoices selected");
+  if (ids.length > 500) throw new Error("Too many invoices selected");
+
+  if (!(PAYMENT_METHODS as readonly string[]).includes(method)) {
+    throw new Error("Choose how it was paid");
+  }
+  if (typeof date !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    throw new Error("Choose the date it was paid");
+  }
+  const paidAt = parseDateInput(date);
+  if (Number.isNaN(paidAt.getTime())) throw new Error("Choose the date it was paid");
+
+  let paid = 0;
+  let skipped = 0;
+  for (const invoiceId of ids) {
+    const result = await recordPayment({
+      kitchenId: kitchen.id,
+      invoiceId,
+      method,
+      note: null,
+      paidAt,
+    });
+    if (result.ok) paid += 1;
+    else skipped += 1;
+  }
+
+  revalidateApp();
+  return { paid, skipped };
 }
 
 export async function deleteInvoice(formData: FormData) {

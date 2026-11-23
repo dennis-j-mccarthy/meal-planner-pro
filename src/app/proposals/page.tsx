@@ -1,7 +1,7 @@
 import { createProposal } from "@/app/actions";
 import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
-import { formatDateShort, formatEnum } from "@/lib/format";
+import { formatDateShort } from "@/lib/format";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
@@ -56,7 +56,7 @@ export default async function ProposalsPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-semibold text-slate-900">{proposal.title}</h3>
-              <StatusBadge label={formatEnum(proposal.status)} />
+              <StatusBadge status={proposal.status} />
             </div>
             <p className="mt-1 text-xs text-slate-500">
               {clientName} · {formatDateShort(proposal.cookDate.scheduledFor)}
@@ -66,13 +66,13 @@ export default async function ProposalsPage() {
                 {proposal.recipes.slice(0, 4).map((item) => (
                   <span
                     key={item.id}
-                    className="inline-flex rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-500"
+                    className="inline-flex rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500"
                   >
                     {item.recipe.title}
                   </span>
                 ))}
                 {recipeCount > 4 && (
-                  <span className="inline-flex rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-400">
+                  <span className="inline-flex rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-400">
                     +{recipeCount - 4} more
                   </span>
                 )}
@@ -93,7 +93,7 @@ export default async function ProposalsPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Proposals</h1>
+        <h1 className="page-title">Menus</h1>
         <p className="mt-1 text-sm text-slate-500">
           Build menus for your clients. Create a draft, add recipes, then share it for approval.
         </p>
@@ -101,9 +101,9 @@ export default async function ProposalsPage() {
 
       {/* Create form */}
       <section className="panel p-6">
-        <h2 className="text-lg font-bold text-slate-900">New proposal</h2>
+        <h2 className="section-title">New menu</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Pick a cook date and give the proposal a name. You&apos;ll add recipes on the next screen.
+          Pick a cook date and give the menu a name. You&apos;ll add recipes on the next screen.
         </p>
         <form action={createProposal} className="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
           <select className="field" name="cookDateId" required defaultValue="">
@@ -117,7 +117,7 @@ export default async function ProposalsPage() {
               </option>
             ))}
           </select>
-          <input className="field" name="title" placeholder="Proposal title" required />
+          <input className="field" name="title" placeholder="Menu title" required />
           <button className="button-primary" type="submit">
             Create draft
           </button>
@@ -130,7 +130,7 @@ export default async function ProposalsPage() {
           <h2 className="text-base font-bold text-slate-900">
             In progress ({drafts.length})
           </h2>
-          <p className="mt-0.5 text-sm text-slate-500">Drafts and proposals needing changes — click to edit.</p>
+          <p className="mt-0.5 text-sm text-slate-500">Drafts and menus needing changes — click to edit.</p>
           <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {drafts.map((p) => (
               <ProposalCard key={p.id} proposal={p} />
@@ -186,7 +186,7 @@ export default async function ProposalsPage() {
       {/* Empty state */}
       {proposals.length === 0 && (
         <div className="rounded-lg border border-dashed border-slate-300 px-4 py-8 text-center text-sm text-slate-500">
-          No proposals yet. Create one above to get started.
+          No menus yet. Create one above to get started.
         </div>
       )}
     </div>

@@ -168,7 +168,7 @@ export function InvoiceCreateForm({
   return (
     <div className="panel p-6 space-y-5">
       <div>
-        <h2 className="text-lg font-bold text-slate-900">New invoice</h2>
+        <h2 className="section-title">New invoice</h2>
         <p className="mt-1 text-sm text-slate-500">
           Next: <strong>{nextNumber}</strong>
         </p>

@@ -63,7 +63,7 @@ export function AddToProposal({ recipeId, proposals, size = "md" }: AddToProposa
         <svg className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
         </svg>
-        Proposal
+        Menu
       </button>
 
       {open && (
@@ -71,7 +71,7 @@ export function AddToProposal({ recipeId, proposals, size = "md" }: AddToProposa
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute right-0 z-50 mt-1.5 w-80 rounded-xl border border-slate-200 bg-white p-4 shadow-xl">
             <p className="text-sm font-bold text-slate-900">
-              Add to proposal
+              Add to menu
             </p>
             {error && (
               <p className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-600">{error}</p>
@@ -79,14 +79,14 @@ export function AddToProposal({ recipeId, proposals, size = "md" }: AddToProposa
             {editable.length === 0 ? (
               <div className="mt-3">
                 <p className="text-sm text-slate-500">
-                  No draft proposals available. Create one first.
+                  No draft menus available. Create one first.
                 </p>
                 <Link
                   href="/proposals"
                   onClick={() => setOpen(false)}
                   className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--accent-strong)]"
                 >
-                  Go to proposals
+                  Go to menus
                 </Link>
               </div>
             ) : (

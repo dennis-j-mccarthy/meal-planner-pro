@@ -37,7 +37,8 @@ export function KitchenSwitcher({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors"
+        className="flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 hover:bg-slate-50 transition-colors"
+        aria-label="Switch kitchen"
       >
         <div className="text-right hidden sm:block">
           <p className="text-sm font-semibold text-slate-900">{userName}</p>

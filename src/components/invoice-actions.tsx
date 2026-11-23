@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { updateInvoiceStatus, deleteInvoice, sendInvoiceEmail, recordInvoicePayment } from "@/app/actions";
 import { SendToClientButton } from "@/components/send-to-client-button";
+import { PAYMENT_METHODS } from "@/lib/payment-methods";
 
 interface InvoiceActionsProps {
   invoiceId: string;
@@ -137,7 +138,7 @@ export function InvoiceActions({ invoiceId, status, clientEmail }: InvoiceAction
             defaultValue="Zelle"
             className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-900"
           >
-            {["Zelle", "Check", "Cash", "Card", "Other"].map((m) => (
+            {PAYMENT_METHODS.map((m) => (
               <option key={m} value={m}>
                 {m}
               </option>
