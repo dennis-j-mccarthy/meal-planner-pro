@@ -4,11 +4,11 @@ import { notFound } from "next/navigation";
 import { approveProposal, quickCreateProposal } from "@/app/actions";
 import { createInvoiceForCookDate, createMonthlyInvoice } from "@/app/billing-actions";
 import { setGroceriesDone } from "@/app/taste-actions";
-import { BonAppetitPreview } from "@/components/bon-appetit-preview";
 import { CookDateGroceries, CookDateGroceriesLoading } from "@/components/cook-date-groceries";
 import { CookDateHeader } from "@/components/cook-date-header";
 import { CookDateWalkthrough } from "@/components/cook-date-walkthrough";
 import { DeleteCookDateButton } from "@/components/delete-cook-date-button";
+import { DocumentPreview } from "@/components/document-preview";
 import { RecordPaymentForm } from "@/components/record-payment-form";
 import { SendToClientButton } from "@/components/send-to-client-button";
 import { StatusBadge } from "@/components/status-badge";
@@ -348,7 +348,7 @@ export default async function CookDateDetailPage({
         </>
       }
     >
-      <BonAppetitPreview menuCardId={bonAppetit.id} title={bonAppetit.title} />
+      <DocumentPreview src={`/api/menu-cards/${bonAppetit.id}/html`} title={`Preview of ${bonAppetit.title}`} />
       {cookDate.menuCards.length > 1 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide muted">Other Bon Appetits</p>
@@ -526,15 +526,34 @@ export default async function CookDateDetailPage({
   );
   const invoicePanel = invoice ? (
     <StepPanel
-      title={invoice.billingPeriod ? `${monthName} invoice` : "Invoice"}
-      detail={invoice.billingPeriod ? `${first} gets one invoice for all of ${monthLabel}.` : null}
+      title={invoice.billingPeriod ? `${monthName} invoice #${invoice.invoiceNumber}` : `Invoice #${invoice.invoiceNumber}`}
+      detail={
+        <>
+          {formatMoney(invoiceTotal)} · <StatusBadge status={invoice.status} />
+          {invoice.billingPeriod && <> · One invoice for all of {monthLabel}</>}
+          {paidText && <> · {paidText}</>}
+        </>
+      }
       actions={
-        invoice.status !== "PAID" && invoice.status !== "VOID" ? (
-          <SendToClientButton kind="invoice" id={invoice.id} clientEmail={client.email} variant="secondary" />
-        ) : null
+        <>
+          {invoice.status !== "PAID" && invoice.status !== "VOID" && (
+            <SendToClientButton kind="invoice" id={invoice.id} clientEmail={client.email} variant="secondary" />
+          )}
+          <Link href={`/invoices/${invoice.id}`} className="button-secondary">
+            Edit
+          </Link>
+          <a
+            href={`/api/invoices/${invoice.id}/pdf`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="button-secondary text-sm"
+          >
+            PDF
+          </a>
+        </>
       }
     >
-      {invoiceRow}
+      <DocumentPreview src={`/api/invoices/${invoice.id}/html`} title={`Preview of invoice #${invoice.invoiceNumber}`} />
     </StepPanel>
   ) : monthly ? (
     <StepPanel

@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// A letter-size page (816 × 1056 at 96 dpi) shrunk to fit its column. Shows
-// the same HTML the PDF is printed from.
+// A letter-size page (816 × 1056 at 96 dpi) shrunk to fit its column: the
+// Bon Appetit or the invoice, from the same HTML the PDF is printed from.
 const PAGE_W = 816;
 const PAGE_H = 1056;
 
-export function BonAppetitPreview({ menuCardId, title }: { menuCardId: string; title: string }) {
+export function DocumentPreview({ src, title }: { src: string; title: string }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.6);
 
@@ -28,7 +28,7 @@ export function BonAppetitPreview({ menuCardId, title }: { menuCardId: string; t
       style={{ height: PAGE_H * scale }}
     >
       <iframe
-        src={`/api/menu-cards/${menuCardId}/html`}
+        src={src}
         title={`Preview of ${title}`}
         loading="lazy"
         className="absolute left-0 top-0 origin-top-left border-0"

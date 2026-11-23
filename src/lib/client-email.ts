@@ -7,7 +7,8 @@
 import { format } from "date-fns";
 import type { Kitchen } from "@/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
-import { buildInvoiceHtml, PAYMENT_TEXT } from "@/lib/invoice-template";
+import { PAYMENT_TEXT } from "@/lib/invoice-template";
+import { loadInvoiceHtml } from "@/lib/invoice-html";
 import { loadBonAppetitHtml } from "@/lib/bon-appetit-html";
 import { generatePdfFromHtml } from "@/lib/generate-pdf";
 import { sendEmail } from "@/lib/email";
@@ -43,11 +44,9 @@ export async function sendInvoiceToClient(
   opts: { pdf?: Buffer } = {},
 ): Promise<ClientSendResult> {
   try {
-    const invoice = await prisma.invoice.findFirst({
-      where: { id: invoiceId, kitchenId: kitchen.id },
-      include: { client: true, lineItems: { orderBy: { position: "asc" } } },
-    });
-    if (!invoice) return { ok: false, error: "Invoice not found" };
+    const loaded = await loadInvoiceHtml(invoiceId, kitchen.id);
+    if (!loaded) return { ok: false, error: "Invoice not found" };
+    const { invoice } = loaded;
     if (invoice.status === "VOID") return { ok: false, error: "This invoice is void" };
 
     const to = invoice.client.email?.trim();
@@ -59,20 +58,7 @@ export async function sendInvoiceToClient(
     }
 
     const total = invoice.lineItems.reduce((s, li) => s + li.amount, 0);
-    let pdf = opts.pdf;
-    if (!pdf) {
-      pdf = await generatePdfFromHtml(
-        buildInvoiceHtml({
-          invoiceNumber: invoice.invoiceNumber,
-          invoiceDate: format(invoice.invoiceDate, "M/d/yyyy"),
-          clientName: [invoice.client.firstName, invoice.client.lastName].filter(Boolean).join(" "),
-          clientAddress: invoice.client.address,
-          lineItems: invoice.lineItems.map((li) => ({ description: li.description, amount: li.amount })),
-          remarks: invoice.remarks,
-          showGratuity: invoice.showGratuity,
-        }),
-      );
-    }
+    const pdf = opts.pdf ?? (await generatePdfFromHtml(loaded.html));
 
     const text = [
       `Hi ${invoice.client.firstName},`,
