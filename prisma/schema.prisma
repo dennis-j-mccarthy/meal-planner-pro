@@ -84,6 +84,7 @@ model Kitchen {
   menuCards     MenuCard[]
   newsletters   Newsletter[]
   tasteFeedback TasteFeedback[]
+  groceryReceipts GroceryReceipt[]
   // Beth's own address: copied on everything sent to clients.
   contactEmail    String?
 }
@@ -177,6 +178,9 @@ model CookDate {
   groceryChecked  String?
   // Beth tapped "Groceries bought".
   groceriesDoneAt DateTime?
+  // What the groceries cost (goes on the invoice as "Groceries").
+  groceryCost     Float?
+  groceryReceipts GroceryReceipt[]
   tasteFeedback   TasteFeedback?
   @@index([kitchenId, scheduledFor])
   @@index([clientId, scheduledFor])
@@ -375,4 +379,19 @@ model TasteFeedback {
   cookDate    CookDate  @relation(fields: [cookDateId], references: [id], onDelete: Cascade)
 
   @@index([kitchenId, submittedAt])
+}
+
+// A photo of a grocery receipt for a cook date. Shrunk in the browser before
+// upload and kept in the database (private: served only to the kitchen).
+model GroceryReceipt {
+  id          String   @id @default(cuid())
+  kitchenId   String
+  cookDateId  String
+  contentType String
+  data        Bytes
+  createdAt   DateTime @default(now())
+  kitchen     Kitchen  @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  cookDate    CookDate @relation(fields: [cookDateId], references: [id], onDelete: Cascade)
+
+  @@index([cookDateId])
 }

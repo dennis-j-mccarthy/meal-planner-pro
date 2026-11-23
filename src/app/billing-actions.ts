@@ -108,9 +108,9 @@ export async function updateCookDate(formData: FormData) {
 
 /**
  * One invoice for one cook date, linked to it: "Personal Chef – <day>" at the
- * client's rate (0 when unset, for Beth to fill in) plus Travel when the
- * client has a travel fee. Groceries are added in the editor. If the cook
- * date already has an invoice, that one opens instead.
+ * client's rate (0 when unset, for Beth to fill in), Travel when the client
+ * has a travel fee, and Groceries when she entered what she spent. If the
+ * cook date already has an invoice, that one opens instead.
  */
 export async function createInvoiceForCookDate(cookDateId: string) {
   const kitchen = await requireKitchen();
@@ -136,6 +136,9 @@ export async function createInvoiceForCookDate(cookDateId: string) {
   if (client.travelFee && client.travelFee > 0) {
     lines.push({ description: "Travel", amount: client.travelFee });
   }
+  if (cookDate.groceryCost && cookDate.groceryCost > 0) {
+    lines.push({ description: "Groceries", amount: cookDate.groceryCost });
+  }
 
   const invoice = await createWithInvoiceNumber(kitchen.id, (invoiceNumber) =>
     prisma.invoice.create({
@@ -159,7 +162,8 @@ export async function createInvoiceForCookDate(cookDateId: string) {
 /**
  * One invoice for all of a client's cook dates in a month ("YYYY-MM",
  * Eastern): a "Personal Chef – <day>" line per cook date at the client's rate,
- * plus one "Travel × n" line when the client has a travel fee. Cook dates that
+ * plus one "Travel × n" line when the client has a travel fee and one
+ * "Groceries" line for what was spent across the month. Cook dates that
  * already have their own invoice are left off. If the month already has a
  * monthly invoice, that one opens instead.
  */
@@ -191,6 +195,10 @@ export async function createMonthlyInvoice(clientId: string, monthKey: string) {
   if (client.travelFee && client.travelFee > 0) {
     const n = month.included.length;
     lines.push({ description: `Travel × ${n}`, amount: Math.round(client.travelFee * n * 100) / 100 });
+  }
+  const groceries = month.included.reduce((sum, cd) => sum + (cd.groceryCost ?? 0), 0);
+  if (groceries > 0) {
+    lines.push({ description: "Groceries", amount: Math.round(groceries * 100) / 100 });
   }
 
   const invoice = await createWithInvoiceNumber(kitchen.id, (invoiceNumber) =>

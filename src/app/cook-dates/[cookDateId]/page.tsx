@@ -3,13 +3,13 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { approveProposal, quickCreateProposal } from "@/app/actions";
 import { createInvoiceForCookDate, createMonthlyInvoice } from "@/app/billing-actions";
-import { setGroceriesDone } from "@/app/taste-actions";
 import { ClientPagePreview } from "@/components/client-page-preview";
 import { CookDateGroceries, CookDateGroceriesLoading } from "@/components/cook-date-groceries";
 import { CookDateHeader } from "@/components/cook-date-header";
 import { CookDateWalkthrough } from "@/components/cook-date-walkthrough";
 import { DeleteCookDateButton } from "@/components/delete-cook-date-button";
 import { DocumentPreview } from "@/components/document-preview";
+import { GroceriesBought } from "@/components/groceries-bought";
 import { RecordPaymentForm } from "@/components/record-payment-form";
 import { SendToClientButton } from "@/components/send-to-client-button";
 import { StatusBadge } from "@/components/status-badge";
@@ -90,6 +90,7 @@ export default async function CookDateDetailPage({
         orderBy: { createdAt: "desc" },
       },
       tasteFeedback: true,
+      groceryReceipts: { select: { id: true }, orderBy: { createdAt: "asc" } },
     },
   });
 
@@ -363,39 +364,31 @@ export default async function CookDateDetailPage({
       detail={
         !approved && !bonAppetit
           ? "The grocery list fills in once the menu is approved."
-          : cookDate.groceriesDoneAt
-            ? `Marked bought ${formatDayShort(cookDate.groceriesDoneAt)}.`
-            : progress.done.groceries
-              ? "The cook date has passed."
-              : checkedCount > 0
-                ? `${checkedCount} item${checkedCount === 1 ? "" : "s"} checked off so far.`
-                : `Everything for ${cookDay}, scaled to the guests. Tap an item to check it off.`
+          : checkedCount > 0
+            ? `${checkedCount} item${checkedCount === 1 ? "" : "s"} checked off so far.`
+            : `Everything for ${cookDay}, scaled to the guests. Tap an item to check it off.`
       }
       actions={
         approved || bonAppetit ? (
-          <>
-            <Link href={`/cook-dates/${cookDate.id}/groceries`} className="button-secondary">
-              Full page
-            </Link>
-            {cookDate.groceriesDoneAt ? (
-              <form action={setGroceriesDone.bind(null, cookDate.id, false)}>
-                <button className="button-secondary">Undo bought</button>
-              </form>
-            ) : (
-              !progress.done.groceries && (
-                <form action={setGroceriesDone.bind(null, cookDate.id, true)}>
-                  <button className={btn("groceries")}>Groceries bought</button>
-                </form>
-              )
-            )}
-          </>
+          <Link href={`/cook-dates/${cookDate.id}/groceries`} className="button-secondary">
+            Full page
+          </Link>
         ) : null
       }
     >
       {(approved || bonAppetit) && (
-        <Suspense fallback={<CookDateGroceriesLoading />}>
-          <CookDateGroceries cookDateId={cookDate.id} kitchenId={kitchen.id} />
-        </Suspense>
+        <>
+          <GroceriesBought
+            cookDateId={cookDate.id}
+            boughtLabel={cookDate.groceriesDoneAt ? formatDayShort(cookDate.groceriesDoneAt) : null}
+            cost={cookDate.groceryCost}
+            receiptIds={cookDate.groceryReceipts.map((r) => r.id)}
+            primary={isCurrent("groceries")}
+          />
+          <Suspense fallback={<CookDateGroceriesLoading />}>
+            <CookDateGroceries cookDateId={cookDate.id} kitchenId={kitchen.id} />
+          </Suspense>
+        </>
       )}
     </StepPanel>
   );
@@ -508,6 +501,12 @@ export default async function CookDateDetailPage({
       <span className="text-sm font-semibold text-ink">{formatMoney(invoiceTotal)}</span>
     </Link>
   );
+  const groceriesNotInvoiced =
+    !!invoice &&
+    !!cookDate.groceryCost &&
+    invoice.status !== "PAID" &&
+    invoice.status !== "VOID" &&
+    !invoice.lineItems.some((li) => /grocer/i.test(li.description));
   const invoicePanel = invoice ? (
     <StepPanel
       title={invoice.billingPeriod ? `${monthName} invoice #${invoice.invoiceNumber}` : `Invoice #${invoice.invoiceNumber}`}
@@ -537,6 +536,11 @@ export default async function CookDateDetailPage({
         </>
       }
     >
+      {groceriesNotInvoiced && (
+        <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Groceries ({formatMoney(cookDate.groceryCost ?? 0)}) aren&apos;t on this invoice yet. Use Edit to add them.
+        </p>
+      )}
       <DocumentPreview src={`/api/invoices/${invoice.id}/html`} title={`Preview of invoice #${invoice.invoiceNumber}`} />
     </StepPanel>
   ) : monthly ? (

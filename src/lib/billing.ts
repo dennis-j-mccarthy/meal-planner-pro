@@ -31,7 +31,7 @@ export async function findCookDateInvoice(
         { clientId: cookDate.clientId, billingPeriod: monthKeyOf(cookDate.scheduledFor) },
       ],
     },
-    include: { lineItems: { select: { amount: true } } },
+    include: { lineItems: { select: { amount: true, description: true } } },
     orderBy: { createdAt: "desc" },
   });
   return invoices.find((inv) => inv.cookDateId === cookDate.id) ?? invoices[0] ?? null;
@@ -62,7 +62,7 @@ export async function cookDatesForMonth(kitchenId: string, clientId: string, mon
       scheduledFor: { gte: range.start, lt: range.end },
       status: { not: "CANCELLED" },
     },
-    select: { id: true, scheduledFor: true, startTimeLabel: true },
+    select: { id: true, scheduledFor: true, startTimeLabel: true, groceryCost: true },
     orderBy: { scheduledFor: "asc" },
   });
 
