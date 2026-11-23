@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createCookDate } from "@/app/actions";
 import { StatusBadge } from "@/components/status-badge";
-import { formatDateShort, formatDateLong, formatEnum } from "@/lib/format";
+import { formatDateShort, formatDateLong, formatEnum, formatMoney } from "@/lib/format";
 import { parsePreferenceList } from "@/lib/preference-options";
 import { parseDishQuota, totalDishes } from "@/lib/dish-quota";
 import { requireKitchen } from "@/lib/guard";
@@ -168,7 +168,7 @@ export default async function ClientDetailPage({
                 Dish plan
               </h2>
               <span className="text-xs text-slate-400">
-                {totalDishes(quota)} dishes per proposal
+                {totalDishes(quota)} dish{totalDishes(quota) !== 1 ? "es" : ""} per proposal
               </span>
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -280,7 +280,7 @@ export default async function ClientDetailPage({
                   <StatusBadge label={formatEnum(cd.status)} />
                 </div>
                 <p className="text-xs text-slate-500">
-                  {cd.finalizedProposal?.title || `${cd.proposals.length} proposals`}
+                  {cd.finalizedProposal?.title || `${cd.proposals.length} proposal${cd.proposals.length !== 1 ? "s" : ""}`}
                 </p>
               </Link>
             ))}
@@ -314,7 +314,7 @@ export default async function ClientDetailPage({
                     </p>
                   </div>
                   <p className="text-sm font-bold text-slate-900">
-                    ${total.toFixed(2)}
+                    {formatMoney(total)}
                   </p>
                 </Link>
               );
@@ -342,7 +342,7 @@ export default async function ClientDetailPage({
                   </p>
                   <p className="text-xs text-slate-500">
                     {formatDateShort(mc.menuDate)} &middot;{" "}
-                    {mc.recipes.length} recipes
+                    {mc.recipes.length} recipe{mc.recipes.length !== 1 ? "s" : ""}
                   </p>
                 </div>
               </Link>

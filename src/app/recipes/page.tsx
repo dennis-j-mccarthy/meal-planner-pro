@@ -122,7 +122,7 @@ export default async function RecipesPage({ searchParams }: RecipesPageProps) {
               Recipes
             </h1>
             <p className="mt-3 text-base text-slate-600 max-w-xl">
-              {totalCount.toLocaleString()} recipes ready to inspire your next
+              {totalCount.toLocaleString()} recipe{totalCount !== 1 ? "s" : ""} ready to inspire your next
               menu. Search, filter, or discover something new.
             </p>
           </div>

@@ -125,7 +125,7 @@ export function ProposalReviewForm({
       })}
 
       <p className="px-1 text-xs text-slate-400">
-        Keeping {keptCount} of {recipes.length} dishes.
+        Keeping {keptCount} of {recipes.length} dish{recipes.length !== 1 ? "es" : ""}.
       </p>
 
       <textarea

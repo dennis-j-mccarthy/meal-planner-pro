@@ -3,8 +3,21 @@ const MONTHS = [
   "july", "august", "september", "october", "november", "december",
 ];
 
+// Noon of today's date in US Eastern. A bare new Date() is server UTC, which
+// is already tomorrow after ~7-8pm Eastern.
+function todayEastern(): Date {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/New_York",
+    year: "numeric",
+    month: "numeric",
+    day: "numeric",
+  }).formatToParts(new Date());
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return new Date(get("year"), get("month") - 1, get("day"), 12, 0, 0);
+}
+
 // Subject: "Client Name - M/D/YYYY", or month-only "Client Name - October 2026"
-// / "October, 2026" / "10/2026". No date → today. monthOnly drops the day from
+// / "October, 2026" / "10/2026". No date → today (US Eastern). monthOnly drops the day from
 // the printed date ("October, 2026").
 export function parseSubject(subject: string): {
   client: string;
@@ -22,7 +35,7 @@ export function parseSubject(subject: string): {
     const d = new Date(y, mo - 1, da, 12, 0, 0);
     return {
       client: client.trim() || "Guest",
-      date: isNaN(d.getTime()) ? new Date() : d,
+      date: isNaN(d.getTime()) ? todayEastern() : d,
       monthOnly: isNaN(d.getTime()) ? false : monthOnly,
     };
   };
@@ -42,5 +55,5 @@ export function parseSubject(subject: string): {
     if (idx >= 0 && m[2].length >= 3) return build(m[1], Number(m[3]), idx + 1, 1, true);
   }
 
-  return { client: raw || "Guest", date: new Date(), monthOnly: false };
+  return { client: raw || "Guest", date: todayEastern(), monthOnly: false };
 }

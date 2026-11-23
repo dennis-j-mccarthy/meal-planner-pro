@@ -335,7 +335,7 @@ export function InvoiceCreateForm({
             <textarea
               className="field min-h-20"
               name="remarks"
-              placeholder="Custom payment instructions or notes (defaults to standard Zelle/check info)"
+              placeholder="Optional note (shown above the standard Zelle/check instructions)"
               value={remarksText}
               onChange={(e) => setRemarksText(e.target.value)}
             />

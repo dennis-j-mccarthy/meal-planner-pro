@@ -5,6 +5,7 @@ import Link from "next/link";
 import { approveProposal, requestProposalRevision, sendBonAppetitEmail } from "@/app/actions";
 import { QuickCookDate } from "@/components/quick-cook-date";
 import { EditClientModal } from "@/components/edit-client-modal";
+import { formatMoney } from "@/lib/format";
 
 interface ProposalSummary {
   id: string;
@@ -259,7 +260,7 @@ function ClientNestedContent({ client }: { client: ClientData }) {
                           <form action={sendBonAppetitEmail}>
                             <input type="hidden" name="menuCardId" value={ba.id} />
                             <button className="rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] font-semibold text-blue-700 hover:bg-blue-100 transition-colors">
-                              Send to Beth
+                              Email PDF to me
                             </button>
                           </form>
                           <button
@@ -317,7 +318,7 @@ function ClientNestedContent({ client }: { client: ClientData }) {
                 </Link>
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="font-semibold text-slate-900">
-                    ${inv.total.toFixed(2)}
+                    {formatMoney(inv.total)}
                   </span>
                   <button
                     type="button"
@@ -400,8 +401,8 @@ export function ClientList({ clients }: { clients: ClientData[] }) {
                         {client.firstName} {client.lastName}
                       </p>
                       <p className="text-xs text-slate-500">
-                        {client.cookDateCount} cook dates ·{" "}
-                        {client.invoiceCount} invoices
+                        {client.cookDateCount} cook date{client.cookDateCount !== 1 ? "s" : ""} ·{" "}
+                        {client.invoiceCount} invoice{client.invoiceCount !== 1 ? "s" : ""}
                         {client.nextCookDate &&
                           ` · Next: ${formatShort(client.nextCookDate)}`}
                       </p>

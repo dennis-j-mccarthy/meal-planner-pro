@@ -28,3 +28,12 @@ export function formatMinutes(prepMinutes?: number | null, cookMinutes?: number 
 
   return parts.length > 0 ? parts.join(" • ") : "Timing not set";
 }
+
+/** $3,990.00 / -$25.00 (en-US, always 2 decimals, minus sign before the $). */
+export function formatMoney(n: number) {
+  const s = Math.abs(n).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+  return n < 0 ? `-$${s}` : `$${s}`;
+}

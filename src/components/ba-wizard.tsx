@@ -226,7 +226,7 @@ export function BaWizard({ clients }: BaWizardProps) {
 
                 {sent ? (
                   <div className="mt-4 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-center text-sm font-semibold text-green-700">
-                    Sent to Beth ✓
+                    Emailed ✓
                   </div>
                 ) : (
                   <button

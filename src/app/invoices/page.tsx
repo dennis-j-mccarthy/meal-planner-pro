@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { StatusBadge } from "@/components/status-badge";
 import { InvoiceCreateForm } from "@/components/invoice-create-form";
-import { formatDateShort } from "@/lib/format";
+import { formatDateShort, formatMoney } from "@/lib/format";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 import { getNextInvoiceNumber } from "@/lib/invoice-number";
@@ -86,7 +86,7 @@ export default async function InvoicesPage({
                       </div>
                       <div className="text-right">
                         <p className="text-lg font-bold text-slate-900">
-                          ${total.toFixed(2)}
+                          {formatMoney(total)}
                         </p>
                         <p className="text-xs text-slate-500">
                           {invoice.lineItems.length} item{invoice.lineItems.length !== 1 ? "s" : ""}

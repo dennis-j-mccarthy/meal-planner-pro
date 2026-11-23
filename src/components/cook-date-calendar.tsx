@@ -337,7 +337,7 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
                         <h4 className="text-sm font-semibold text-slate-900">{cd.clientName}</h4>
                         <p className="mt-1 text-xs text-slate-500">
                           {cd.startTimeLabel || "No time set"}
-                          {cd.guestCount ? ` · ${cd.guestCount} guests` : ""}
+                          {cd.guestCount ? ` · ${cd.guestCount} guest${cd.guestCount !== 1 ? "s" : ""}` : ""}
                         </p>
                         {cd.serviceNotes && (
                           <p className="mt-2 text-sm text-slate-600">{cd.serviceNotes}</p>

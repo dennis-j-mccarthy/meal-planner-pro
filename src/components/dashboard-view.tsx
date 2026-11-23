@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CookDateCalendar } from "@/components/cook-date-calendar";
 import { StatusBadge } from "@/components/status-badge";
+import { formatMoney } from "@/lib/format";
 
 interface CookDateItem {
   id: string;
@@ -95,7 +96,9 @@ export function DashboardView({
   const paidTotal = monthInvoices
     .filter((inv) => inv.status === "PAID")
     .reduce((sum, inv) => sum + inv.total, 0);
-  const monthTotal = monthInvoices.reduce((sum, inv) => sum + inv.total, 0);
+  const monthTotal = monthInvoices
+    .filter((inv) => inv.status !== "VOID")
+    .reduce((sum, inv) => sum + inv.total, 0);
 
   function handleMonthChange(m: number, y: number) {
     setMonth(m);
@@ -120,7 +123,8 @@ export function DashboardView({
         <p className="text-base font-bold text-slate-900">
           {MONTH_NAMES[month]} {year}
           <span className="ml-2 text-sm font-normal text-slate-500">
-            {monthCookDates.length} cook dates · {monthInvoices.length} invoices
+            {monthCookDates.length} cook date{monthCookDates.length !== 1 ? "s" : ""} ·{" "}
+            {monthInvoices.length} invoice{monthInvoices.length !== 1 ? "s" : ""}
           </span>
         </p>
         <label className="flex items-center gap-1.5 text-sm text-slate-600 cursor-pointer">
@@ -182,7 +186,7 @@ export function DashboardView({
             </h3>
             {monthTotal > 0 && (
               <p className="text-lg font-bold text-green-600">
-                ${monthTotal.toFixed(2)}
+                {formatMoney(monthTotal)}
               </p>
             )}
           </div>
@@ -190,12 +194,12 @@ export function DashboardView({
             <div className="mt-1 flex justify-end gap-3 text-xs">
               {unpaidTotal > 0 && (
                 <span className="text-amber-600">
-                  ${unpaidTotal.toFixed(2)} unpaid
+                  {formatMoney(unpaidTotal)} unpaid
                 </span>
               )}
               {paidTotal > 0 && (
                 <span className="text-green-600">
-                  ${paidTotal.toFixed(2)} paid
+                  {formatMoney(paidTotal)} paid
                 </span>
               )}
             </div>
@@ -222,7 +226,7 @@ export function DashboardView({
                     </span>
                   </div>
                   <span className="text-sm font-bold text-slate-900 shrink-0">
-                    ${inv.total.toFixed(2)}
+                    {formatMoney(inv.total)}
                   </span>
                 </Link>
               ))

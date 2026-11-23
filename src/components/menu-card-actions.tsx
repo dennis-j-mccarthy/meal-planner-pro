@@ -52,10 +52,10 @@ export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) 
     sendStatus === "sending"
       ? "Sending…"
       : sendStatus === "sent"
-        ? "Sent to Beth ✓"
+        ? "Emailed ✓"
         : sendStatus === "error"
           ? "Send failed — retry"
-          : "Send to Beth";
+          : "Email PDF to me";
 
   const sendColor =
     sendStatus === "sent"
@@ -82,7 +82,7 @@ export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) 
           </svg>
         </a>
 
-        {/* Send to Beth (Resend) */}
+        {/* Email PDF to me (Resend) */}
         <button
           onClick={handleSend}
           disabled={sendStatus === "sending"}
@@ -152,7 +152,7 @@ export function MenuCardActions({ menuCardId, accepted }: MenuCardActionsProps) 
                 : "text-slate-500"
           }`}
         >
-          {sendStatus === "sending" && "Rendering PDF & sending to Beth…"}
+          {sendStatus === "sending" && "Rendering PDF & emailing…"}
           {sendStatus === "sent" && `✓ ${sendDetail}`}
           {sendStatus === "error" && `Failed — ${sendDetail}`}
         </p>

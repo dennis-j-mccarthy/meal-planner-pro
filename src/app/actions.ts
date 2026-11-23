@@ -633,12 +633,28 @@ export async function quickCreateProposal(formData: FormData) {
   redirect(`/proposals/${proposal.id}`);
 }
 
+// Clears the client's last review (decision, comment, removed dishes) so the
+// /review link reopens on the current menu. No-op for an approved proposal.
+function resetClientReview(proposalId: string, status: ProposalStatus) {
+  if (status === ProposalStatus.APPROVED) return [];
+  return [
+    prisma.proposal.update({
+      where: { id: proposalId },
+      data: { clientSubmittedAt: null, clientApproved: null, clientComment: null },
+    }),
+    prisma.proposalRecipe.updateMany({
+      where: { proposalId },
+      data: { clientRemoved: false },
+    }),
+  ];
+}
+
 export async function sendProposal(formData: FormData) {
   const kitchen = await requireKitchen();
   const proposalId = requiredText(formData, "proposalId");
   const proposal = await prisma.proposal.findFirst({
     where: { id: proposalId, kitchenId: kitchen.id },
-    select: { cookDateId: true, shareToken: true },
+    select: { cookDateId: true, shareToken: true, status: true },
   });
 
   if (!proposal) {
@@ -656,6 +672,8 @@ export async function sendProposal(formData: FormData) {
         shareToken: proposal.shareToken ?? crypto.randomUUID(),
       },
     }),
+    // Reopen the client review link on the current menu.
+    ...resetClientReview(proposalId, proposal.status),
     prisma.cookDate.updateMany({
       where: { id: proposal.cookDateId, kitchenId: kitchen.id },
       data: {
@@ -741,12 +759,15 @@ export async function approveProposal(formData: FormData) {
       title: `Bon Appetit, ${clientName}!`,
       menuDate: proposal.cookDate.scheduledFor,
       accepted: true,
+      // Dishes the client removed stay on the proposal as history only.
       recipes: {
-        create: proposal.recipes.map((r) => ({
-          recipeId: r.recipeId,
-          position: r.position,
-          category: r.courseLabel,
-        })),
+        create: proposal.recipes
+          .filter((r) => !r.clientRemoved)
+          .map((r, i) => ({
+            recipeId: r.recipeId,
+            position: i + 1,
+            category: r.courseLabel,
+          })),
       },
     },
   });
@@ -875,6 +896,9 @@ export async function emailProposalLinkToClient(formData: FormData) {
       kitchen.name,
     ].join("\n"),
   });
+
+  // Sent: reopen the client review link on the current menu.
+  await prisma.$transaction(resetClientReview(proposal.id, proposal.status));
 
   revalidatePath(`/proposals/${proposal.id}`);
   return { ok: true };
@@ -1535,12 +1559,8 @@ export async function sendInvoiceEmail(formData: FormData) {
     attachmentPdf: pdfBuffer,
   });
 
-  // Mark as sent
-  await prisma.invoice.update({
-    where: { id: invoiceId },
-    data: { status: "SENT", sentAt: new Date() },
-  });
-
+  // This only emails the PDF to Beth; the client hasn't received it, so the
+  // invoice status is left alone (use "Mark as sent" for that).
   revalidateApp();
 }
 

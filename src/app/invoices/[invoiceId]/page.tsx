@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireKitchen } from "@/lib/guard";
-import { formatDateShort } from "@/lib/format";
+import { formatDateShort, formatMoney } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { InvoiceActions } from "@/components/invoice-actions";
 
@@ -70,7 +70,7 @@ export default async function InvoiceDetailPage({
             </p>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-bold text-slate-900">${total.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-slate-900">{formatMoney(total)}</p>
           </div>
         </div>
 
@@ -94,13 +94,13 @@ export default async function InvoiceDetailPage({
               {invoice.lineItems.map((li) => (
                 <tr key={li.id} className="border-t border-slate-100">
                   <td className="px-4 py-3 text-slate-900">{li.description}</td>
-                  <td className="px-4 py-3 text-right text-slate-900">${li.amount.toFixed(2)}</td>
+                  <td className="px-4 py-3 text-right text-slate-900">{formatMoney(li.amount)}</td>
                 </tr>
               ))}
               <tr className="border-t-2 border-slate-200 bg-slate-50">
                 <td className="px-4 py-3 font-bold text-slate-900">Total</td>
                 <td className="px-4 py-3 text-right font-bold text-[#60a5fa] text-base">
-                  ${total.toFixed(2)}
+                  {formatMoney(total)}
                 </td>
               </tr>
             </tbody>

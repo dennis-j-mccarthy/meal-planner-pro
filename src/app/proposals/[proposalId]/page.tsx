@@ -228,7 +228,7 @@ export default async function ProposalDetailPage({ params, searchParams }: Propo
                   ))}
                 </ul>
                 <p className="mt-2 text-xs text-slate-400">
-                  These are suggestions — remove them from the menu below if you agree.
+                  These are left off the Bon Appetit when you mark the proposal approved.
                 </p>
               </div>
             );

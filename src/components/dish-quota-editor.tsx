@@ -74,7 +74,7 @@ export function DishQuotaEditor({ defaultValue }: { defaultValue: DishQuotaRow[]
           + Add category
         </button>
         <span className="text-xs text-slate-400">
-          {totalDishes(rows)} dishes total
+          {totalDishes(rows)} dish{totalDishes(rows) !== 1 ? "es" : ""} total
         </span>
       </div>
     </div>

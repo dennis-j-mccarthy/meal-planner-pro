@@ -3,6 +3,7 @@ import { StatCard } from "@/components/stat-card";
 import { DashboardView } from "@/components/dashboard-view";
 import { MarketingPage } from "@/components/marketing-page";
 import { getKitchen } from "@/lib/data";
+import { formatMoney } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 
 export default async function Home() {
@@ -51,10 +52,12 @@ export default async function Home() {
   const unpaidCount = invoices.filter(
     (inv) => inv.status === "DRAFT" || inv.status === "SENT",
   ).length;
-  const totalRevenue = invoices.reduce(
-    (sum, inv) => sum + inv.lineItems.reduce((s, li) => s + li.amount, 0),
-    0,
-  );
+  const totalRevenue = invoices
+    .filter((inv) => inv.status !== "VOID")
+    .reduce(
+      (sum, inv) => sum + inv.lineItems.reduce((s, li) => s + li.amount, 0),
+      0,
+    );
 
   return (
     <div className="space-y-8 fade-up">
@@ -63,7 +66,7 @@ export default async function Home() {
         <StatCard value={clientCount} label="Clients" hint="Active client households" color="orange" icon="users" />
         <StatCard value={upcomingCookDates.length} label="Upcoming cook dates" hint="Future service visits" color="blue" icon="calendar" />
         <StatCard value={openProposalCount} label="Open meal plans" hint="Drafts, sent, and revisions" color="purple" icon="menu" />
-        <StatCard value={`$${totalRevenue.toFixed(0)}`} label="Total invoiced" hint={`${unpaidCount} unpaid`} color="green" icon="dollar" />
+        <StatCard value={formatMoney(totalRevenue)} label="Total invoiced" hint={`${unpaidCount} unpaid`} color="green" icon="dollar" />
       </section>
 
       <DashboardView

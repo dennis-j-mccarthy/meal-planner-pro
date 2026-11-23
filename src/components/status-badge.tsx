@@ -3,6 +3,8 @@ type StatusBadgeProps = {
 };
 
 const styles: Record<string, string> = {
+  paid: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
+  void: "bg-rose-50 text-rose-500 ring-rose-500/20 line-through",
   approved: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   ready: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
   completed: "bg-emerald-50 text-emerald-700 ring-emerald-600/20",

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { quickCreateProposal } from "@/app/actions";
 import { StatusBadge } from "@/components/status-badge";
 import { DeleteCookDateButton } from "@/components/delete-cook-date-button";
-import { formatDateLong, formatDateShort, formatEnum, formatMinutes } from "@/lib/format";
+import { formatDateLong, formatDateShort, formatEnum, formatMinutes, formatMoney } from "@/lib/format";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
@@ -104,7 +104,7 @@ export default async function CookDateDetailPage({
             <p className="mt-1 text-sm text-slate-600">
               {cookDate.client.firstName} {cookDate.client.lastName}
               {cookDate.startTimeLabel && ` · ${cookDate.startTimeLabel}`}
-              {cookDate.guestCount && ` · ${cookDate.guestCount} guests`}
+              {cookDate.guestCount && ` · ${cookDate.guestCount} guest${cookDate.guestCount !== 1 ? "s" : ""}`}
             </p>
             {cookDate.serviceNotes && (
               <p className="mt-2 text-sm text-slate-500">
@@ -194,7 +194,7 @@ export default async function CookDateDetailPage({
                   <StatusBadge label={formatEnum(mp.status)} />
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  {mp.recipes.length} recipes
+                  {mp.recipes.length} recipe{mp.recipes.length !== 1 ? "s" : ""}
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
                   </svg>
@@ -253,7 +253,7 @@ export default async function CookDateDetailPage({
                     {mc.title}
                   </p>
                   <span className="text-xs text-slate-500">
-                    Preview PDF · Send to Beth
+                    Preview PDF
                   </span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1">
@@ -314,7 +314,7 @@ export default async function CookDateDetailPage({
                     </p>
                   </div>
                   <p className="text-sm font-bold text-slate-900">
-                    ${total.toFixed(2)}
+                    {formatMoney(total)}
                   </p>
                 </Link>
               );

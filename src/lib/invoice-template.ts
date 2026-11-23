@@ -51,9 +51,13 @@ export function buildInvoiceHtml(data: InvoiceData): string {
     )
     .join("");
 
-  const remarksText =
-    data.remarks ||
+  const paymentText =
     "Please pay by check, payable to Beth McCarthy, or use Zelle (719-440-2815/yogabeth@mac.com).";
+  // A custom remark is shown above the payment instructions, never instead of them.
+  const remarksHtml = [data.remarks?.trim(), paymentText]
+    .filter((t): t is string => !!t)
+    .map((t) => `<div style="white-space: pre-line;">${escapeHtml(t)}</div>`)
+    .join("");
 
   const addressLines = data.clientAddress
     ? data.clientAddress
@@ -305,7 +309,7 @@ export function buildInvoiceHtml(data: InvoiceData): string {
 
     <div class="remarks">
       <div class="remarks-header">Remarks / payment instructions:</div>
-      <div class="remarks-body">${escapeHtml(remarksText)}</div>
+      <div class="remarks-body">${remarksHtml}</div>
       <div class="thank-you">Thank you!</div>
     </div>
   </div>

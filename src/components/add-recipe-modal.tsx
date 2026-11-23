@@ -401,7 +401,7 @@ export function AddRecipeModal() {
                 <>
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-sm font-medium text-slate-700">
-                      {discoverResults.length} recipes
+                      {discoverResults.length} recipe{discoverResults.length !== 1 ? "s" : ""}
                     </p>
                     <button
                       type="button"
@@ -434,7 +434,7 @@ export function AddRecipeModal() {
                           <p className="text-xs text-slate-500">
                             {recipe.source}
                             {recipe.totalTime > 0 && ` · ${recipe.totalTime} min`}
-                            {recipe.yield > 0 && ` · ${recipe.yield} servings`}
+                            {recipe.yield > 0 && ` · ${recipe.yield} serving${recipe.yield !== 1 ? "s" : ""}`}
                           </p>
                           <div className="mt-1 flex flex-wrap gap-1">
                             {recipe.dietLabels.slice(0, 2).map((d) => (
@@ -589,7 +589,7 @@ export function AddRecipeModal() {
                       <p className="text-xs text-slate-500 mt-0.5">
                         {recipe.source}
                         {recipe.totalTime > 0 && ` · ${recipe.totalTime} min`}
-                        {recipe.yield > 0 && ` · ${recipe.yield} servings`}
+                        {recipe.yield > 0 && ` · ${recipe.yield} serving${recipe.yield !== 1 ? "s" : ""}`}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1">
                         {recipe.dietLabels.slice(0, 3).map((d) => (
