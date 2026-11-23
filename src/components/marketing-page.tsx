@@ -1,10 +1,12 @@
 import { SignInButton } from "@clerk/nextjs";
+import { Logo } from "@/components/logo";
 
 export function MarketingPage() {
   return (
     <div className="space-y-20 py-8">
       {/* Hero */}
       <section className="text-center space-y-6 max-w-3xl mx-auto">
+        <div className="pb-2"><Logo size="lg" /></div>
         <h1 className="text-4xl font-bold text-slate-900 sm:text-5xl tracking-tight">
           Everything a personal chef needs.
           <br />
@@ -14,7 +16,7 @@ export function MarketingPage() {
         </h1>
         <p className="text-lg text-slate-600 max-w-2xl mx-auto">
           From recipe discovery to client approval to branded PDFs and emails —
-          Meal Planner Pro handles the business side so you can focus on the food.
+          Yes, Chef! handles the business side so you can focus on the food.
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
           <SignInButton mode="modal">
