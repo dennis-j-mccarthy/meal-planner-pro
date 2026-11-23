@@ -7,6 +7,8 @@
 const CHROMIUM_URL =
   "https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar";
 
+let executablePathPromise: Promise<string> | null = null;
+
 async function getBrowser(): Promise<any> {
   const isServerless =
     !!process.env.VERCEL || !!process.env.AWS_LAMBDA_FUNCTION_VERSION;
@@ -15,11 +17,19 @@ async function getBrowser(): Promise<any> {
     const chromium = (await import("@sparticuz/chromium-min")).default;
     const puppeteerCore = (await import("puppeteer-core")).default;
 
-    return await puppeteerCore.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(CHROMIUM_URL),
-      headless: true,
-    });
+    // One download/extract per instance: two PDFs at once otherwise race on
+    // the binary in /tmp and fail with "spawn ETXTBSY".
+    executablePathPromise ??= chromium.executablePath(CHROMIUM_URL);
+    const executablePath = await executablePathPromise;
+    for (let attempt = 1; ; attempt++) {
+      try {
+        return await puppeteerCore.launch({ args: chromium.args, executablePath, headless: true });
+      } catch (e) {
+        const busy = e instanceof Error && /ETXTBSY/.test(e.message);
+        if (!busy || attempt >= 4) throw e;
+        await new Promise((r) => setTimeout(r, 400 * attempt));
+      }
+    }
   }
 
   const puppeteer = (await import("puppeteer")).default;

@@ -33,7 +33,13 @@ export const SEND_LINE_RE = /^send\s*:?\s*(yes|y|client)?\s*$/i;
 export function stripSendLine(body: string): { body: string; send: boolean } {
   let send = false;
   const kept: string[] = [];
-  for (const raw of body.split(/\r?\n/)) {
+  const lines = body.split(/\r?\n/);
+  // Apple Mail sometimes delivers the whole body quoted ("> ..."). When every
+  // non-empty line is quoted, it's the new text, not a forwarded quote.
+  const nonEmpty = lines.filter((l) => l.trim());
+  const allQuoted = nonEmpty.length > 0 && nonEmpty.every((l) => /^\s*>/.test(l));
+  for (const line of lines) {
+    const raw = allQuoted ? line.replace(/^\s*(>\s?)+/, "") : line;
     const trimmed = raw.trim();
     if (SEND_LINE_RE.test(trimmed)) {
       send = true;
@@ -50,7 +56,13 @@ export function stripSendLine(body: string): { body: string; send: boolean } {
 // the "On ... wrote:" line.
 export function replyText(body: string): string {
   const out: string[] = [];
-  for (const raw of body.split(/\r?\n/)) {
+  let lines = body.split(/\r?\n/);
+  // Whole body quoted (Apple Mail quirk): unquote one level first.
+  const nonEmpty = lines.filter((l) => l.trim());
+  if (nonEmpty.length > 0 && nonEmpty.every((l) => /^\s*>/.test(l))) {
+    lines = lines.map((l) => l.replace(/^\s*>\s?/, ""));
+  }
+  for (const raw of lines) {
     const line = raw.trim();
     if (line.startsWith(">") || /^On .+ wrote:$/.test(line)) break;
     out.push(raw);
