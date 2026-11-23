@@ -65,8 +65,11 @@ export function ProposalReviewForm({
   keepTarget,
   chef,
   firstName,
+  preview = false,
 }: {
   token: string;
+  /** The chef's preview: every button works, nothing is saved or sent. */
+  preview?: boolean;
   recipes: ReviewRecipe[];
   /** How many dishes the client's plan calls for, when the menu has extras. */
   keepTarget: number | null;
@@ -97,7 +100,7 @@ export function ProposalReviewForm({
       fd.set("decision", decision);
       fd.set("comment", comment);
       for (const id of removed) fd.append("removed", id);
-      await submitProposalReview(fd);
+      if (!preview) await submitProposalReview(fd);
       setDone(decision);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
@@ -119,6 +122,15 @@ export function ProposalReviewForm({
           <p className="mt-2 text-sm text-stone-600">
             {done === "approve" ? `You approved this menu. ${chef} has your choices.` : `${chef} will send an updated menu.`}
           </p>
+          {preview && (
+            <button
+              type="button"
+              onClick={() => setDone(null)}
+              className={`mt-4 min-h-11 rounded-full px-4 text-sm font-medium text-[var(--accent-strong)] hover:underline ${FOCUS}`}
+            >
+              Preview only, nothing was sent. Start over
+            </button>
+          )}
         </div>
         {done === "approve" && <FinalMenu recipes={kept} />}
       </div>

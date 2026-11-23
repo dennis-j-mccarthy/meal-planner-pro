@@ -15,8 +15,11 @@ export function TasteForm({
   initialOverall,
   initialComment,
   alreadySubmitted,
+  preview = false,
 }: {
   token: string;
+  /** The chef's preview: every button works, nothing is saved or sent. */
+  preview?: boolean;
   dishes: Dish[];
   initialOverall: number | null;
   initialComment: string;
@@ -39,6 +42,10 @@ export function TasteForm({
     if (overall) fd.set("overall", String(overall));
     fd.set("comment", comment);
     for (const [id, r] of Object.entries(ratings)) if (r) fd.set(`dish_${id}`, r);
+    if (preview) {
+      setStage("done");
+      return;
+    }
     try {
       const res = await submitTasteFeedback(fd);
       if (res.ok) setStage("done");
@@ -56,7 +63,9 @@ export function TasteForm({
     return (
       <div className="mt-8 rounded-[14px] border border-stone-200 bg-white p-6 text-center sm:p-8">
         <p className="text-xl text-stone-900">Thank you!</p>
-        <p className="mt-2 text-sm text-stone-600">Your answers went straight to your chef.</p>
+        <p className="mt-2 text-sm text-stone-600">
+          {preview ? "Preview only, nothing was sent." : "Your answers went straight to your chef."}
+        </p>
         <button
           type="button"
           onClick={() => setStage("form")}

@@ -52,10 +52,10 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Public client-facing pages (menu review, "How did it taste?") render
-  // chrome-free (no app nav, no auth).
+  // Client-facing pages (menu review, "How did it taste?") and the chef's
+  // /preview/ copies of them render chrome-free (no app nav).
   const pathname = (await headers()).get("x-pathname") || "";
-  if (pathname.startsWith("/review") || pathname.startsWith("/taste")) {
+  if (pathname.startsWith("/review") || pathname.startsWith("/taste") || pathname.startsWith("/preview/")) {
     return (
       <html lang="en">
         <body className={`${inter.variable} antialiased`}>{children}</body>

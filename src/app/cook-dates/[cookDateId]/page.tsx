@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { approveProposal, quickCreateProposal } from "@/app/actions";
 import { createInvoiceForCookDate, createMonthlyInvoice } from "@/app/billing-actions";
 import { setGroceriesDone } from "@/app/taste-actions";
+import { ClientPagePreview } from "@/components/client-page-preview";
 import { CookDateGroceries, CookDateGroceriesLoading } from "@/components/cook-date-groceries";
 import { CookDateHeader } from "@/components/cook-date-header";
 import { CookDateWalkthrough } from "@/components/cook-date-walkthrough";
@@ -243,7 +244,7 @@ export default async function CookDateDetailPage({
         ) : null
       }
     >
-      {menuBlock}
+      {menu && menuDishes.length > 0 ? <ClientPagePreview src={`/preview/review/${menu.id}`} firstName={first} /> : menuBlock}
     </StepPanel>
   );
 
@@ -487,7 +488,9 @@ export default async function CookDateDetailPage({
             </a>
           </>
         }
-      />
+      >
+        <ClientPagePreview src={`/preview/taste/${cookDate.id}`} firstName={first} />
+      </StepPanel>
     );
   } else if (!bonAppetit && !approved) {
     tastePanel = (
@@ -505,7 +508,9 @@ export default async function CookDateDetailPage({
               : `${first} rates each dish and the meal overall; no login. You get an email with the answers.`
         }
         actions={sendTaste("Send “How did it taste?”", isCurrent("taste"))}
-      />
+      >
+        <ClientPagePreview src={`/preview/taste/${cookDate.id}`} firstName={first} />
+      </StepPanel>
     );
   }
 

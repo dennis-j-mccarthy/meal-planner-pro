@@ -243,7 +243,7 @@ export function Finder({
                   type="button"
                   onClick={() => onAdd(hit)}
                   aria-label={`Add ${hit.title}`}
-                  className={`${BTN_PRIMARY} h-11 w-11 shrink-0 px-0 sm:h-9 sm:min-h-9 sm:w-9`}
+                  className={`${BTN_PRIMARY} h-11 w-11 shrink-0 !px-0 sm:h-9 sm:min-h-9 sm:w-9`}
                 >
                   <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />

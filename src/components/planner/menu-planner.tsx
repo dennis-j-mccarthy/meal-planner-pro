@@ -946,12 +946,7 @@ export function MenuPlanner(props: MenuPlannerProps) {
       </div>
 
       {previewOpen && (
-        <PreviewModal
-          firstName={firstName}
-          dateLabel={props.dateLabel}
-          groups={groupDishes(dishes, quota)}
-          onClose={() => setPreviewOpen(false)}
-        />
+        <PreviewModal proposalId={proposalId} firstName={firstName} onClose={() => setPreviewOpen(false)} />
       )}
     </div>
   );

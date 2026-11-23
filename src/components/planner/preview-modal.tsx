@@ -1,19 +1,16 @@
 "use client";
 
 import { useEffect, useEffectEvent, useRef } from "react";
-import type { SlotGroup } from "./planner-logic";
-import { DISPLAY_FONT, FOCUS } from "./ui";
+import { FOCUS } from "./ui";
 
-/** What the client will see, before a review link exists. */
+/** What the client will see: their real menu page, with its buttons (nothing is saved or sent). */
 export function PreviewModal({
+  proposalId,
   firstName,
-  dateLabel,
-  groups,
   onClose,
 }: {
+  proposalId: string;
   firstName: string;
-  dateLabel: string;
-  groups: SlotGroup[];
   onClose: () => void;
 }) {
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -33,17 +30,12 @@ export function PreviewModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="preview-title"
+        aria-label={`What ${firstName} sees`}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-[#faf9f7] p-6 shadow-xl sm:rounded-2xl"
+        className="flex h-[92dvh] w-full max-w-[440px] flex-col overflow-hidden rounded-t-2xl bg-white shadow-xl sm:rounded-2xl"
       >
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-slate-500">Preview · what {firstName} sees</p>
-            <h2 id="preview-title" className="mt-1 text-2xl text-slate-900" style={DISPLAY_FONT}>
-              Your menu for {dateLabel}
-            </h2>
-          </div>
+        <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-2">
+          <p className="text-xs font-medium uppercase tracking-wider text-slate-500">What {firstName} sees</p>
           <button
             ref={closeRef}
             type="button"
@@ -53,26 +45,7 @@ export function PreviewModal({
             Close
           </button>
         </div>
-        {groups.length === 0 ? (
-          <p className="mt-6 text-sm text-slate-500">No dishes yet.</p>
-        ) : (
-          groups.map((g) => (
-            <section key={g.name} className="mt-5">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--accent-strong)]">{g.name}</h3>
-              <ul className="mt-2 space-y-2">
-                {g.dishes.map((d) => (
-                  <li key={d.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-                    <p className="font-semibold text-slate-900">{d.title}</p>
-                    {d.description && <p className="mt-0.5 line-clamp-2 text-sm text-slate-500">{d.description}</p>}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))
-        )}
-        <p className="mt-6 text-xs text-slate-500">
-          Once you send it, {firstName} gets a link to remove anything they&apos;d skip, leave a note, and approve.
-        </p>
+        <iframe src={`/preview/review/${proposalId}`} title={`What ${firstName} sees`} className="w-full flex-1 border-0" />
       </div>
     </div>
   );
