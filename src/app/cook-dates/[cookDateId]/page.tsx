@@ -1,6 +1,5 @@
 import {
   ChefHat,
-  CircleCheck,
   ExternalLink,
   FileDown,
   FilePlus2,
@@ -14,6 +13,7 @@ import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { approveProposal, quickCreateProposal } from "@/app/actions";
 import { createInvoiceForCookDate, createMonthlyInvoice } from "@/app/billing-actions";
+import { ApproveButton } from "@/components/approve-button";
 import { ClientPagePreview } from "@/components/client-page-preview";
 import { CookDateGroceries, CookDateGroceriesLoading } from "@/components/cook-date-groceries";
 import { CookDateHeader } from "@/components/cook-date-header";
@@ -255,10 +255,7 @@ export default async function CookDateDetailPage({
     menu && (
       <form action={approveProposal}>
         <input type="hidden" name="proposalId" value={menu.id} />
-        <button className={primary ? "button-primary" : "button-secondary"}>
-          <CircleCheck aria-hidden="true" />
-          Client approved
-        </button>
+        <ApproveButton className={primary ? "button-primary" : "button-secondary"} />
       </form>
     );
   if (progress.done.accepted) {
@@ -355,7 +352,15 @@ export default async function CookDateDetailPage({
         </>
       }
     >
-      <DocumentPreview src={`/api/menu-cards/${bonAppetit.id}/html`} title={`Preview of ${bonAppetit.title}`} />
+      <DocumentPreview
+        src={`/api/menu-cards/${bonAppetit.id}/html`}
+        title={`Preview of ${bonAppetit.title}`}
+        progress={{
+          expectedMs: 8000,
+          label: "Building the Bon Appetit",
+          stages: ["Gathering the dishes…", "Working out the nutrition…", "Laying out the page…"],
+        }}
+      />
       {cookDate.menuCards.length > 1 && (
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide muted">Other Bon Appetits</p>
@@ -588,7 +593,11 @@ export default async function CookDateDetailPage({
           Groceries ({formatMoney(cookDate.groceryCost ?? 0)}) aren&apos;t on this invoice yet. Use Edit to add them.
         </p>
       )}
-      <DocumentPreview src={`/api/invoices/${invoice.id}/html`} title={`Preview of invoice #${invoice.invoiceNumber}`} />
+      <DocumentPreview
+        src={`/api/invoices/${invoice.id}/html`}
+        title={`Preview of invoice #${invoice.invoiceNumber}`}
+        progress={{ expectedMs: 1500, label: "Building the invoice", stages: ["Laying out the invoice…"] }}
+      />
     </StepPanel>
   ) : monthly ? (
     <StepPanel

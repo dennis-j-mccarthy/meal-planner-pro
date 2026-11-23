@@ -1,8 +1,9 @@
-import { CalendarCheck, CircleCheck, MessageSquareText } from "lucide-react";
+import { CalendarCheck, MessageSquareText } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { approveProposal, requestProposalRevision } from "@/app/actions";
+import { ApproveButton } from "@/components/approve-button";
 import { MenuPlanner } from "@/components/planner/menu-planner";
 import { isEditableStatus, safetyChips } from "@/components/planner/planner-logic";
 import {
@@ -162,10 +163,7 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
             {canAnswer && (
               <form action={approveProposal}>
                 <input type="hidden" name="proposalId" value={proposal.id} />
-                <button type="submit" className={BTN_PRIMARY}>
-                  <CircleCheck aria-hidden="true" />
-                  Client approved
-                </button>
+                <ApproveButton className={BTN_PRIMARY} />
               </form>
             )}
             {proposal.status === "SENT" && (

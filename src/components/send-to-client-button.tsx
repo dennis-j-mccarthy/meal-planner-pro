@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendBonAppetitToClientAction, sendInvoiceToClientAction } from "@/app/actions";
 import { sendTasteEmailAction } from "@/app/taste-actions";
+import { ProgressBar } from "@/components/progress-bar";
 
 interface SendToClientButtonProps {
   /** taste: the "How did it taste?" email; id is the cook date. */
@@ -18,7 +19,7 @@ interface SendToClientButtonProps {
 
 type Stage = "idle" | "confirm" | "sending" | "sent" | "error";
 
-// "Send to client" → inline "Send to <email>? [Send] [Cancel]" → "Sending…"
+// "Send to client" → inline "Send to <email>? [Send] [Cancel]" → a progress bar
 // → "Sent to <email> ✓". Disabled when the client has no email.
 export function SendToClientButton({
   kind,
@@ -69,25 +70,33 @@ export function SendToClientButton({
     }
   }
 
-  if (stage === "confirm" || stage === "sending") {
+  // Sending a Bon Appetit or an invoice means making its PDF first: show how far along.
+  if (stage === "sending") {
+    const what = kind === "menuCard" ? "Bon Appetit" : kind === "invoice" ? "invoice" : null;
+    return (
+      <div className="w-64 max-w-full">
+        <ProgressBar
+          expectedMs={what ? 9000 : 2000}
+          label={`Sending to ${email}`}
+          stages={
+            what
+              ? [`Making the ${what} PDF…`, `Making the ${what} PDF…`, `Emailing ${email}…`]
+              : [`Emailing ${email}…`]
+          }
+        />
+      </div>
+    );
+  }
+
+  if (stage === "confirm") {
     return (
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-slate-700">Send to {email}?</span>
-        <button
-          type="button"
-          onClick={handleSend}
-          disabled={stage === "sending"}
-          className="button-primary text-sm disabled:opacity-60"
-        >
+        <button type="button" onClick={handleSend} className="button-primary text-sm">
           <Send aria-hidden="true" />
-          {stage === "sending" ? "Sending…" : "Send"}
+          Send
         </button>
-        <button
-          type="button"
-          onClick={() => setStage("idle")}
-          disabled={stage === "sending"}
-          className="button-secondary text-sm disabled:opacity-60"
-        >
+        <button type="button" onClick={() => setStage("idle")} className="button-secondary text-sm">
           Cancel
         </button>
       </div>
