@@ -31,24 +31,48 @@ function byCourse<T extends { courseLabel: string | null }>(items: T[]): Array<{
 function CourseHeading({ course }: { course: string | null }) {
   if (!course) return null;
   return (
-    <h2 className="mb-2 mt-6 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--accent-strong)] first:mt-0">
+    <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.15em] text-[var(--accent-strong)]">
       {course}
     </h2>
   );
 }
 
-/** The approved menu: the dishes the client kept. */
-export function FinalMenu({ recipes }: { recipes: Array<Omit<ReviewRecipe, "clientRemoved">> }) {
+/** The menu after the client answered: every dish, the ones they removed greyed out. */
+export function FinalMenu({
+  recipes,
+}: {
+  recipes: Array<Omit<ReviewRecipe, "clientRemoved"> & { clientRemoved?: boolean }>;
+}) {
   if (recipes.length === 0) return null;
+  // Courses keep the menu's order; within each, kept dishes first and the
+  // removed ones below, greyed out.
+  const groups = byCourse(recipes).map((g) => ({
+    ...g,
+    items: [...g.items].sort((a, b) => Number(!!a.clientRemoved) - Number(!!b.clientRemoved)),
+  }));
   return (
     <div className="mt-6">
-      {byCourse(recipes).map((group) => (
-        <section key={group.course ?? "_"}>
+      {groups.map((group) => (
+        <section key={group.course ?? "_"} className="mt-8 first:mt-0">
           <CourseHeading course={group.course} />
           <ul className="space-y-2">
             {group.items.map((r) => (
-              <li key={r.id} className="rounded-[14px] border border-stone-200 bg-white px-4 py-3">
-                <p className="font-semibold text-stone-900">{r.title}</p>
+              <li
+                key={r.id}
+                className={`rounded-[14px] border px-4 py-3 ${
+                  r.clientRemoved ? "border-stone-200 bg-stone-100/60 opacity-60" : "border-stone-200 bg-white"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className={`font-semibold ${r.clientRemoved ? "text-stone-500 line-through" : "text-stone-900"}`}>
+                    {r.title}
+                  </p>
+                  {r.clientRemoved && (
+                    <span className="shrink-0 rounded-full bg-stone-200 px-2 py-0.5 text-xs font-medium text-stone-600">
+                      Removed
+                    </span>
+                  )}
+                </div>
                 {r.description && <p className="mt-0.5 line-clamp-2 text-sm text-stone-500">{r.description}</p>}
               </li>
             ))}
@@ -132,7 +156,7 @@ export function ProposalReviewForm({
             </button>
           )}
         </div>
-        {done === "approve" && <FinalMenu recipes={kept} />}
+        <FinalMenu recipes={recipes.map((r) => ({ ...r, clientRemoved: removed.has(r.id) }))} />
       </div>
     );
   }
@@ -148,7 +172,7 @@ export function ProposalReviewForm({
   return (
     <div className="mt-6">
       {byCourse(recipes).map((group) => (
-        <section key={group.course ?? "_"}>
+        <section key={group.course ?? "_"} className="mt-8 first:mt-0">
           <CourseHeading course={group.course} />
           <ul className="space-y-2">
             {group.items.map((r) => {

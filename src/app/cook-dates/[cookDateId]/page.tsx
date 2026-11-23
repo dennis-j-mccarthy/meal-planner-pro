@@ -283,7 +283,7 @@ export default async function CookDateDetailPage({
   }
   const acceptedPanel = (
     <StepPanel title={acceptedTitle} detail={acceptedDetail} actions={acceptedActions}>
-      {menuBlock}
+      {hasDishes ? <ClientPagePreview src={`/preview/review/${menu.id}`} firstName={first} /> : menuBlock}
     </StepPanel>
   );
 
@@ -597,7 +597,10 @@ export default async function CookDateDetailPage({
         }}
       />
 
+      {/* Keyed on the current step: after any action moves the job along,
+          the steps open on the new current step. */}
       <CookDateWalkthrough
+        key={progress.current ?? "done"}
         progress={progress}
         cancelledNote={<p className="text-sm muted">This cook date is cancelled. Use Edit to bring it back.</p>}
         panels={{

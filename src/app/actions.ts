@@ -772,7 +772,7 @@ export async function approveProposal(formData: FormData) {
 
   // Auto-create a Bon Appetit from the approved proposal
   const clientName = proposal.cookDate.client.firstName;
-  const bonAppetit = await prisma.menuCard.create({
+  await prisma.menuCard.create({
     data: {
       kitchenId: kitchen.id,
       clientId: proposal.cookDate.clientId,
@@ -794,7 +794,8 @@ export async function approveProposal(formData: FormData) {
   });
 
   revalidateApp();
-  redirect(`/menu-cards/${bonAppetit.id}`);
+  // Back to the cook date's steps, which now open on the Bon Appetit.
+  redirect(`/cook-dates/${proposal.cookDateId}`);
 }
 
 /**

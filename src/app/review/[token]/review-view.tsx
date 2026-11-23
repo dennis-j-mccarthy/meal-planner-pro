@@ -55,7 +55,6 @@ export function ReviewView({
     courseLabel: pr.courseLabel,
     clientRemoved: pr.clientRemoved,
   }));
-  const kept = recipes.filter((r) => !r.clientRemoved);
 
   const quotaTotal = totalDishes(parseDishQuota(proposal.cookDate.client.dishQuota));
   const keepTarget = quotaTotal > 0 && quotaTotal < recipes.length ? quotaTotal : null;
@@ -67,7 +66,7 @@ export function ReviewView({
     body = (
       <>
         <ClientNotice title={`You're all set, ${firstName}`}>Here&apos;s your menu for {dateLabel}.</ClientNotice>
-        <FinalMenu recipes={kept} />
+        <FinalMenu recipes={recipes} />
       </>
     );
   } else if (proposal.clientSubmittedAt && proposal.clientApproved) {
@@ -76,12 +75,15 @@ export function ReviewView({
         <ClientNotice title={`Thank you, ${firstName}!`}>
           You approved this menu. {chef} has your choices.
         </ClientNotice>
-        <FinalMenu recipes={kept} />
+        <FinalMenu recipes={recipes} />
       </>
     );
   } else if (proposal.clientSubmittedAt || proposal.status === "REVISIONS_REQUESTED") {
     body = (
-      <ClientNotice title={`Thank you, ${firstName}!`}>{chef} will send an updated menu.</ClientNotice>
+      <>
+        <ClientNotice title={`Thank you, ${firstName}!`}>{chef} will send an updated menu.</ClientNotice>
+        <FinalMenu recipes={recipes} />
+      </>
     );
   } else {
     body = (

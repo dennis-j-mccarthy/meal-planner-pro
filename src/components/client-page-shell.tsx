@@ -22,7 +22,8 @@ export function ClientPageShell({
     "--accent-light": theme.accentLight,
   } as React.CSSProperties;
   return (
-    <div style={style} className="min-h-screen bg-[#faf9f7] text-stone-900">
+    // A preview sizes to its content (its frame grows to fit), not the screen.
+    <div style={style} className={`${preview ? "" : "min-h-screen "}bg-[#faf9f7] text-stone-900`}>
       {preview && (
         <p className="sticky top-0 z-10 bg-stone-900 px-4 py-2 text-center text-xs font-medium text-white">
           {preview}
