@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 import { createWithInvoiceNumber } from "@/lib/invoice-number";
+import { ensureCookDateInvoice } from "@/lib/cook-date-invoice";
 import { formatMonthKey, monthRange, todayYmd } from "@/lib/dates";
 import { cookDatesForMonth, findMonthlyInvoice, personalChefLine } from "@/lib/billing";
 import { isMenuApproved } from "@/lib/cook-date-progress";
@@ -122,42 +123,9 @@ export async function createInvoiceForCookDate(cookDateId: string) {
   });
   if (!cookDate || cookDate.client.kitchenId !== kitchen.id) throw new Error("Cook date not found");
 
-  const existing = await prisma.invoice.findFirst({
-    where: { kitchenId: kitchen.id, cookDateId: cookDate.id, status: { not: "VOID" }, archivedAt: null },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  });
-  const invoiceStep = `/cook-dates/${cookDate.id}?step=invoice`;
-  if (existing) redirect(invoiceStep);
-
-  const { client } = cookDate;
-  const lines: { description: string; amount: number }[] = [
-    { description: personalChefLine(cookDate.scheduledFor), amount: client.defaultRate ?? 0 },
-  ];
-  if (client.travelFee && client.travelFee > 0) {
-    lines.push({ description: "Travel", amount: client.travelFee });
-  }
-  if (cookDate.groceryCost && cookDate.groceryCost > 0) {
-    lines.push({ description: "Groceries", amount: cookDate.groceryCost });
-  }
-
-  await createWithInvoiceNumber(kitchen.id, (invoiceNumber) =>
-    prisma.invoice.create({
-      data: {
-        kitchenId: kitchen.id,
-        clientId: client.id,
-        cookDateId: cookDate.id,
-        invoiceNumber,
-        invoiceDate: parseDateInput(todayYmd()),
-        lineItems: {
-          create: lines.map((l, i) => ({ ...l, position: i + 1 })),
-        },
-      },
-    }),
-  );
-
+  await ensureCookDateInvoice(kitchen.id, cookDate.id);
   revalidateBilling();
-  redirect(invoiceStep);
+  redirect(`/cook-dates/${cookDate.id}?step=invoice`);
 }
 
 /**

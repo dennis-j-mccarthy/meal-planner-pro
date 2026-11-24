@@ -614,11 +614,17 @@ export default async function CookDateDetailPage({
   ) : (
     <StepPanel
       title="Invoice"
-      detail={
-        client.defaultRate
-          ? `Starts with ${formatMoney(client.defaultRate)} for the cook date${client.travelFee ? ` and ${formatMoney(client.travelFee)} travel` : ""}. Add groceries before sending.`
-          : "Add the rate and groceries before sending."
-      }
+      detail={(() => {
+        const parts = [
+          client.defaultRate ? `${formatMoney(client.defaultRate)} for the cook date` : null,
+          client.travelFee ? `${formatMoney(client.travelFee)} travel` : null,
+          cookDate.groceryCost ? `${formatMoney(cookDate.groceryCost)} groceries` : null,
+        ].filter(Boolean);
+        const missing = [!client.defaultRate && "the rate", !cookDate.groceryCost && "groceries"].filter(Boolean);
+        return `${parts.length ? `Starts with ${parts.join(", ")}.` : ""}${
+          missing.length ? ` Add ${missing.join(" and ")} before sending.` : ""
+        }`.trim();
+      })()}
       actions={
         <form action={createInvoiceForCookDate.bind(null, cookDate.id)}>
           <button className={btn("invoice")}>

@@ -7,6 +7,7 @@
 //    groceries bought): each starts with
 //    requireKitchen() and only touches cook dates in that kitchen.
 import { revalidatePath } from "next/cache";
+import { syncCookDateGroceries } from "@/lib/cook-date-invoice";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 import {
@@ -97,6 +98,9 @@ export async function saveGroceriesBought(
     where: { id: cookDate.id },
     data: { groceryCost: cost, groceriesDoneAt: cookDate.groceriesDoneAt ?? new Date() },
   });
-  revalidatePath(`/cook-dates/${cookDateId}`);
+  // The invoice follows right away: made now (fee, travel, groceries) or its
+  // draft Groceries line updated.
+  await syncCookDateGroceries(kitchen.id, cookDate.id);
+  revalidatePath("/", "layout");
   return { ok: true };
 }
