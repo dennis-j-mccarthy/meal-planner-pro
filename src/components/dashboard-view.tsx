@@ -52,7 +52,10 @@ export function DashboardView({
   initialMonth,
   initialYear,
   todayIso,
+  belowCalendar,
 }: {
+  /** Shown between the calendar and the month's lists (stats, Needs you). */
+  belowCalendar?: React.ReactNode;
   cookDates: CookDateItem[];
   invoices: InvoiceItem[];
   clients: DashboardClient[];
@@ -106,6 +109,8 @@ export function DashboardView({
         />
       </section>
 
+      {belowCalendar}
+
       {/* Month label */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-base font-bold text-slate-900">
@@ -134,8 +139,8 @@ export function DashboardView({
               Cook dates
               <span className="ml-2 text-sm font-normal text-slate-500">{monthCookDates.length}</span>
             </h3>
-            <Link href="/cook-dates" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--accent-strong)] hover:underline">
-              Calendar &rarr;
+            <Link href="/proposals" className="inline-flex min-h-11 items-center text-sm font-semibold text-[var(--accent-strong)] hover:underline">
+              Meal Planner &rarr;
             </Link>
           </div>
           <div className="mt-4 space-y-3">

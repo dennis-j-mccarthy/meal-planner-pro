@@ -268,105 +268,6 @@ export default async function Home() {
         </div>
       </header>
 
-      {/* Stats */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Summary">
-        <StatCard
-          value={activeClients.length}
-          label="Clients"
-          hint="Active client households"
-          color="orange"
-          icon="users"
-          href="/clients"
-        />
-        <StatCard
-          value={upcomingCount}
-          label="Upcoming cook dates"
-          hint="From today on, not cancelled"
-          color="blue"
-          icon="calendar"
-          href="/cook-dates"
-        />
-        <StatCard
-          value={openProposalCount}
-          label="Open menus"
-          hint="Drafts, sent, and changes requested"
-          color="purple"
-          icon="menu"
-          href="/proposals"
-        />
-        <StatCard
-          value={formatMoney(notMarkedPaid)}
-          label="Not marked paid"
-          hint={`${plural(openInvoices.length, "invoice")} · ${formatMoney(paidThisMonthTotal)} paid this month`}
-          color="green"
-          icon="dollar"
-          href="/money"
-        />
-      </section>
-
-      {/* Needs you */}
-      <section aria-labelledby="needs-you" className="panel overflow-hidden">
-        <div className="accent-hero flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] text-white shadow-md">
-              <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
-              </svg>
-            </div>
-            <div>
-              <h2 id="needs-you" className="section-title">
-                Needs you
-              </h2>
-              <p className="text-sm text-slate-600">
-                {plural(thisWeek.length, "cook date")} this week · {formatMoney(notMarkedPaid)} not marked paid
-              </p>
-            </div>
-          </div>
-          {rows.length > 0 && (
-            <span className="rounded-full bg-[var(--accent)] px-3 py-1 text-sm font-bold text-white shadow-sm">
-              {rows.length}
-            </span>
-          )}
-        </div>
-
-        {rows.length === 0 ? (
-          <div className="flex items-center gap-3 px-5 py-8 sm:px-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-              <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-              </svg>
-            </div>
-            <p className="text-sm font-medium text-slate-700">You&apos;re all caught up.</p>
-          </div>
-        ) : (
-          <ul className="space-y-3 p-4 sm:p-5">
-            {rows.map((row) => (
-              <li
-                key={row.key}
-                className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
-              >
-                <div className="flex min-w-0 items-start gap-3">
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm ${TONE_CLASS[row.tone]}`}
-                  >
-                    <svg aria-hidden="true" className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d={TONE_ICON[row.tone]} />
-                    </svg>
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">{row.title}</p>
-                    <p className="mt-1 text-sm text-slate-500">{row.detail}</p>
-                  </div>
-                </div>
-                <Link href={row.href} className="button-secondary shrink-0 self-start text-sm sm:self-auto">
-                  {row.action}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
       <DashboardView
         cookDates={allCookDates.map((cd) => ({
           id: cd.id,
@@ -390,6 +291,108 @@ export default async function Home() {
         initialMonth={Number(monthKey.slice(5, 7)) - 1}
         initialYear={Number(monthKey.slice(0, 4))}
         todayIso={start.toISOString()}
+        belowCalendar={
+          <>
+          {/* Stats */}
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Summary">
+            <StatCard
+              value={activeClients.length}
+              label="Clients"
+              hint="Active client households"
+              color="orange"
+              icon="users"
+              href="/clients"
+            />
+            <StatCard
+              value={upcomingCount}
+              label="Upcoming cook dates"
+              hint="From today on, not cancelled"
+              color="blue"
+              icon="calendar"
+              href="/cook-dates"
+            />
+            <StatCard
+              value={openProposalCount}
+              label="Open menus"
+              hint="Drafts, sent, and changes requested"
+              color="purple"
+              icon="menu"
+              href="/proposals"
+            />
+            <StatCard
+              value={formatMoney(notMarkedPaid)}
+              label="Not marked paid"
+              hint={`${plural(openInvoices.length, "invoice")} · ${formatMoney(paidThisMonthTotal)} paid this month`}
+              color="green"
+              icon="dollar"
+              href="/money"
+            />
+          </section>
+
+          {/* Needs you */}
+          <section aria-labelledby="needs-you" className="panel overflow-hidden">
+            <div className="accent-hero flex flex-wrap items-center justify-between gap-3 border-b px-5 py-4 sm:px-6">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] text-white shadow-md">
+                  <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 id="needs-you" className="section-title">
+                    Needs you
+                  </h2>
+                  <p className="text-sm text-slate-600">
+                    {plural(thisWeek.length, "cook date")} this week · {formatMoney(notMarkedPaid)} not marked paid
+                  </p>
+                </div>
+              </div>
+              {rows.length > 0 && (
+                <span className="rounded-full bg-[var(--accent)] px-3 py-1 text-sm font-bold text-white shadow-sm">
+                  {rows.length}
+                </span>
+              )}
+            </div>
+
+            {rows.length === 0 ? (
+              <div className="flex items-center gap-3 px-5 py-8 sm:px-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                  <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                </div>
+                <p className="text-sm font-medium text-slate-700">You&apos;re all caught up.</p>
+              </div>
+            ) : (
+              <ul className="space-y-3 p-4 sm:p-5">
+                {rows.map((row) => (
+                  <li
+                    key={row.key}
+                    className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6"
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-white shadow-sm ${TONE_CLASS[row.tone]}`}
+                      >
+                        <svg aria-hidden="true" className="h-[18px] w-[18px]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d={TONE_ICON[row.tone]} />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900">{row.title}</p>
+                        <p className="mt-1 text-sm text-slate-500">{row.detail}</p>
+                      </div>
+                    </div>
+                    <Link href={row.href} className="button-secondary shrink-0 self-start text-sm sm:self-auto">
+                      {row.action}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          </>
+        }
       />
     </div>
   );
