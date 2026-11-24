@@ -15,6 +15,7 @@ import {
   todayYmd,
 } from "@/lib/dates";
 import { formatMoney } from "@/lib/format";
+import { cookDaysFromLine, isChefLine } from "@/lib/invoice-cook-days";
 import { prisma } from "@/lib/prisma";
 
 type NeedsYouTone = "purple" | "green" | "blue" | "amber" | "orange";
@@ -103,7 +104,7 @@ export default async function Home() {
       }),
       prisma.invoice.findMany({
         where: { kitchenId: kitchen.id, archivedAt: null },
-        include: { client: true, lineItems: { select: { amount: true } } },
+        include: { client: true, lineItems: { select: { amount: true, description: true } } },
         orderBy: { invoiceDate: "desc" },
       }),
       prisma.proposal.findMany({
@@ -133,6 +134,35 @@ export default async function Home() {
 
   const invoiceTotal = (inv: { lineItems: { amount: number }[] }) =>
     inv.lineItems.reduce((s, li) => s + li.amount, 0);
+
+  // Cooking days that are only on invoices (most of Beth's past cooks), for
+  // the calendar. A day that already has a cook date for that client is
+  // skipped, and each client/day shows once.
+  const seenDays = new Set(allCookDates.map((cd) => `${cd.clientId}:${todayYmd(cd.scheduledFor)}`));
+  const invoiceCooks = [];
+  for (const inv of [...invoices].reverse()) {
+    if (inv.status === "VOID") continue;
+    for (const li of inv.lineItems) {
+      if (!isChefLine(li.description)) continue;
+      for (const ymd of cookDaysFromLine(li.description, inv.invoiceDate)) {
+        const key = `${inv.clientId}:${ymd}`;
+        if (seenDays.has(key)) continue;
+        seenDays.add(key);
+        invoiceCooks.push({
+          id: `invoice-${inv.id}-${ymd}`,
+          scheduledFor: `${ymd}T12:00:00`,
+          startTimeLabel: null,
+          guestCount: null,
+          status: "COMPLETED",
+          serviceNotes: null,
+          clientName: clientName(inv.client),
+          proposalTitle: null,
+          href: `/invoices/${inv.id}`,
+          invoiceNumber: inv.invoiceNumber,
+        });
+      }
+    }
+  }
 
   // ── Stat cards ──
   const upcomingCount = allCookDates.filter(
@@ -288,6 +318,7 @@ export default async function Home() {
           total: invoiceTotal(inv),
         }))}
         clients={activeClients}
+        invoiceCooks={invoiceCooks}
         initialMonth={Number(monthKey.slice(5, 7)) - 1}
         initialYear={Number(monthKey.slice(0, 4))}
         todayIso={start.toISOString()}

@@ -8,8 +8,12 @@ import { COOK_DATE_LEGEND, statusDotClass, statusLabel } from "@/lib/status";
 
 const noopSubscribe = () => () => {};
 
-type CalendarCookDate = {
+export type CalendarCookDate = {
   id: string;
+  /** Where the entry opens; a cook date's own page when not set. */
+  href?: string;
+  /** Set for cooking days known only from an invoice. */
+  invoiceNumber?: string;
   scheduledFor: string; // ISO string
   startTimeLabel: string | null;
   guestCount: number | null;
@@ -40,6 +44,9 @@ const MONTH_NAMES = [
 ];
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// Rough time per cook date (shopping, cooking, clean-up) for the month estimate.
+const HOURS_PER_COOK_DATE = 8;
 
 export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients, onDateSelect, onMonthChange }: CookDateCalendarProps) {
   const router = useRouter();
@@ -154,14 +161,31 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
 
   const selectedCookDates = selectedDate ? dateMap.get(selectedDate) || [] : [];
 
+  // This month's cook dates (not cancelled) and the estimated hours.
+  let monthCount = 0;
+  for (const [key, list] of dateMap) {
+    if (key.startsWith(`${year}-${month}-`)) monthCount += list.filter((cd) => cd.status !== "CANCELLED").length;
+  }
+
   return (
     <div className="space-y-4">
       {/* Month navigation */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
           <h2 className="section-title">
             {MONTH_NAMES[month]} {year}
           </h2>
+          <p className="text-sm text-slate-500">
+            {monthCount} cook date{monthCount === 1 ? "" : "s"}
+            {monthCount > 0 && (
+              <>
+                {" · "}
+                <span title={`${HOURS_PER_COOK_DATE} hours per cook date`}>
+                  about {monthCount * HOURS_PER_COOK_DATE} hours cooking
+                </span>
+              </>
+            )}
+          </p>
           <button
             type="button"
             onClick={goToToday}
@@ -252,7 +276,7 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
                         role="link"
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/cook-dates/${ev.id}`);
+                          router.push(ev.href ?? `/cook-dates/${ev.id}`);
                         }}
                         className="flex cursor-pointer items-center gap-1 rounded px-1 py-0.5 hover:bg-slate-100"
                       >
@@ -311,25 +335,38 @@ export function CookDateCalendar({ cookDates, initialMonth, initialYear, clients
                 {selectedCookDates.map((cd) => (
                   <div
                     key={cd.id}
-                    onClick={() => router.push(`/cook-dates/${cd.id}`)}
+                    onClick={() => router.push(cd.href ?? `/cook-dates/${cd.id}`)}
                     className="cursor-pointer rounded-lg border border-slate-200 p-4 transition hover:border-slate-300 hover:shadow-sm"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <h4 className="text-sm font-semibold text-slate-900">{cd.clientName}</h4>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {cd.startTimeLabel || "No time set"}
-                          {cd.guestCount ? ` · ${cd.guestCount} guest${cd.guestCount !== 1 ? "s" : ""}` : ""}
-                        </p>
-                        {cd.serviceNotes && (
-                          <p className="mt-2 text-sm text-slate-600">{cd.serviceNotes}</p>
+                        {cd.invoiceNumber ? (
+                          <>
+                            <p className="mt-1 text-xs text-slate-500">
+                              Cooked · from invoice #{cd.invoiceNumber}
+                            </p>
+                            <p className="mt-2 text-xs font-medium text-[var(--accent-strong)]">
+                              Open invoice &rarr;
+                            </p>
+                          </>
+                        ) : (
+                          <>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {cd.startTimeLabel || "No time set"}
+                              {cd.guestCount ? ` · ${cd.guestCount} guest${cd.guestCount !== 1 ? "s" : ""}` : ""}
+                            </p>
+                            {cd.serviceNotes && (
+                              <p className="mt-2 text-sm text-slate-600">{cd.serviceNotes}</p>
+                            )}
+                            <p className="mt-2 text-xs text-slate-400">
+                              {cd.proposalTitle || "No approved menu yet"}
+                            </p>
+                            <p className="mt-2 text-xs font-medium text-[var(--accent-strong)]">
+                              Open cook date &rarr;
+                            </p>
+                          </>
                         )}
-                        <p className="mt-2 text-xs text-slate-400">
-                          {cd.proposalTitle || "No approved menu yet"}
-                        </p>
-                        <p className="mt-2 text-xs font-medium text-[var(--accent-strong)]">
-                          Open cook date &rarr;
-                        </p>
                       </div>
                       <StatusBadge status={cd.status} />
                     </div>

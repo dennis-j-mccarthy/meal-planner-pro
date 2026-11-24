@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { CookDateCalendar } from "@/components/cook-date-calendar";
+import { CookDateCalendar, type CalendarCookDate } from "@/components/cook-date-calendar";
 import { StatusBadge } from "@/components/status-badge";
 import { formatMoney } from "@/lib/format";
 
@@ -53,7 +53,10 @@ export function DashboardView({
   initialYear,
   todayIso,
   belowCalendar,
+  invoiceCooks = [],
 }: {
+  /** Cooking days known only from invoices; shown on the calendar only. */
+  invoiceCooks?: CalendarCookDate[];
   /** Shown between the calendar and the month's lists (stats, Needs you). */
   belowCalendar?: React.ReactNode;
   cookDates: CookDateItem[];
@@ -98,7 +101,7 @@ export function DashboardView({
       {/* Calendar */}
       <section className="panel p-4 sm:p-6" aria-label="Calendar">
         <CookDateCalendar
-          cookDates={cookDates}
+          cookDates={[...cookDates, ...invoiceCooks]}
           initialMonth={initialMonth}
           initialYear={initialYear}
           clients={clients}
