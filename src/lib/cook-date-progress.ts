@@ -2,6 +2,8 @@
 // Groceries → How did it taste? → Invoice → Paid. Worked out from the data, never stored. Plain module (not
 // "use server"): safe to import from server and client components.
 
+import { todayYmd } from "@/lib/dates";
+
 export const BILLING_MODES = ["ONE_OFF", "MONTHLY_AHEAD", "MONTHLY_AFTER"] as const;
 export type BillingMode = (typeof BILLING_MODES)[number];
 
@@ -142,4 +144,42 @@ export function computeProgress(input: {
     ? null
     : (open.find((k) => k !== "taste" || cooked) ?? open[0] ?? null);
   return { done, skipped: { taste: tasteTooOld }, current, cancelled: input.cancelled };
+}
+
+/** Whole days from one YYYY-MM-DD to another. */
+export function daysBetween(fromYmd: string, toYmd: string) {
+  return Math.round((Date.parse(toYmd) - Date.parse(fromYmd)) / 86_400_000);
+}
+
+/**
+ * Progress for one cook date from its records: the menu (newest proposal or
+ * the approved one), its newest Bon Appetit, the taste survey, and its
+ * invoice (its own, or the client's monthly one). Used by the cook date page
+ * and the Meal Planner cards, so both always agree on the next step.
+ */
+export function progressFor<P extends ProposalLike>(
+  cd: CookDateLike<P> & {
+    scheduledFor: Date;
+    groceriesDoneAt: Date | null;
+    menuCards: { sentAt: Date | null }[];
+    tasteFeedback: { sentAt: Date | null; submittedAt: Date | null } | null;
+  },
+  invoice: { status: string } | null,
+  today = todayYmd(),
+): CookDateProgress {
+  const menu = activeProposal(cd);
+  const bonAppetit = cd.menuCards[0] ?? null;
+  const taste = cd.tasteFeedback;
+  return computeProgress({
+    cancelled: cd.status === "CANCELLED",
+    menuSent: !!menu && (menu.status === "SENT" || menu.status === "APPROVED"),
+    approved: isMenuApproved(cd),
+    hasBonAppetit: !!bonAppetit,
+    bonAppetitSent: !!bonAppetit?.sentAt,
+    groceriesDone: !!cd.groceriesDoneAt,
+    daysSinceCookDate: daysBetween(todayYmd(cd.scheduledFor), today),
+    tasteSent: !!taste?.sentAt || !!taste?.submittedAt,
+    hasInvoice: !!invoice,
+    paid: invoice?.status === "PAID",
+  });
 }

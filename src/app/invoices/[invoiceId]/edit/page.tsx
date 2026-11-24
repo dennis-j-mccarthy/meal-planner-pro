@@ -6,10 +6,15 @@ import { InvoiceEditForm } from "@/components/invoice-edit-form";
 
 export default async function InvoiceEditPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ invoiceId: string }>;
+  searchParams: Promise<{ back?: string }>;
 }) {
   const { invoiceId } = await params;
+  // Opened from a cook date's Invoice step: Save and Cancel go back there.
+  const { back: backParam } = await searchParams;
+  const back = backParam && backParam.startsWith("/cook-dates/") ? backParam : null;
   const kitchen = await requireKitchen();
 
   const [invoice, clients] = await Promise.all([
@@ -31,8 +36,8 @@ export default async function InvoiceEditPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-slate-500">
-        <Link href="/invoices" className="hover:text-slate-900">
-          Invoices
+        <Link href={back ?? "/invoices"} className="hover:text-slate-900">
+          {back ? "Cook date" : "Invoices"}
         </Link>
         <span>/</span>
         <Link
@@ -59,6 +64,7 @@ export default async function InvoiceEditPage({
           })),
         }}
         clients={clients}
+        back={back}
       />
     </div>
   );

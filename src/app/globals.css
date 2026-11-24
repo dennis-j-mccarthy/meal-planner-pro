@@ -308,18 +308,29 @@ textarea {
 
   /* Page and section headings: bold sans, like the original pages. */
   .page-title {
-    font-weight: 700;
-    font-size: 1.75rem;
+    font-family: var(--font-fraunces), Georgia, serif;
+    font-variation-settings: "SOFT" 100;
+    font-weight: 680;
+    font-size: 1.875rem;
     line-height: 2.25rem;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.01em;
     color: var(--text-strong);
   }
 
-  .section-title {
-    font-weight: 700;
-    font-size: 1.125rem;
-    line-height: 1.75rem;
+  /* Page headings use the logo's lettering: Fraunces with the Soft axis. */
+  main h1 {
+    font-family: var(--font-fraunces), Georgia, serif;
+    font-variation-settings: "SOFT" 100;
     letter-spacing: -0.01em;
+  }
+
+  .section-title {
+    font-family: var(--font-fraunces), Georgia, serif;
+    font-variation-settings: "SOFT" 100;
+    font-weight: 650;
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+    letter-spacing: -0.005em;
     color: var(--text-strong);
   }
 

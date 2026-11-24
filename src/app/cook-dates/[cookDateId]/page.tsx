@@ -27,7 +27,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { findCookDateInvoice, monthKeyOf } from "@/lib/billing";
 import {
   activeProposal,
-  computeProgress,
+  progressFor,
   isMenuApproved,
   isMonthlyBilling,
   STEP_KEYS,
@@ -131,18 +131,7 @@ export default async function CookDateDetailPage({
   const cookDay = formatWeekdayLong(cookDate.scheduledFor);
   const checkedCount = parseCheckedKeys(cookDate.groceryChecked).length;
 
-  const progress = computeProgress({
-    cancelled: cookDate.status === "CANCELLED",
-    menuSent: !!menu && (menu.status === "SENT" || menu.status === "APPROVED"),
-    approved,
-    hasBonAppetit: !!bonAppetit,
-    bonAppetitSent: !!bonAppetit?.sentAt,
-    groceriesDone: !!cookDate.groceriesDoneAt,
-    daysSinceCookDate,
-    tasteSent: !!taste?.sentAt || !!taste?.submittedAt,
-    hasInvoice: !!invoice,
-    paid: invoice?.status === "PAID",
-  });
+  const progress = progressFor(cookDate, invoice);
   const isCurrent = (k: StepKey) => progress.current === k;
   const btn = (k: StepKey) => (isCurrent(k) ? "button-primary" : "button-secondary");
 
@@ -577,7 +566,12 @@ export default async function CookDateDetailPage({
           {invoice.status !== "PAID" && invoice.status !== "VOID" && (
             <SendToClientButton kind="invoice" id={invoice.id} clientEmail={client.email} variant="secondary" />
           )}
-          <Link href={`/invoices/${invoice.id}`} aria-label="Edit the invoice" data-tip="Edit" className="button-icon">
+          <Link
+            href={`/invoices/${invoice.id}/edit?back=${encodeURIComponent(`/cook-dates/${cookDate.id}?step=invoice`)}`}
+            aria-label="Edit the invoice"
+            data-tip="Edit"
+            className="button-icon"
+          >
             <Pencil aria-hidden="true" />
           </Link>
           <a
@@ -609,7 +603,7 @@ export default async function CookDateDetailPage({
       title={`Billed monthly — ${monthName} invoice`}
       detail={`${first} gets one invoice for all of ${monthLabel}. No ${monthLabel} invoice yet.`}
       actions={
-        <form action={createMonthlyInvoice.bind(null, cookDate.clientId, monthKey)}>
+        <form action={createMonthlyInvoice.bind(null, cookDate.clientId, monthKey, cookDate.id)}>
           <button className={btn("invoice")}>
             <FilePlus2 aria-hidden="true" />
             Create {monthName} invoice

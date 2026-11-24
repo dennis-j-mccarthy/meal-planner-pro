@@ -1,40 +1,56 @@
-import { createProposal } from "@/app/actions";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { PlanMenuButton } from "@/components/plan-menu-button";
-import { StatusBadge } from "@/components/status-badge";
-import { todayStart, todayYmd } from "@/lib/dates";
-import { formatDateShort } from "@/lib/format";
+import { monthKeyOf } from "@/lib/billing";
+import {
+  activeProposal,
+  progressFor,
+  STEP_KEYS,
+  STEP_LABEL,
+  type CookDateProgress,
+  type StepKey,
+} from "@/lib/cook-date-progress";
+import { addDays, formatWeekdayShort, todayStart, todayYmd } from "@/lib/dates";
 import { requireKitchen } from "@/lib/guard";
 import { prisma } from "@/lib/prisma";
 
+// Every cook date as a card: the client, the day, the seven steps as a bar,
+// and what comes next. A card opens the cook date's steps on that next step.
+
+const proposalSelect = {
+  id: true,
+  status: true,
+  createdAt: true,
+  recipes: { where: { clientRemoved: false }, select: { id: true } },
+} as const;
+
+// Past cook dates still waiting on something stay up top for this long.
+const TO_FINISH_DAYS = 60;
+
 export default async function MealPlannerPage() {
   const kitchen = await requireKitchen();
-  const [cookDates, proposals, clients] = await Promise.all([
+  const [cookDates, invoices, clients] = await Promise.all([
     prisma.cookDate.findMany({
       where: { kitchenId: kitchen.id },
-      include: {
-        client: true,
+      select: {
+        id: true,
+        clientId: true,
+        status: true,
+        scheduledFor: true,
+        groceriesDoneAt: true,
+        finalizedProposalId: true,
+        client: { select: { firstName: true, lastName: true } },
+        finalizedProposal: { select: proposalSelect },
+        proposals: { select: proposalSelect, orderBy: { createdAt: "desc" } },
+        menuCards: { select: { sentAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
+        tasteFeedback: { select: { sentAt: true, submittedAt: true } },
       },
-      orderBy: {
-        scheduledFor: "asc",
-      },
+      orderBy: { scheduledFor: "asc" },
     }),
-    prisma.proposal.findMany({
-      where: { kitchenId: kitchen.id },
-      include: {
-        cookDate: {
-          include: {
-            client: true,
-          },
-        },
-        recipes: {
-          include: { recipe: { select: { title: true } } },
-          orderBy: { position: "asc" },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
+    prisma.invoice.findMany({
+      where: { kitchenId: kitchen.id, status: { not: "VOID" }, archivedAt: null },
+      select: { status: true, cookDateId: true, clientId: true, billingPeriod: true },
+      orderBy: { createdAt: "desc" },
     }),
     prisma.client.findMany({
       where: { kitchenId: kitchen.id, active: true },
@@ -43,84 +59,49 @@ export default async function MealPlannerPage() {
     }),
   ]);
 
+  // Same rule as findCookDateInvoice: its own invoice, else the client's
+  // monthly invoice for that month. Newest first, so the first match wins.
+  const ownInvoice = new Map<string, (typeof invoices)[number]>();
+  const monthlyInvoice = new Map<string, (typeof invoices)[number]>();
+  for (const inv of invoices) {
+    if (inv.cookDateId && !ownInvoice.has(inv.cookDateId)) ownInvoice.set(inv.cookDateId, inv);
+    const key = inv.billingPeriod ? `${inv.clientId}:${inv.billingPeriod}` : null;
+    if (key && !monthlyInvoice.has(key)) monthlyInvoice.set(key, inv);
+  }
+
+  const today = todayYmd();
   const start = todayStart();
-  const byDateAsc = (a: (typeof proposals)[number], b: (typeof proposals)[number]) =>
-    a.cookDate.scheduledFor.getTime() - b.cookDate.scheduledFor.getTime();
-  const byDateDesc = (a: (typeof proposals)[number], b: (typeof proposals)[number]) => byDateAsc(b, a);
+  const finishFrom = addDays(start, -TO_FINISH_DAYS);
+  const cards = cookDates.map((cd) => {
+    const invoice =
+      ownInvoice.get(cd.id) ?? monthlyInvoice.get(`${cd.clientId}:${monthKeyOf(cd.scheduledFor)}`) ?? null;
+    const menu = activeProposal(cd);
+    return {
+      cd,
+      progress: progressFor(cd, invoice, today),
+      dishCount: menu?.recipes.length ?? 0,
+      hasInvoice: !!invoice,
+    };
+  });
 
-  const isUpcoming = (p: (typeof proposals)[number]) => p.cookDate.scheduledFor >= start;
-  const live = proposals.filter((p) => p.status !== "ARCHIVED");
-
-  // Upcoming cook dates and anything still being drafted come first, soonest first.
-  const comingUp = live
-    .filter((p) => isUpcoming(p) || p.status === "DRAFT" || p.status === "REVISIONS_REQUESTED")
-    .sort(byDateAsc);
-  const comingUpIds = new Set(comingUp.map((p) => p.id));
-  const past = live.filter((p) => !comingUpIds.has(p.id)).sort(byDateDesc);
-  const archived = proposals.filter((p) => p.status === "ARCHIVED").sort(byDateDesc);
+  const live = cards.filter((c) => !c.progress.cancelled);
+  const comingUp = live.filter((c) => c.cd.scheduledFor >= start);
+  const toFinish = live
+    .filter((c) => c.cd.scheduledFor < start && c.cd.scheduledFor >= finishFrom && c.progress.current)
+    .reverse();
+  const shown = new Set([...comingUp, ...toFinish].map((c) => c.cd.id));
+  const past = live.filter((c) => !shown.has(c.cd.id)).reverse();
+  const cancelled = cards.filter((c) => c.progress.cancelled).reverse();
 
   // "Plan a menu" opens an existing menu instead of making a second cook date
   // for the same client and day.
-  const existingMenus = comingUp
-    .filter(isUpcoming)
-    .map((p) => ({ clientId: p.cookDate.clientId, ymd: todayYmd(p.cookDate.scheduledFor), proposalId: p.id }));
-
-  function ProposalCard({ proposal }: { proposal: (typeof proposals)[number] }) {
-    const clientName = `${proposal.cookDate.client.firstName} ${proposal.cookDate.client.lastName}`;
-    const recipeCount = proposal.recipes.length;
-
-    return (
-      <Link
-        href={`/proposals/${proposal.id}`}
-        className="group block rounded-xl border border-slate-200 bg-white p-4 transition-all hover:border-[var(--accent)] hover:shadow-md"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-sm font-bold text-white">
-            {proposal.cookDate.client.firstName.charAt(0)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-slate-900">{clientName}</h3>
-              <StatusBadge status={proposal.status} />
-            </div>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {formatDateShort(proposal.cookDate.scheduledFor)} · {proposal.title}
-            </p>
-            {recipeCount > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {proposal.recipes.slice(0, 4).map((item) => (
-                  <span key={item.id} className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                    {item.recipe.title}
-                  </span>
-                ))}
-                {recipeCount > 4 && (
-                  <span className="inline-flex rounded-md bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-                    +{recipeCount - 4} more
-                  </span>
-                )}
-              </div>
-            ) : (
-              <p className="mt-2 text-xs font-medium text-[var(--accent-strong)]">No dishes yet. Open the planner</p>
-            )}
-          </div>
-          <svg
-            aria-hidden="true"
-            className="mt-2 h-5 w-5 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-[var(--accent)]"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="currentColor"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-          </svg>
-        </div>
-      </Link>
-    );
-  }
+  const existingMenus = comingUp.flatMap((c) => {
+    const menu = activeProposal(c.cd);
+    return menu ? [{ clientId: c.cd.clientId, ymd: todayYmd(c.cd.scheduledFor), proposalId: menu.id }] : [];
+  });
 
   return (
     <div className="space-y-10 fade-up">
-      {/* Hero header */}
       <section className="relative overflow-hidden rounded-3xl border accent-hero px-6 py-8 sm:px-8 sm:py-10">
         <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-[var(--accent-light)] opacity-60 blur-3xl" />
         <div className="absolute -bottom-20 -left-16 h-56 w-56 rounded-full bg-[var(--accent-light)] opacity-60 blur-3xl" />
@@ -131,95 +112,198 @@ export default async function MealPlannerPage() {
             </p>
             <h1 className="text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl">Meal Planner</h1>
             <p className="mt-3 max-w-xl text-base text-slate-600">
-              Pick a client and a date, then build the menu from your recipes and send it for approval.
+              Every cook date and where it stands. Open one to pick up at the next step.
             </p>
           </div>
           <PlanMenuButton
             clients={clients}
             existing={existingMenus}
-            today={todayYmd()}
+            today={today}
             className="button-primary px-6 py-3 text-base"
           />
         </div>
       </section>
 
-      {/* Coming up + drafts */}
-      <section aria-labelledby="coming-up">
-        <h2 id="coming-up" className="section-title">
-          Coming up and in progress
-          <span className="ml-2 text-sm font-normal text-slate-500">{comingUp.length}</span>
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">Soonest cook date first. Open one to keep planning.</p>
-        {comingUp.length === 0 ? (
-          <div className="mt-4 rounded-xl border-2 border-dashed border-slate-200 px-4 py-10 text-center">
-            <p className="text-base font-semibold text-slate-700">Nothing planned yet</p>
-            <p className="mt-1 text-sm text-slate-500">Use &ldquo;+ Plan a menu&rdquo; to start one.</p>
-          </div>
-        ) : (
-          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {comingUp.map((p) => (
-              <ProposalCard key={p.id} proposal={p} />
-            ))}
-          </div>
-        )}
-      </section>
+      <CardSection
+        id="coming-up"
+        title="Coming up"
+        note="Soonest first."
+        cards={comingUp}
+        empty="Nothing on the calendar yet. Use “+ Plan a menu” to start one."
+      />
 
-      {/* Past */}
-      {past.length > 0 && (
-        <section aria-labelledby="past-menus">
-          <h2 id="past-menus" className="section-title">
-            Past menus
-            <span className="ml-2 text-sm font-normal text-slate-500">{past.length}</span>
-          </h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {past.map((p) => (
-              <ProposalCard key={p.id} proposal={p} />
-            ))}
-          </div>
-        </section>
+      {toFinish.length > 0 && (
+        <CardSection
+          id="to-finish"
+          title="To finish"
+          note={`Cooked in the last ${TO_FINISH_DAYS} days and still waiting on a step.`}
+          cards={toFinish}
+        />
       )}
 
-      {/* Archived */}
-      {archived.length > 0 && (
+      {past.length > 0 && (
         <details className="group">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-base font-bold text-slate-500 [&::-webkit-details-marker]:hidden">
-            <svg aria-hidden="true" className="h-4 w-4 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
-            </svg>
-            Replaced menus ({archived.length})
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <ChevronRight aria-hidden="true" className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" />
+            <span className="section-title">Past cook dates</span>
+            <span className="text-sm text-slate-500">{past.length}</span>
           </summary>
-          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {archived.map((p) => (
-              <ProposalCard key={p.id} proposal={p} />
-            ))}
-          </div>
+          <CardGrid cards={past} />
         </details>
       )}
 
-      {/* Add a menu to a cook date that already exists */}
-      <section className="panel p-6">
-        <h2 className="section-title">Add a menu to an existing cook date</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          For a cook date that&apos;s already on the calendar. You&apos;ll add dishes on the next screen.
-        </p>
-        <form action={createProposal} className="mt-5 grid gap-3 lg:grid-cols-[1fr_1fr_auto]">
-          <select className="field" name="cookDateId" required defaultValue="">
-            <option disabled value="">
-              Select a cook date
-            </option>
-            {cookDates.map((cookDate) => (
-              <option key={cookDate.id} value={cookDate.id}>
-                {cookDate.client.firstName} {cookDate.client.lastName} ·{" "}
-                {formatDateShort(cookDate.scheduledFor)}
-              </option>
-            ))}
-          </select>
-          <input className="field" name="title" placeholder="Menu title" required />
-          <button className="button-secondary" type="submit">
-            Create menu
-          </button>
-        </form>
-      </section>
+      {cancelled.length > 0 && (
+        <details className="group">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+            <ChevronRight aria-hidden="true" className="h-4 w-4 text-slate-400 transition-transform group-open:rotate-90" />
+            <span className="section-title">Cancelled</span>
+            <span className="text-sm text-slate-500">{cancelled.length}</span>
+          </summary>
+          <CardGrid cards={cancelled} />
+        </details>
+      )}
     </div>
+  );
+}
+
+type Card = {
+  cd: { id: string; scheduledFor: Date; client: { firstName: string; lastName: string } };
+  progress: CookDateProgress;
+  dishCount: number;
+  hasInvoice: boolean;
+};
+
+function CardSection({
+  id,
+  title,
+  note,
+  cards,
+  empty,
+}: {
+  id: string;
+  title: string;
+  note: string;
+  cards: Card[];
+  empty?: string;
+}) {
+  return (
+    <section aria-labelledby={id}>
+      <h2 id={id} className="section-title">
+        {title}
+        <span className="ml-2 font-sans text-sm font-normal text-slate-500">{cards.length}</span>
+      </h2>
+      <p className="mt-1 text-sm text-slate-500">{note}</p>
+      {cards.length === 0 && empty ? (
+        <div className="mt-4 rounded-xl border-2 border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+          {empty}
+        </div>
+      ) : (
+        <CardGrid cards={cards} />
+      )}
+    </section>
+  );
+}
+
+function CardGrid({ cards }: { cards: Card[] }) {
+  return (
+    <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      {cards.map((c) => (
+        <CookDateCard key={c.cd.id} card={c} />
+      ))}
+    </div>
+  );
+}
+
+function nextText(card: Card): { text: string; tone: "next" | "done" | "muted" } {
+  const { progress, dishCount, hasInvoice } = card;
+  const first = card.cd.client.firstName.split(/[ ,&]/)[0];
+  if (progress.cancelled) return { text: "Cancelled", tone: "muted" };
+  switch (progress.current) {
+    case null:
+      return { text: "All done", tone: "done" };
+    case "proposed":
+      return { text: dishCount ? "Send the menu" : "Plan the menu", tone: "next" };
+    case "accepted":
+      return { text: `Waiting for ${first} to approve`, tone: "next" };
+    case "bonAppetit":
+      return { text: "Send the Bon Appetit", tone: "next" };
+    case "groceries":
+      return { text: "Buy the groceries", tone: "next" };
+    case "taste":
+      return { text: "Ask how it tasted", tone: "next" };
+    case "invoice":
+      return { text: hasInvoice ? "Send the invoice" : "Create the invoice", tone: "next" };
+    case "paid":
+      return { text: "Waiting for payment", tone: "next" };
+  }
+}
+
+function CookDateCard({ card }: { card: Card }) {
+  const { cd, progress, dishCount } = card;
+  const name = `${cd.client.firstName} ${cd.client.lastName}`.trim();
+  const next = nextText(card);
+  const stepNo = progress.current ? STEP_KEYS.indexOf(progress.current) + 1 : null;
+
+  return (
+    <Link
+      href={`/cook-dates/${cd.id}`}
+      className={`group flex flex-col gap-4 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-5 shadow-sm transition hover:border-[var(--accent)] hover:shadow-md ${
+        progress.cancelled ? "opacity-60" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold leading-snug text-ink">{name}</h3>
+          <p className="mt-0.5 text-sm text-slate-500">
+            {formatWeekdayShort(cd.scheduledFor)}
+            {dishCount > 0 && ` · ${dishCount} dish${dishCount === 1 ? "" : "es"}`}
+          </p>
+        </div>
+        <ChevronRight
+          aria-hidden="true"
+          className="mt-0.5 h-5 w-5 shrink-0 text-slate-300 transition group-hover:translate-x-0.5 group-hover:text-[var(--accent)]"
+        />
+      </div>
+
+      <StepBar progress={progress} />
+
+      <p
+        className={`text-sm font-semibold ${
+          next.tone === "done" ? "text-emerald-700" : next.tone === "muted" ? "text-slate-500" : "text-[var(--accent-strong)]"
+        }`}
+      >
+        {stepNo && <span className="font-normal text-slate-500">Step {stepNo} of 7 · </span>}
+        {next.tone === "next" ? `Next: ${next.text}` : next.text}
+      </p>
+    </Link>
+  );
+}
+
+/** The seven steps as one bar: green done, accent for the next step, grey to come. */
+function StepBar({ progress }: { progress: CookDateProgress }) {
+  const label = (k: StepKey) =>
+    `${STEP_LABEL[k]}: ${
+      progress.skipped[k] ? "skipped" : progress.done[k] ? "done" : progress.current === k ? "next" : "to do"
+    }`;
+  return (
+    <ol className="flex gap-1" aria-label={STEP_KEYS.map(label).join(", ")}>
+      {STEP_KEYS.map((k) => (
+        <li
+          key={k}
+          title={label(k)}
+          className={`h-1.5 flex-1 rounded-full ${
+            progress.cancelled
+              ? "bg-slate-200"
+              : progress.current === k
+                ? "bg-[var(--accent)]"
+                : progress.skipped[k]
+                  ? "bg-emerald-200"
+                  : progress.done[k]
+                    ? "bg-emerald-500"
+                    : "bg-slate-200"
+          }`}
+        />
+      ))}
+    </ol>
   );
 }

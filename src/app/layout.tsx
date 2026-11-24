@@ -33,6 +33,8 @@ const inter = Inter({
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
+  // Soft and optical size, so headlines match the logo's lettering.
+  axes: ["SOFT", "opsz"],
 });
 
 export const metadata: Metadata = {

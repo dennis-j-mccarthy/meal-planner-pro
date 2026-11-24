@@ -413,7 +413,7 @@ export default async function ClientDetailPage({
                 Open {selectedMonthLabel} invoice #{existingMonthInvoice.invoiceNumber}
               </Link>
             ) : (
-              <form action={createMonthlyInvoice.bind(null, client.id, selectedBillMonth)}>
+              <form action={createMonthlyInvoice.bind(null, client.id, selectedBillMonth, "")}>
                 <button
                   className={monthly ? "button-primary" : "button-secondary"}
                   disabled={billCount === 0}

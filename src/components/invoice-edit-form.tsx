@@ -27,9 +27,12 @@ interface InitialInvoice {
 export function InvoiceEditForm({
   invoice,
   clients,
+  back,
 }: {
   invoice: InitialInvoice;
   clients: ClientOption[];
+  /** Cook date page to return to after Save or Cancel. */
+  back?: string | null;
 }) {
   const [clientId, setClientId] = useState(invoice.clientId);
   const [invoiceDate, setInvoiceDate] = useState(invoice.invoiceDate);
@@ -90,6 +93,7 @@ export function InvoiceEditForm({
 
       <form action={updateInvoice}>
         <input type="hidden" name="invoiceId" value={invoice.id} />
+        {back && <input type="hidden" name="returnTo" value={back} />}
         <div className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-semibold text-slate-700">
@@ -254,7 +258,7 @@ export function InvoiceEditForm({
 
         <div className="mt-5 flex gap-2 justify-end">
           <a
-            href={`/invoices/${invoice.id}`}
+            href={back ?? `/invoices/${invoice.id}`}
             className="button-secondary text-sm"
           >
             Cancel

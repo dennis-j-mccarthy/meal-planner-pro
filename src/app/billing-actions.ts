@@ -109,8 +109,8 @@ export async function updateCookDate(formData: FormData) {
 /**
  * One invoice for one cook date, linked to it: "Personal Chef – <day>" at the
  * client's rate (0 when unset, for Beth to fill in), Travel when the client
- * has a travel fee, and Groceries when she entered what she spent. If the
- * cook date already has an invoice, that one opens instead.
+ * has a travel fee, and Groceries when she entered what she spent. Either way
+ * (new, or the one it already has) it lands on the cook date's Invoice step.
  */
 export async function createInvoiceForCookDate(cookDateId: string) {
   const kitchen = await requireKitchen();
@@ -127,7 +127,8 @@ export async function createInvoiceForCookDate(cookDateId: string) {
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });
-  if (existing) redirect(`/invoices/${existing.id}`);
+  const invoiceStep = `/cook-dates/${cookDate.id}?step=invoice`;
+  if (existing) redirect(invoiceStep);
 
   const { client } = cookDate;
   const lines: { description: string; amount: number }[] = [
@@ -140,7 +141,7 @@ export async function createInvoiceForCookDate(cookDateId: string) {
     lines.push({ description: "Groceries", amount: cookDate.groceryCost });
   }
 
-  const invoice = await createWithInvoiceNumber(kitchen.id, (invoiceNumber) =>
+  await createWithInvoiceNumber(kitchen.id, (invoiceNumber) =>
     prisma.invoice.create({
       data: {
         kitchenId: kitchen.id,
@@ -156,7 +157,7 @@ export async function createInvoiceForCookDate(cookDateId: string) {
   );
 
   revalidateBilling();
-  redirect(`/invoices/${invoice.id}/edit`);
+  redirect(invoiceStep);
 }
 
 /**
@@ -165,9 +166,10 @@ export async function createInvoiceForCookDate(cookDateId: string) {
  * plus one "Travel × n" line when the client has a travel fee and one
  * "Groceries" line for what was spent across the month. Cook dates that
  * already have their own invoice are left off. If the month already has a
- * monthly invoice, that one opens instead.
+ * monthly invoice, that one opens instead. Made from a cook date, it lands back
+ * on that cook date's Invoice step.
  */
-export async function createMonthlyInvoice(clientId: string, monthKey: string) {
+export async function createMonthlyInvoice(clientId: string, monthKey: string, fromCookDateId?: string) {
   const kitchen = await requireKitchen();
   if (typeof clientId !== "string" || !clientId) throw new Error("Client not found");
   if (typeof monthKey !== "string" || !monthRange(monthKey)) throw new Error("Choose a month");
@@ -177,8 +179,12 @@ export async function createMonthlyInvoice(clientId: string, monthKey: string) {
   });
   if (!client) throw new Error("Client not found");
 
+  const back =
+    typeof fromCookDateId === "string" && fromCookDateId
+      ? `/cook-dates/${encodeURIComponent(fromCookDateId)}?step=invoice`
+      : null;
   const existing = await findMonthlyInvoice(kitchen.id, client.id, monthKey);
-  if (existing) redirect(`/invoices/${existing.id}`);
+  if (existing) redirect(back ?? `/invoices/${existing.id}`);
 
   const month = await cookDatesForMonth(kitchen.id, client.id, monthKey);
   if (!month || month.included.length === 0) {
@@ -218,5 +224,5 @@ export async function createMonthlyInvoice(clientId: string, monthKey: string) {
   );
 
   revalidateBilling();
-  redirect(`/invoices/${invoice.id}/edit`);
+  redirect(back ?? `/invoices/${invoice.id}/edit`);
 }

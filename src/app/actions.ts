@@ -1341,7 +1341,8 @@ export async function updateInvoice(formData: FormData) {
   });
 
   revalidateApp();
-  redirect(`/invoices/${invoiceId}`);
+  const returnTo = optionalText(formData, "returnTo");
+  redirect(returnTo && returnTo.startsWith("/cook-dates/") ? returnTo : `/invoices/${invoiceId}`);
 }
 
 export async function updateInvoiceStatus(formData: FormData) {

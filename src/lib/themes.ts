@@ -35,11 +35,12 @@ export const THEMES: Theme[] = [
   },
   {
     id: "ocean",
-    name: "Ocean Blue",
-    accent: "#457b9d",
-    accentStrong: "#345f7a",
-    accentLight: "#dbe7ef",
-    background: "#f5f9fc",
+    // The logo's blues (logo set, 11/24/2026).
+    name: "Yes, Chef! Blue",
+    accent: "#2563eb",
+    accentStrong: "#1d4ed8",
+    accentLight: "#dfe8fd",
+    background: "#f3f7ff",
   },
   {
     id: "aubergine",
@@ -110,11 +111,12 @@ export const THEMES: Theme[] = [
   },
   {
     id: "dark-ocean",
-    name: "Dark Ocean",
-    accent: "#38bdf8",
-    accentStrong: "#0ea5e9",
-    accentLight: "#172436",
-    background: "#0d1220",
+    // The logo's on-dark blues.
+    name: "Yes, Chef! Blue, dark",
+    accent: "#6ea2ff",
+    accentStrong: "#4f8bff",
+    accentLight: "#16233d",
+    background: "#0b1220",
     dark: true,
   },
   {

@@ -76,13 +76,14 @@ export function AppNav() {
             key={link.href}
             href={link.href}
             aria-current={active ? "page" : undefined}
-            className={`flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium ${
+            className={`flex min-h-10 items-center whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium ${
               active
                 ? "bg-slate-100 text-slate-900"
                 : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
             }`}
           >
-            <span className="hidden xl:inline-flex [&>svg]:h-4 [&>svg]:w-4">{link.icon}</span>
+            {/* Text only up here: with the logo and the account controls, icons
+                do not fit in the header. The phone tab bar keeps its icons. */}
             {link.label}
           </Link>
         );
