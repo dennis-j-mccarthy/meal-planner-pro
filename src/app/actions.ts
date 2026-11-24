@@ -243,6 +243,32 @@ function clientBillingFields(formData: FormData) {
   return out;
 }
 
+/** Set a client's fee per cook date and travel fee from the cook date or planner. Blank clears. */
+export async function setClientRate(
+  clientId: string,
+  rateText: string,
+  travelText: string,
+): Promise<{ ok: true; rate: number | null; travel: number | null } | { ok: false; error: string }> {
+  const kitchen = await requireKitchen();
+  await assertClientInKitchen(kitchen.id, clientId);
+
+  const parse = (text: string) => {
+    const t = text.replace(/[$,\s]/g, "");
+    if (!t) return null;
+    const n = Number(t);
+    return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : NaN;
+  };
+  const defaultRate = parse(rateText);
+  const travelFee = parse(travelText);
+  if (Number.isNaN(defaultRate) || Number.isNaN(travelFee)) {
+    return { ok: false, error: "Enter amounts as numbers, like 415 or 30." };
+  }
+
+  await prisma.client.update({ where: { id: clientId }, data: { defaultRate, travelFee } });
+  revalidateApp();
+  return { ok: true, rate: defaultRate, travel: travelFee };
+}
+
 export async function createClient(formData: FormData) {
   const kitchen = await requireKitchen();
   const addr = clientAddressFields(formData);
@@ -1334,6 +1360,24 @@ export async function updateInvoiceStatus(formData: FormData) {
   const { count } = await prisma.invoice.updateMany({
     where: { id: invoiceId, kitchenId: kitchen.id },
     data: updateData,
+  });
+  if (count === 0) {
+    throw new Error("Invoice not found");
+  }
+
+  revalidateApp();
+}
+
+// Archive (or bring back) an invoice. Nothing is deleted: an archived invoice
+// keeps its lines, payment and number, and just drops out of every list and total.
+export async function setInvoiceArchived(formData: FormData) {
+  const kitchen = await requireKitchen();
+  const invoiceId = requiredText(formData, "invoiceId");
+  const archive = formData.get("archive") === "1";
+
+  const { count } = await prisma.invoice.updateMany({
+    where: { id: invoiceId, kitchenId: kitchen.id },
+    data: { archivedAt: archive ? new Date() : null },
   });
   if (count === 0) {
     throw new Error("Invoice not found");

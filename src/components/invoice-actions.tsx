@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { updateInvoiceStatus, deleteInvoice, sendInvoiceEmail } from "@/app/actions";
+import { useFormStatus } from "react-dom";
+import { Archive, ArchiveRestore } from "lucide-react";
+import { updateInvoiceStatus, deleteInvoice, sendInvoiceEmail, setInvoiceArchived } from "@/app/actions";
 import { SendToClientButton } from "@/components/send-to-client-button";
 import { RecordPaymentForm } from "@/components/record-payment-form";
 
@@ -10,9 +12,20 @@ interface InvoiceActionsProps {
   invoiceId: string;
   status: string;
   clientEmail: string | null;
+  archived: boolean;
 }
 
-export function InvoiceActions({ invoiceId, status, clientEmail }: InvoiceActionsProps) {
+function ArchiveButton({ archived }: { archived: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button disabled={pending} className="button-secondary text-sm disabled:opacity-60">
+      {archived ? <ArchiveRestore aria-hidden="true" /> : <Archive aria-hidden="true" />}
+      {pending ? (archived ? "Unarchiving…" : "Archiving…") : archived ? "Unarchive" : "Archive"}
+    </button>
+  );
+}
+
+export function InvoiceActions({ invoiceId, status, clientEmail, archived }: InvoiceActionsProps) {
   const router = useRouter();
 
   async function handleDownload() {
@@ -114,11 +127,18 @@ export function InvoiceActions({ invoiceId, status, clientEmail }: InvoiceAction
           </form>
         )}
 
+        {/* Archive: keeps everything, hides it from lists and totals */}
+        <form action={setInvoiceArchived} className="ml-auto">
+          <input type="hidden" name="invoiceId" value={invoiceId} />
+          <input type="hidden" name="archive" value={archived ? "0" : "1"} />
+          <ArchiveButton archived={archived} />
+        </form>
+
         {/* Delete */}
         {status === "DRAFT" && (
           <button
             onClick={handleDelete}
-            className="button-secondary text-sm border-red-200 text-red-600 hover:bg-red-50 ml-auto"
+            className="button-secondary text-sm border-red-200 text-red-600 hover:bg-red-50"
           >
             Delete
           </button>

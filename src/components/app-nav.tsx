@@ -42,11 +42,11 @@ const NEWSLETTERS = icon(
 
 // Header nav (lg and up).
 const LINKS: NavLink[] = [
-  { href: "/", label: "Dashboard", icon: DASHBOARD },
-  // Every menu is built from the recipe database, so it comes right after Dashboard.
-  { href: "/recipes", label: "Recipes", icon: RECIPES },
-  { href: "/proposals", label: "Meal Planner", icon: PLANNER },
   { href: "/cook-dates", label: "Calendar", icon: CALENDAR },
+  // Every menu is built from the recipe database, so it comes second.
+  { href: "/recipes", label: "Recipes", icon: RECIPES },
+  { href: "/", label: "Dashboard", icon: DASHBOARD },
+  { href: "/proposals", label: "Meal Planner", icon: PLANNER },
   { href: "/clients", label: "Clients", icon: CLIENTS },
   { href: "/money", label: "Money", icon: MONEY },
   { href: "/newsletters", label: "Newsletters", icon: NEWSLETTERS },

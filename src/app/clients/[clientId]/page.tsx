@@ -48,6 +48,7 @@ export default async function ClientDetailPage({
         orderBy: { scheduledFor: "desc" },
       },
       invoices: {
+        where: { archivedAt: null },
         include: {
           lineItems: { orderBy: { position: "asc" } },
         },

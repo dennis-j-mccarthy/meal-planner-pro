@@ -36,6 +36,7 @@ function paidInRange(kitchenId: string, start: Date, end: Date) {
     where: {
       kitchenId,
       status: "PAID",
+      archivedAt: null,
       OR: [
         { paidAt: { gte: start, lt: end } },
         { paidAt: null, invoiceDate: { gte: start, lt: end } },
@@ -64,7 +65,7 @@ export default async function MoneyPage({
 
   const [unpaid, paidSelected, paidThisMonth] = await Promise.all([
     prisma.invoice.findMany({
-      where: { kitchenId: kitchen.id, status: { in: ["DRAFT", "SENT"] } },
+      where: { kitchenId: kitchen.id, status: { in: ["DRAFT", "SENT"] }, archivedAt: null },
       include: {
         client: { select: { firstName: true, lastName: true } },
         lineItems: { select: { amount: true } },

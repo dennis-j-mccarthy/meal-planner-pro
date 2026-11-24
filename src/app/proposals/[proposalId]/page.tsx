@@ -1,4 +1,5 @@
 import { CalendarCheck, MessageSquareText } from "lucide-react";
+import { ClientRate } from "@/components/client-rate";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
@@ -51,6 +52,8 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
               email: true,
               exclusions: true,
               dietaryNotes: true,
+              defaultRate: true,
+              travelFee: true,
             },
           },
           menuCards: { select: { id: true }, orderBy: { createdAt: "desc" }, take: 1 },
@@ -100,6 +103,8 @@ export default async function ProposalDetailPage({ params }: ProposalDetailPageP
           {guests} {guests === 1 ? "guest" : "guests"}
         </>
       ) : null}
+      <span aria-hidden="true"> · </span>
+      <ClientRate clientId={client.id} rate={client.defaultRate} travel={client.travelFee} />
     </>
   );
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateCookDate } from "@/app/billing-actions";
+import { ClientRate } from "@/components/client-rate";
 
 // Top of the cook date page: "<Weekday, Month D>", the client, time · guests ·
 // notes, and "Edit" to change the day, time, guests and notes in place (or
@@ -20,7 +21,7 @@ export function CookDateHeader({
     guestCount: number | null;
     serviceNotes: string | null;
     cancelled: boolean;
-    client: { id: string; name: string };
+    client: { id: string; name: string; rate: number | null; travel: number | null };
   };
 }) {
   const router = useRouter();
@@ -53,6 +54,9 @@ export function CookDateHeader({
               {cookDate.client.name}
             </Link>
             {details.length > 0 && <span className="muted"> · {details.join(" · ")}</span>}
+          </p>
+          <p className="mt-1 text-sm">
+            <ClientRate clientId={cookDate.client.id} rate={cookDate.client.rate} travel={cookDate.client.travel} />
           </p>
           {cookDate.serviceNotes && (
             <p className="mt-2 whitespace-pre-line text-sm muted">{cookDate.serviceNotes}</p>

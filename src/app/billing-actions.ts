@@ -123,7 +123,7 @@ export async function createInvoiceForCookDate(cookDateId: string) {
   if (!cookDate || cookDate.client.kitchenId !== kitchen.id) throw new Error("Cook date not found");
 
   const existing = await prisma.invoice.findFirst({
-    where: { kitchenId: kitchen.id, cookDateId: cookDate.id, status: { not: "VOID" } },
+    where: { kitchenId: kitchen.id, cookDateId: cookDate.id, status: { not: "VOID" }, archivedAt: null },
     orderBy: { createdAt: "desc" },
     select: { id: true },
   });

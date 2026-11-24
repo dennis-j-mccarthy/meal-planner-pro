@@ -19,7 +19,7 @@ export default async function ClientsPage() {
         take: 1,
       },
       invoices: {
-        where: { status: { in: ["DRAFT", "SENT"] } },
+        where: { status: { in: ["DRAFT", "SENT"] }, archivedAt: null },
         select: { lineItems: { select: { amount: true } } },
       },
     },

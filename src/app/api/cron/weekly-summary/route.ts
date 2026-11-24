@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
       where: {
         kitchenId,
         status: { in: ["DRAFT", "SENT"] },
+        archivedAt: null,
         invoiceDate: { gte: new Date(now.getTime() - 60 * DAY_MS) },
       },
       include: { client: true, lineItems: { select: { amount: true } } },

@@ -6,6 +6,7 @@ import { formatDateShort, formatMoney } from "@/lib/format";
 import { StatusBadge } from "@/components/status-badge";
 import { InvoiceActions } from "@/components/invoice-actions";
 import { formatMonthKey, formatWeekdayLong } from "@/lib/dates";
+import { Archive } from "lucide-react";
 
 export default async function InvoiceDetailPage({
   params,
@@ -46,6 +47,16 @@ export default async function InvoiceDetailPage({
         <span>/</span>
         <span className="text-slate-900 font-medium">#{invoice.invoiceNumber}</span>
       </div>
+
+      {invoice.archivedAt && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <Archive aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
+          <p>
+            Archived {formatDateShort(invoice.archivedAt)}. Everything on it is kept, but it is left out of
+            invoice lists, Money and the dashboard. Unarchive to bring it back.
+          </p>
+        </div>
+      )}
 
       {/* Header */}
       <div className="panel p-6">
@@ -108,6 +119,7 @@ export default async function InvoiceDetailPage({
             invoiceId={invoice.id}
             status={invoice.status}
             clientEmail={invoice.client.email}
+            archived={!!invoice.archivedAt}
           />
         </div>
       </div>

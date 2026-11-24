@@ -245,6 +245,8 @@ model Invoice {
   showGratuity    Boolean       @default(false)
   sentAt          DateTime?
   paidAt          DateTime?
+  // Archived invoices keep all their data but drop out of every list and total.
+  archivedAt      DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   kitchen         Kitchen       @relation(fields: [kitchenId], references: [id], onDelete: Cascade)

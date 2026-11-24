@@ -102,7 +102,7 @@ export default async function Home() {
         },
       }),
       prisma.invoice.findMany({
-        where: { kitchenId: kitchen.id },
+        where: { kitchenId: kitchen.id, archivedAt: null },
         include: { client: true, lineItems: { select: { amount: true } } },
         orderBy: { invoiceDate: "desc" },
       }),
@@ -121,6 +121,7 @@ export default async function Home() {
         where: {
           kitchenId: kitchen.id,
           status: "PAID",
+          archivedAt: null,
           OR: [
             { paidAt: { gte: month.start, lt: month.end } },
             { paidAt: null, invoiceDate: { gte: month.start, lt: month.end } },

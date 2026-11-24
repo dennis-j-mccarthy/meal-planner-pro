@@ -26,6 +26,7 @@ export async function findCookDateInvoice(
     where: {
       kitchenId,
       status: { not: "VOID" },
+      archivedAt: null,
       OR: [
         { cookDateId: cookDate.id },
         { clientId: cookDate.clientId, billingPeriod: monthKeyOf(cookDate.scheduledFor) },
@@ -40,7 +41,7 @@ export async function findCookDateInvoice(
 /** The client's monthly invoice for a month (not void), if there is one. */
 export function findMonthlyInvoice(kitchenId: string, clientId: string, monthKey: string) {
   return prisma.invoice.findFirst({
-    where: { kitchenId, clientId, billingPeriod: monthKey, status: { not: "VOID" } },
+    where: { kitchenId, clientId, billingPeriod: monthKey, status: { not: "VOID" }, archivedAt: null },
     orderBy: { createdAt: "desc" },
     select: { id: true, invoiceNumber: true, status: true },
   });
@@ -73,6 +74,7 @@ export async function cookDatesForMonth(kitchenId: string, clientId: string, mon
           clientId,
           cookDateId: { in: cookDates.map((cd) => cd.id) },
           status: { not: "VOID" },
+          archivedAt: null,
         },
         select: { id: true, invoiceNumber: true, cookDateId: true },
       })
