@@ -29,6 +29,9 @@ export default async function ClientsPage() {
   const rows = clients.map((client) => ({
     id: client.id,
     name: `${client.firstName} ${client.lastName}`.trim(),
+    firstName: client.firstName,
+    lastName: client.lastName,
+    avatarUpdatedAt: client.avatarUpdatedAt?.getTime() ?? null,
     active: client.active,
     nextCookDateLabel: client.cookDates[0]
       ? formatWeekdayShort(client.cookDates[0].scheduledFor)

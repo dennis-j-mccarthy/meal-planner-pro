@@ -1,10 +1,14 @@
 import Link from "next/link";
+import { ClientBadge } from "@/components/client-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { formatMoney } from "@/lib/format";
 
 export interface ClientRow {
   id: string;
   name: string;
+  firstName: string;
+  lastName: string;
+  avatarUpdatedAt: number | null;
   active: boolean;
   /** Pre-formatted, e.g. "Mon, Nov 30", or null when nothing is scheduled. */
   nextCookDateLabel: string | null;
@@ -31,14 +35,13 @@ export function ClientList({ clients }: { clients: ClientRow[] }) {
               client.active ? "border-slate-200" : "border-slate-200 opacity-70"
             }`}
           >
-            <div
-              aria-hidden="true"
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ${
-                client.active ? "bg-[var(--accent)]" : "bg-slate-400"
-              }`}
-            >
-              {client.name.charAt(0).toUpperCase()}
-            </div>
+            <ClientBadge
+              clientId={client.id}
+              firstName={client.firstName}
+              lastName={client.lastName}
+              avatarUpdatedAt={client.avatarUpdatedAt}
+              muted={!client.active}
+            />
             <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 text-base font-semibold text-slate-900">
                 <span className="truncate">{client.name}</span>

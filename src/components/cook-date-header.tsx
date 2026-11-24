@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { updateCookDate } from "@/app/billing-actions";
+import { ClientBadge } from "@/components/client-badge";
 import { ClientRate } from "@/components/client-rate";
 
 // Top of the cook date page: "<Weekday, Month D>", the client, time · guests ·
@@ -21,7 +22,15 @@ export function CookDateHeader({
     guestCount: number | null;
     serviceNotes: string | null;
     cancelled: boolean;
-    client: { id: string; name: string; rate: number | null; travel: number | null };
+    client: {
+      id: string;
+      name: string;
+      firstName: string;
+      lastName: string;
+      avatarUpdatedAt: number | null;
+      rate: number | null;
+      travel: number | null;
+    };
   };
 }) {
   const router = useRouter();
@@ -46,11 +55,18 @@ export function CookDateHeader({
               <span className="ml-3 align-middle badge badge-muted">Cancelled</span>
             )}
           </h1>
-          <p className="mt-2 text-sm">
+          <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <Link
               href={`/clients/${cookDate.client.id}`}
-              className="font-semibold text-[var(--accent-strong)] hover:underline"
+              className="inline-flex items-center gap-2 font-semibold text-[var(--accent-strong)] hover:underline"
             >
+              <ClientBadge
+                clientId={cookDate.client.id}
+                firstName={cookDate.client.firstName}
+                lastName={cookDate.client.lastName}
+                avatarUpdatedAt={cookDate.client.avatarUpdatedAt}
+                size="sm"
+              />
               {cookDate.client.name}
             </Link>
             {details.length > 0 && <span className="muted"> · {details.join(" · ")}</span>}

@@ -658,7 +658,15 @@ export default async function CookDateDetailPage({
           guestCount: cookDate.guestCount,
           serviceNotes: cookDate.serviceNotes,
           cancelled: cookDate.status === "CANCELLED",
-          client: { id: client.id, name: clientName, rate: client.defaultRate, travel: client.travelFee },
+          client: {
+            id: client.id,
+            name: clientName,
+            firstName: client.firstName,
+            lastName: client.lastName,
+            avatarUpdatedAt: client.avatarUpdatedAt?.getTime() ?? null,
+            rate: client.defaultRate,
+            travel: client.travelFee,
+          },
         }}
       />
 

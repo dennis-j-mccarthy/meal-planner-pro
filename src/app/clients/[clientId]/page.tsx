@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createInvoiceForCookDate, createMonthlyInvoice } from "@/app/billing-actions";
+import { ClientAvatarUpload } from "@/components/client-avatar-upload";
 import { EditClientModal } from "@/components/edit-client-modal";
 import { StatusBadge } from "@/components/status-badge";
 import { formatDateShort, formatDateLong, formatMoney } from "@/lib/format";
@@ -145,6 +146,14 @@ export default async function ClientDetailPage({
       <div className="panel p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
+            <div className="mb-4">
+              <ClientAvatarUpload
+                clientId={client.id}
+                firstName={client.firstName}
+                lastName={client.lastName}
+                avatarUpdatedAt={client.avatarUpdatedAt?.getTime() ?? null}
+              />
+            </div>
             <h1 className="page-title">
               {client.firstName} {client.lastName}
             </h1>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { ClientBadge } from "@/components/client-badge";
 import { PlanMenuButton } from "@/components/plan-menu-button";
 import { monthKeyOf } from "@/lib/billing";
 import {
@@ -39,7 +40,7 @@ export default async function MealPlannerPage() {
         scheduledFor: true,
         groceriesDoneAt: true,
         finalizedProposalId: true,
-        client: { select: { firstName: true, lastName: true } },
+        client: { select: { firstName: true, lastName: true, avatarUpdatedAt: true } },
         finalizedProposal: { select: proposalSelect },
         proposals: { select: proposalSelect, orderBy: { createdAt: "desc" } },
         menuCards: { select: { sentAt: true }, orderBy: { createdAt: "desc" }, take: 1 },
@@ -167,7 +168,12 @@ export default async function MealPlannerPage() {
 }
 
 type Card = {
-  cd: { id: string; scheduledFor: Date; client: { firstName: string; lastName: string } };
+  cd: {
+    id: string;
+    clientId: string;
+    scheduledFor: Date;
+    client: { firstName: string; lastName: string; avatarUpdatedAt: Date | null };
+  };
   progress: CookDateProgress;
   dishCount: number;
   hasInvoice: boolean;
@@ -251,8 +257,15 @@ function CookDateCard({ card }: { card: Card }) {
         progress.cancelled ? "opacity-60" : ""
       }`}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+      <div className="flex items-start gap-3">
+        <ClientBadge
+          clientId={cd.clientId}
+          firstName={cd.client.firstName}
+          lastName={cd.client.lastName}
+          avatarUpdatedAt={cd.client.avatarUpdatedAt}
+          muted={progress.cancelled}
+        />
+        <div className="min-w-0 flex-1">
           <h3 className="text-base font-semibold leading-snug text-ink">{name}</h3>
           <p className="mt-0.5 text-sm text-slate-500">
             {formatWeekdayShort(cd.scheduledFor)}

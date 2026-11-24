@@ -85,6 +85,7 @@ model Kitchen {
   newsletters   Newsletter[]
   tasteFeedback TasteFeedback[]
   groceryReceipts GroceryReceipt[]
+  clientAvatars   ClientAvatar[]
   // Beth's own address: copied on everything sent to clients.
   contactEmail    String?
 }
@@ -121,6 +122,10 @@ model Client {
   billingMode     String        @default("ONE_OFF")
   defaultRate     Float?
   travelFee       Float?
+  // Photo for the client's badge (kept in ClientAvatar so client queries
+  // never load the image). Set when a photo is added; used to bust caches.
+  avatarUpdatedAt DateTime?
+  avatar          ClientAvatar?
   @@index([kitchenId, lastName, firstName])
 }
 
@@ -396,4 +401,14 @@ model GroceryReceipt {
   cookDate    CookDate @relation(fields: [cookDateId], references: [id], onDelete: Cascade)
 
   @@index([cookDateId])
+}
+
+model ClientAvatar {
+  clientId    String   @id
+  kitchenId   String
+  contentType String
+  data        Bytes
+  updatedAt   DateTime @updatedAt
+  kitchen     Kitchen  @relation(fields: [kitchenId], references: [id], onDelete: Cascade)
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
 }
