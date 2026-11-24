@@ -30,6 +30,30 @@ interface ClientInitial {
   travelFee?: number | null;
 }
 
+const GROUP = "text-xs font-bold uppercase tracking-wider text-slate-400";
+
+function Field({
+  label,
+  optional = false,
+  className = "",
+  children,
+}: {
+  label: string;
+  optional?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className={`block ${className}`}>
+      <span className="mb-1.5 block text-xs font-semibold text-slate-600">
+        {label}
+        {optional && <span className="font-normal text-slate-400"> (optional)</span>}
+      </span>
+      {children}
+    </label>
+  );
+}
+
 export function EditClientModal({ client }: { client: ClientInitial }) {
   const [open, setOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -62,14 +86,22 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
       <dialog
         ref={dialogRef}
         onClose={() => setOpen(false)}
-        className="fixed inset-0 m-auto w-full max-w-lg max-h-[90vh] rounded-2xl border border-slate-200 p-0 shadow-xl backdrop:bg-black/40 overflow-y-auto"
+        className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl border border-slate-200 p-0 shadow-xl backdrop:bg-black/40"
       >
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
+        <form
+          className="flex max-h-[90vh] flex-col"
+          action={async (formData) => {
+            await updateClient(formData);
+            setOpen(false);
+          }}
+        >
+          <input type="hidden" name="clientId" value={client.id} />
+          <div className="flex items-center justify-between gap-4 border-b border-slate-100 px-6 py-4">
             <h2 className="section-title">Edit client</h2>
             <button
               type="button"
               onClick={() => setOpen(false)}
+              aria-label="Close"
               className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -78,158 +110,142 @@ export function EditClientModal({ client }: { client: ClientInitial }) {
             </button>
           </div>
 
-          <form
-            action={async (formData) => {
-              await updateClient(formData);
-              setOpen(false);
-            }}
-          >
-            <input type="hidden" name="clientId" value={client.id} />
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                className="field"
-                name="firstName"
-                placeholder="First name"
-                defaultValue={client.firstName}
-                required
-              />
-              <input
-                className="field"
-                name="lastName"
-                placeholder="Last name"
-                defaultValue={client.lastName}
-                required
-              />
-              <input
-                className="field md:col-span-2"
-                name="email"
-                type="email"
-                placeholder="Email"
-                defaultValue={client.email ?? ""}
-                required
-              />
-              <input
-                className="field md:col-span-2"
-                name="secondaryEmail"
-                type="email"
-                placeholder="Secondary email (optional)"
-                defaultValue={client.secondaryEmail ?? ""}
-              />
-              <input
-                className="field"
-                name="phone"
-                placeholder="Phone"
-                defaultValue={client.phone ?? ""}
-              />
-              <input
-                className="field"
-                name="householdLabel"
-                placeholder="Household label"
-                defaultValue={client.householdLabel ?? ""}
-              />
-              <textarea
-                className="field md:col-span-2 min-h-24"
-                name="dietaryNotes"
-                placeholder="Dietary preferences, dislikes, allergen notes"
-                defaultValue={client.dietaryNotes ?? ""}
-              />
-              <div className="md:col-span-2">
-                <p className="mb-1.5 text-xs font-semibold text-emerald-600">
-                  Inclusions — foods they love / want more of
-                </p>
-                <PreferenceCheckboxes
-                  name="inclusions"
-                  tone="include"
-                  selected={parsePreferenceList(client.inclusions)}
+          {/* Two columns on wider screens: who and billing on the left, food on the right. */}
+          <div className="grid gap-x-10 gap-y-8 overflow-y-auto px-6 py-6 lg:grid-cols-2">
+            <div className="space-y-8">
+              <section className="space-y-4">
+                <h3 className={GROUP}>Contact</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="First name">
+                    <input className="field" name="firstName" defaultValue={client.firstName} required />
+                  </Field>
+                  <Field label="Last name">
+                    <input className="field" name="lastName" defaultValue={client.lastName} required />
+                  </Field>
+                  <Field label="Email" className="sm:col-span-2">
+                    <input className="field" name="email" type="email" defaultValue={client.email ?? ""} required />
+                  </Field>
+                  <Field label="Second email" optional className="sm:col-span-2">
+                    <input
+                      className="field"
+                      name="secondaryEmail"
+                      type="email"
+                      defaultValue={client.secondaryEmail ?? ""}
+                    />
+                  </Field>
+                  <Field label="Phone">
+                    <input className="field" name="phone" defaultValue={client.phone ?? ""} />
+                  </Field>
+                  <Field label="Household label" optional>
+                    <input className="field" name="householdLabel" defaultValue={client.householdLabel ?? ""} />
+                  </Field>
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <h3 className={GROUP}>Address</h3>
+                <div className="grid gap-4 sm:grid-cols-[1fr_5.5rem_7rem]">
+                  <Field label="Street" className="sm:col-span-3">
+                    <input className="field" name="street" defaultValue={client.street ?? ""} />
+                  </Field>
+                  <Field label="City">
+                    <input className="field" name="city" defaultValue={client.city ?? ""} />
+                  </Field>
+                  <Field label="State">
+                    <input className="field" name="state" defaultValue={client.state ?? ""} />
+                  </Field>
+                  <Field label="ZIP">
+                    <input className="field" name="zip" defaultValue={client.zip ?? ""} />
+                  </Field>
+                </div>
+              </section>
+
+              <div className="grid">
+                <ClientBillingFields
+                  idPrefix={`edit-client-${client.id}`}
+                  billingMode={client.billingMode}
+                  defaultRate={client.defaultRate}
+                  travelFee={client.travelFee}
                 />
               </div>
-              <div className="md:col-span-2">
-                <p className="mb-1.5 text-xs font-semibold text-red-600">
-                  Exclusions — foods to always avoid
-                </p>
-                <PreferenceCheckboxes
-                  name="exclusions"
-                  tone="exclude"
-                  selected={parsePreferenceList(client.exclusions)}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <p className="mb-1.5 text-xs font-semibold text-slate-500">
-                  Dish plan — how many of each per menu
-                </p>
+            </div>
+
+            <div className="space-y-8">
+              <section className="space-y-4">
+                <h3 className={GROUP}>Food</h3>
+                <Field label="Dietary notes">
+                  <textarea
+                    className="field min-h-24"
+                    name="dietaryNotes"
+                    placeholder="Preferences, dislikes, allergens"
+                    defaultValue={client.dietaryNotes ?? ""}
+                  />
+                </Field>
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold text-emerald-600">
+                    Inclusions — foods they love / want more of
+                  </p>
+                  <PreferenceCheckboxes
+                    name="inclusions"
+                    tone="include"
+                    selected={parsePreferenceList(client.inclusions)}
+                  />
+                </div>
+                <div>
+                  <p className="mb-1.5 text-xs font-semibold text-red-600">Exclusions — foods to always avoid</p>
+                  <PreferenceCheckboxes
+                    name="exclusions"
+                    tone="exclude"
+                    selected={parsePreferenceList(client.exclusions)}
+                  />
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <h3 className={GROUP}>Dish plan — how many of each per menu</h3>
                 <DishQuotaEditor defaultValue={parseDishQuota(client.dishQuota)} />
-              </div>
-              <textarea
-                className="field md:col-span-2 min-h-20"
-                name="profileNotes"
-                placeholder="Profile notes (anything else worth remembering)"
-                defaultValue={client.profileNotes ?? ""}
-              />
-              <input
-                className="field md:col-span-2"
-                name="street"
-                placeholder="Street address"
-                defaultValue={client.street ?? ""}
-              />
-              <input
-                className="field md:col-span-2"
-                name="city"
-                placeholder="City"
-                defaultValue={client.city ?? ""}
-              />
-              <input
-                className="field"
-                name="state"
-                placeholder="State"
-                defaultValue={client.state ?? ""}
-              />
-              <input
-                className="field"
-                name="zip"
-                placeholder="ZIP"
-                defaultValue={client.zip ?? ""}
-              />
-              <ClientBillingFields
-                idPrefix={`edit-client-${client.id}`}
-                billingMode={client.billingMode}
-                defaultRate={client.defaultRate}
-                travelFee={client.travelFee}
-              />
+              </section>
+
+              <Field label="Profile notes" optional>
+                <textarea
+                  className="field min-h-20"
+                  name="profileNotes"
+                  placeholder="Anything else worth remembering"
+                  defaultValue={client.profileNotes ?? ""}
+                />
+              </Field>
             </div>
-            <div className="mt-5 flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={async () => {
-                  if (
-                    !confirm(
-                      `Delete ${client.firstName} ${client.lastName}? This removes the client and cannot be undone.`,
-                    )
+          </div>
+
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-6 py-4">
+            <button
+              type="button"
+              onClick={async () => {
+                if (
+                  !confirm(
+                    `Delete ${client.firstName} ${client.lastName}? This removes the client and cannot be undone.`,
                   )
-                    return;
-                  const fd = new FormData();
-                  fd.set("clientId", client.id);
-                  await deleteClient(fd);
-                  setOpen(false);
-                }}
-                className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"
-              >
-                Delete client
+                )
+                  return;
+                const fd = new FormData();
+                fd.set("clientId", client.id);
+                await deleteClient(fd);
+                setOpen(false);
+              }}
+              className="whitespace-nowrap rounded-lg border border-red-200 bg-white px-3 py-1.5 text-sm font-semibold text-red-600 hover:bg-red-50"
+            >
+              Delete client
+            </button>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setOpen(false)} className="button-secondary text-sm">
+                Cancel
               </button>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="button-secondary text-sm"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="button-primary text-sm">
-                  Save changes
-                </button>
-              </div>
+              <button type="submit" className="button-primary text-sm">
+                Save changes
+              </button>
             </div>
-          </form>
-        </div>
+          </div>
+        </form>
       </dialog>
     </>
   );
