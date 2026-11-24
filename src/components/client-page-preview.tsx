@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 
-// The client's page, live, in a phone-width frame that grows to the page's
-// full height: the menu review or the "How did it taste?" survey. The
+// The client's page, live, at about the width a client sees on a laptop, in a
+// frame that grows to the page's full height: the menu review or the "How did
+// it taste?" survey. The
 // /preview/ pages behind it run the client's buttons without saving or
 // sending anything.
 export function ClientPagePreview({ src, firstName }: { src: string; firstName: string }) {
@@ -36,7 +37,7 @@ export function ClientPagePreview({ src, firstName }: { src: string; firstName: 
   }, [src]);
 
   return (
-    <figure className="mx-auto w-full max-w-[420px]">
+    <figure className="mx-auto w-full max-w-3xl">
       <figcaption className="mb-2 text-center text-xs font-semibold uppercase tracking-wide muted">
         What {firstName} sees
       </figcaption>
@@ -46,7 +47,7 @@ export function ClientPagePreview({ src, firstName }: { src: string; firstName: 
         title={`What ${firstName} sees`}
         scrolling="no"
         style={{ height }}
-        className="w-full overflow-hidden rounded-[28px] border-[6px] border-slate-800 bg-[#faf9f7] shadow-lg"
+        className="w-full overflow-hidden rounded-2xl border border-[var(--line)] bg-[#faf9f7] shadow-sm"
       />
     </figure>
   );

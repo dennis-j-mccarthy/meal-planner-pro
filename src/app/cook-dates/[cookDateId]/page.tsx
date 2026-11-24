@@ -648,7 +648,7 @@ export default async function CookDateDetailPage({
   );
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 fade-up">
+    <div className="space-y-8 fade-up">
       <CookDateHeader
         cookDate={{
           id: cookDate.id,

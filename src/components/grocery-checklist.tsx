@@ -118,11 +118,15 @@ export function GroceryChecklist(props: Props) {
                 {done}/{group.items.length}
               </span>
             </div>
-            <ul>
+            {/* Two columns of items on wide screens; one on phones and in print. */}
+            <ul className="lg:grid lg:grid-cols-2">
               {ordered.map((item) => {
                 const isChecked = checked.has(item.key);
                 return (
-                  <li key={item.key} className="border-t border-[var(--border-soft)] bg-white">
+                  <li
+                    key={item.key}
+                    className="border-t border-[var(--border-soft)] bg-white lg:even:border-l"
+                  >
                     <button
                       type="button"
                       role="checkbox"

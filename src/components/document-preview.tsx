@@ -48,7 +48,7 @@ export function DocumentPreview({
   return (
     <div
       ref={boxRef}
-      className="relative w-full overflow-hidden rounded-lg border border-[var(--line)] bg-white shadow-sm"
+      className="relative mx-auto w-full max-w-[880px] overflow-hidden rounded-lg border border-[var(--line)] bg-white shadow-sm"
       style={{ height: PAGE_H * scale }}
     >
       <iframe
